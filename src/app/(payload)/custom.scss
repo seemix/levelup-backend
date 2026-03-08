@@ -1,0 +1,60 @@
+@font-face {
+  font-family: 'Montserrat';
+  src: url('./fonts/inter.woff2') format('woff2');
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+:root {
+  --font-body: 'Inter', sans-serif;
+  --font-header: 'Inter', sans-serif;
+  --font-size-base: 16px;
+  --font-size-xs: 14px;
+  --font-size-sm: 15px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+}
+body {
+  font-size: var(--font-size-base);
+  font-family: "Inter", sans-serif;
+}
+.thumbnail {
+  min-width: 150px !important;
+  height: 150px !important;
+}
+.file__filename {
+  display: none;
+}
+
+.step-nav__home {
+  width: 40px;
+  height: 40px;
+}
+button:active {
+  transform: translateY(2px) scale(0.99);
+  transition: all .15s ease-in;
+}
+.btn {
+  cursor: pointer;
+  //border: 1px solid black;
+}
+.btn--style-primary {
+  background-color: white;
+  color: black;
+  border-radius: 0;
+  border: 1px solid black;
+}
+.nav__link:has(.nav__link-indicator) {
+  font-weight: 500;
+}
+.card__title {
+  font-weight: 500;
+}

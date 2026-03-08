@@ -1,5 +1,5 @@
 {
-  "name": "",
+  "name": "levelup-backend",
   "version": "1.0.0",
   "description": "A blank template to get started with Payload 3.0",
   "license": "MIT",
@@ -18,18 +18,19 @@
     "test:int": "cross-env NODE_OPTIONS=--no-deprecation vitest run --config ./vitest.config.mts"
   },
   "dependencies": {
+    "@payloadcms/db-mongodb": "3.78.0",
     "@payloadcms/next": "3.78.0",
     "@payloadcms/richtext-lexical": "3.78.0",
     "@payloadcms/ui": "3.78.0",
     "cross-env": "^7.0.3",
     "dotenv": "16.4.7",
+    "framer-motion": "^12.34.4",
     "graphql": "^16.8.1",
     "next": "15.4.11",
     "payload": "3.78.0",
     "react": "19.2.1",
     "react-dom": "19.2.1",
-    "sharp": "0.34.2",
-    "@payloadcms/db-mongodb": "3.78.0"
+    "sharp": "0.34.2"
   },
   "devDependencies": {
     "@playwright/test": "1.58.2",
