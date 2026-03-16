@@ -2,6 +2,9 @@ import { CollectionConfig } from 'payload';
 
 export const Slides: CollectionConfig = {
     slug: 'slides',
+    access: {
+        read: () => true,
+    },
     admin: {
         useAsTitle: 'title',
         group: 'Content',
