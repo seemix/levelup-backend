@@ -20,12 +20,12 @@ export default buildConfig({
         admin: '/',
     },
     cors: [
-        process.env.FRONTEND_URL || 'https://levelupbalti.com',
-        process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
+        process.env.FRONTEND_URL || 'http://195.178.106.119:3003',
+        process.env.BACKEND_URL || 'http://195.178.106.119:3002',
     ],
     csrf: [
-        process.env.FRONTEND_URL || 'https://levelupbalti.com',
-        process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
+        process.env.FRONTEND_URL || 'http://195.178.106.119:3003',
+        process.env.BACKEND_URL || 'http://195.178.106.119:3002',
     ],
     admin: {
         user: Users.slug,
