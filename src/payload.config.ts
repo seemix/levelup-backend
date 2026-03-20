@@ -1,8 +1,8 @@
 import { mongooseAdapter } from '@payloadcms/db-mongodb';
 import { lexicalEditor } from '@payloadcms/richtext-lexical';
-import path from 'path';
 import { buildConfig } from 'payload';
 import { fileURLToPath } from 'url';
+import path from 'path';
 import sharp from 'sharp';
 
 import { Users } from './collections/Users';
@@ -16,16 +16,27 @@ const dirname = path.dirname(filename);
 
 
 export default buildConfig({
+    routes: {
+        admin: '/',
+    },
+    cors: [
+        process.env.FRONTEND_URL || 'https://levelupbalti.com',
+        process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
+    ],
+    csrf: [
+        process.env.FRONTEND_URL || 'https://levelupbalti.com',
+        process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
+    ],
     admin: {
         user: Users.slug,
         importMap: {
             baseDir: path.resolve(dirname),
         },
         components: {
-            header: ['@/app/(payload)/admin/components/LocaleSwitcher'],
+          //  header: ['@/app/(payload)/admin/components/LocaleSwitcher'],
             graphics: {
-                Logo: '@/app/(payload)/admin/components/Logo',
-                Icon: '@/app/(payload)/admin/components/Logo',
+                Logo: '@/app/(payload)/components/Logo',
+                Icon: '@/app/(payload)/components/Logo',
             },
         },
     },
