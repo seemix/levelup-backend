@@ -19,6 +19,9 @@ export default buildConfig({
     routes: {
         admin: '/',
     },
+    auth: {
+        jwtOrder: ['cookie', 'Bearer'],
+    },
     cors: [
         process.env.FRONTEND_URL || 'https://levelupbalti.com',
         process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
