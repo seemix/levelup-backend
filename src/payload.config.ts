@@ -22,14 +22,14 @@ export default buildConfig({
     auth: {
         jwtOrder: ['cookie', 'Bearer'],
     },
-    cors: [
-        process.env.FRONTEND_URL || 'https://levelupbalti.com',
-        process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
-    ],
-    csrf: [
-        process.env.FRONTEND_URL || 'https://levelupbalti.com',
-        process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
-    ],
+    // cors: [
+    //     process.env.FRONTEND_URL || 'https://levelupbalti.com',
+    //     process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
+    // ],
+    // csrf: [
+    //     process.env.FRONTEND_URL || 'https://levelupbalti.com',
+    //     process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
+    // ],
     admin: {
         user: Users.slug,
         importMap: {
