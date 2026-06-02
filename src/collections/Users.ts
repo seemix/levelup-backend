@@ -13,6 +13,9 @@ export const Users: CollectionConfig = {
     },
     auth: {
         cookies: { domain: '.levelupbalti.com', secure: true, sameSite: 'Lax' },
+        depth: 3,
+        tokenExpiration: 1209600,
+        useSessions: false,
     },
     fields: [
         // Email added by default
