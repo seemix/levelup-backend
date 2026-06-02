@@ -12,7 +12,7 @@ export const Users: CollectionConfig = {
         useAsTitle: 'email',
     },
     auth: {
-        cookies: { domain: 'admin.levelupbalti.com', secure: true, sameSite: 'Lax' },
+        cookies: { domain: '.levelupbalti.com', secure: true, sameSite: 'Lax' },
     },
     fields: [
         // Email added by default
