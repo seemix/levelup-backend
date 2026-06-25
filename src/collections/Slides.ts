@@ -19,6 +19,14 @@ export const Slides: CollectionConfig = {
             name: 'image',
             type: 'upload',
             relationTo: 'media',
+            label: '1920x1080'
+        },
+        {
+            name: 'verticalImage',
+            type: 'upload',
+            relationTo: 'media',
+            label: '1080x2400',
+            required: true
         }
     ]
 };

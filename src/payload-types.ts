@@ -198,6 +198,7 @@ export interface Slide {
   id: string;
   title?: string | null;
   image?: (string | null) | Media;
+  verticalImage: string | Media;
   updatedAt: string;
   createdAt: string;
 }
@@ -336,6 +337,7 @@ export interface BarbersSelect<T extends boolean = true> {
 export interface SlidesSelect<T extends boolean = true> {
   title?: T;
   image?: T;
+  verticalImage?: T;
   updatedAt?: T;
   createdAt?: T;
 }
