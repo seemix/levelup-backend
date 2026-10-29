@@ -1,11 +1,11 @@
-import type { CollectionConfig } from 'payload';
-import { adminOrEditor, anyone } from '@/access';
+import type { CollectionConfig } from 'payload'
+import { adminOrEditor, anyone } from '@/access'
 
 export const contentAccess: NonNullable<CollectionConfig['access']> = {
-    read: anyone,
-    create: adminOrEditor,
-    update: adminOrEditor,
-    delete: adminOrEditor,
-};
+  read: anyone,
+  create: adminOrEditor,
+  update: adminOrEditor,
+  delete: adminOrEditor,
+}
 
-export const contentGroup = 'Content';
+export const contentGroup = 'Content'

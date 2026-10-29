@@ -24,7 +24,7 @@
 }
 body {
   font-size: var(--font-size-base);
-  font-family: "Inter", sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 .thumbnail {
   min-width: 150px !important;
@@ -40,7 +40,7 @@ body {
 }
 button:active {
   transform: translateY(2px) scale(0.99);
-  transition: all .15s ease-in;
+  transition: all 0.15s ease-in;
 }
 .btn {
   cursor: pointer;

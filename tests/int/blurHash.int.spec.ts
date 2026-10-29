@@ -27,6 +27,8 @@ describe('generateBlurHash', () => {
   })
 
   it('throws APIError for broken images', async () => {
-    await expect(run({ data: Buffer.from('nope'), mimetype: 'image/png' })).rejects.toBeInstanceOf(APIError)
+    await expect(run({ data: Buffer.from('nope'), mimetype: 'image/png' })).rejects.toBeInstanceOf(
+      APIError,
+    )
   })
 })
