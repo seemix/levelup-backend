@@ -1,12 +1,15 @@
 import { GlobalConfig } from 'payload';
+import { adminOrEditor, anyone } from '@/access';
+import { contentGroup } from '@/fields';
 
 export const AboutUs: GlobalConfig = {
     slug: 'about-us',
     access: {
-        read: () => true,
+        read: anyone,
+        update: adminOrEditor,
     },
     admin: {
-        group: 'Content'
+        group: contentGroup,
     },
-    fields: [{ name: 'content', type: 'richText', localized: true }]
+    fields: [{ name: 'content', type: 'richText', localized: true }],
 };

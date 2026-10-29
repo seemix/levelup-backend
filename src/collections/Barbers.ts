@@ -1,19 +1,27 @@
 import { CollectionConfig } from 'payload';
+import { contentAccess, contentGroup } from '@/fields';
 
 export const Barbers: CollectionConfig = {
     slug: 'barbers',
-    access: {
-        read: () => true,
-    },
+    access: contentAccess,
     admin: {
         useAsTitle: 'name',
-        group: 'Content'
+        group: contentGroup,
     },
+    defaultSort: 'order',
     fields: [
+        {
+            name: 'order',
+            type: 'number',
+            defaultValue: 0,
+            index: true,
+            admin: { position: 'sidebar', description: 'Lower numbers are shown first' },
+        },
         {
             name: 'name',
             type: 'text',
             required: true,
+            index: true,
         },
         {
             name: 'description',
@@ -31,6 +39,6 @@ export const Barbers: CollectionConfig = {
             type: 'richText',
             required: true,
             localized: true,
-        }
-    ]
-}
+        },
+    ],
+};

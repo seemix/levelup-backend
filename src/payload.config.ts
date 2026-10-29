@@ -5,15 +5,16 @@ import { fileURLToPath } from 'url';
 import path from 'path';
 import sharp from 'sharp';
 
-import { Users } from './collections/Users';
-import { Media } from './collections/Media';
+import { Users } from '@/collections/Users';
+import { Media } from '@/collections/Media';
 import { Barbers } from '@/collections/Barbers';
 import { Slides } from '@/collections/Slides';
 import { AboutUs } from '@/globals/AboutUs';
+import { env } from '@/env';
+import { migrations } from '@/migrations';
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
-
 
 export default buildConfig({
     routes: {
@@ -22,21 +23,17 @@ export default buildConfig({
     auth: {
         jwtOrder: ['cookie', 'Bearer'],
     },
-    // cors: [
-    //     process.env.FRONTEND_URL || 'https://levelupbalti.com',
-    //     process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
-    // ],
-    // csrf: [
-    //     process.env.FRONTEND_URL || 'https://levelupbalti.com',
-    //     process.env.BACKEND_URL || 'https://admin.levelupbalti.com',
-    // ],
+    cors: env.allowedOrigins,
+    csrf: env.allowedOrigins,
+    graphQL: {
+        disablePlaygroundInProduction: true,
+    },
     admin: {
         user: Users.slug,
         importMap: {
             baseDir: path.resolve(dirname),
         },
         components: {
-          //  header: ['@/app/(payload)/admin/components/LocaleSwitcher'],
             graphics: {
                 Logo: '@/app/(payload)/components/Logo',
                 Icon: '@/app/(payload)/components/Logo',
@@ -46,17 +43,18 @@ export default buildConfig({
     localization: {
         locales: ['ru', 'ro', 'en'],
         defaultLocale: 'ru',
-        //  fallbackLocale: true,
     },
+    defaultDepth: 1,
     collections: [Users, Media, Barbers, Slides],
     globals: [AboutUs],
     editor: lexicalEditor(),
-    secret: process.env.PAYLOAD_SECRET || '',
+    secret: env.secret,
     typescript: {
         outputFile: path.resolve(dirname, 'payload-types.ts'),
     },
     db: mongooseAdapter({
-        url: process.env.DATABASE_URL || '',
+        url: env.databaseUrl,
+        prodMigrations: migrations,
     }),
     sharp,
     plugins: [],

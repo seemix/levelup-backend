@@ -1,28 +1,23 @@
 import { getPayload } from 'payload'
-import config from '../../src/payload.config.js'
+import config from '../../src/payload.config'
 
 export const testUser = {
   email: 'dev@payloadcms.com',
   password: 'test',
+  roles: ['admin'] as ('admin' | 'editor')[],
 }
 
 /**
- * Seeds a test user for e2e admin tests.
+ * Seeds a test admin user for e2e admin tests.
  */
 export async function seedTestUser(): Promise<void> {
   const payload = await getPayload({ config })
 
-  // Delete existing test user if any
   await payload.delete({
     collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
+    where: { email: { equals: testUser.email } },
   })
 
-  // Create fresh test user
   await payload.create({
     collection: 'users',
     data: testUser,
@@ -37,10 +32,6 @@ export async function cleanupTestUser(): Promise<void> {
 
   await payload.delete({
     collection: 'users',
-    where: {
-      email: {
-        equals: testUser.email,
-      },
-    },
+    where: { email: { equals: testUser.email } },
   })
 }
