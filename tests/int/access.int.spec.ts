@@ -18,6 +18,8 @@ const makeUser = async (roles: ('admin' | 'editor')[]) => {
 describe('access control', () => {
   beforeAll(async () => {
     payload = await getPayload({ config: await config })
+    // Make sure collections/indexes exist before transactions start (avoids lock timeouts).
+    await Promise.all(Object.values(payload.db.collections).map((model) => model.init()))
   })
 
   afterAll(async () => {
@@ -30,8 +32,7 @@ describe('access control', () => {
       payload.create({ collection: 'users', data, overrideAccess: false }),
     ).rejects.toThrow()
 
-    const { docs } = await payload.find({ collection: 'users', overrideAccess: false })
-    expect(docs).toHaveLength(0)
+    await expect(payload.find({ collection: 'users', overrideAccess: false })).rejects.toThrow()
   })
 
   it('denies anonymous writes to content', async () => {

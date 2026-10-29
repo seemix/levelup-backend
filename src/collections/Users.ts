@@ -44,8 +44,15 @@ export const Users: CollectionConfig = {
         beforeChange: [
             async ({ data, operation, req }) => {
                 if (operation !== 'create') return data;
-                const { totalDocs } = await req.payload.count({ collection: 'users', req });
-                if (totalDocs === 0) data.roles = ['admin'];
+                const { docs } = await req.payload.find({
+                    collection: 'users',
+                    depth: 0,
+                    limit: 1,
+                    pagination: false,
+                    select: {},
+                    req,
+                });
+                if (docs.length === 0) data.roles = ['admin'];
                 return data;
             },
         ],
