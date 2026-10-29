@@ -1,0 +1,7 @@
+node_modules
+.next
+media
+src/payload-types.ts
+src/app/(payload)/importMap.js
+pnpm-lock.yaml
+docs
