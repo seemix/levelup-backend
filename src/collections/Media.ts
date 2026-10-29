@@ -1,3 +1,4 @@
+import path from 'path'
 import type { CollectionConfig } from 'payload'
 import { adminOrEditor, anyone } from '@/access'
 import { generateBlurHash } from '@/hooks/generateBlurHash'
@@ -30,6 +31,7 @@ export const Media: CollectionConfig = {
     },
   ],
   upload: {
+    staticDir: path.resolve(process.cwd(), 'media'),
     mimeTypes: ['image/*'],
     imageSizes: [
       { name: 'thumbnail', width: 400, withoutEnlargement: true },

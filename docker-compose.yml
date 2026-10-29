@@ -1,43 +1,36 @@
-version: '3'
-
 services:
   payload:
-    image: node:18-alpine
+    build: .
     ports:
       - '3000:3000'
+    environment:
+      DATABASE_URL: mongodb://mongo:27017/levelup?replicaSet=rs0
+      PAYLOAD_SECRET: ${PAYLOAD_SECRET:?set PAYLOAD_SECRET in .env}
+      FRONTEND_URL: ${FRONTEND_URL:-}
+      BACKEND_URL: ${BACKEND_URL:-}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
     volumes:
-      - .:/home/node/app
-      - node_modules:/home/node/app/node_modules
-    working_dir: /home/node/app/
-    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+      - media:/app/media
     depends_on:
-      - mongo
-      # - postgres
-    env_file:
-      - .env
+      mongo:
+        condition: service_healthy
 
-  # Ensure your DATABASE_URL uses 'mongo' as the hostname ie. mongodb://mongo/my-db-name
+  # Single-node replica set: required for MongoDB transactions used by Payload.
   mongo:
-    image: mongo:latest
+    image: mongo:8
     ports:
       - '27017:27017'
-    command:
-      - --storageEngine=wiredTiger
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    healthcheck:
+      test: >
+        mongosh --quiet --eval
+        "try { rs.status().ok } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'mongo:27017'}]}).ok }"
+      interval: 5s
+      timeout: 10s
+      retries: 10
     volumes:
       - data:/data/db
-    logging:
-      driver: none
-
-  # Uncomment the following to use postgres
-  # postgres:
-  #   restart: always
-  #   image: postgres:latest
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-  #   ports:
-  #     - "5432:5432"
 
 volumes:
   data:
-  # pgdata:
-  node_modules:
+  media:

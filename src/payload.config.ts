@@ -1,4 +1,5 @@
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
+import { s3Storage } from '@payloadcms/storage-s3'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -57,5 +58,24 @@ export default buildConfig({
     prodMigrations: migrations,
   }),
   sharp,
-  plugins: [],
+  plugins: [
+    // Media goes to S3-compatible storage (S3, R2, MinIO...) only when S3_BUCKET is configured.
+    ...(env.s3
+      ? [
+          s3Storage({
+            collections: { media: { prefix: 'media' } },
+            bucket: env.s3.bucket,
+            config: {
+              region: env.s3.region,
+              endpoint: env.s3.endpoint,
+              forcePathStyle: Boolean(env.s3.endpoint),
+              credentials: {
+                accessKeyId: env.s3.accessKeyId,
+                secretAccessKey: env.s3.secretAccessKey,
+              },
+            },
+          }),
+        ]
+      : []),
+  ],
 })
