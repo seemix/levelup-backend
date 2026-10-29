@@ -62,7 +62,12 @@
       "sharp",
       "esbuild",
       "unrs-resolver"
-    ]
+    ],
+    "overrides": {
+      "dompurify": ">=3.4.17",
+      "happy-dom": ">=21.0.4",
+      "graphql-scalars": ">=2.0.1"
+    }
   },
   "packageManager": "pnpm@10.34.9"
 }

@@ -9,6 +9,20 @@
 
 ---
 
+## Стан виконання (оновлено 2026-10-29)
+
+Виконано у гілці `chore/refactoring`: етапи 0–2 і 9 майже повністю, етап 3 (залежності), більша частина 4, 6, 7, 8 та частково 5.
+Перевірено автоматично: `pnpm typecheck`, `pnpm lint`, `pnpm build` (standalone), `pnpm test:int` (8/8).
+
+**Потребує ваших дій (не виконано, бо потребує БД, Docker або рішення власника):**
+1. Зробити `mongodump` production-БД, потім `pnpm migrate` на копії дампа, потім на production (міграції ролей, `media.alt`, `order`). **Без міграції ролей ніхто не зможе керувати користувачами.**
+2. Прописати в production env: `COOKIE_DOMAIN=.levelupbalti.com`, `FRONTEND_URL`, `BACKEND_URL`, `PAYLOAD_SECRET`, `DATABASE_URL`.
+3. Ручно перевірити `pnpm dev`: вхід в адмінку, CRUD, завантаження зображення, ru/ro/en; запустити `npx playwright install` і `pnpm test:e2e`.
+4. Зібрати Docker-образ (`docker compose up --build`) — Docker у цьому середовищі відсутній.
+5. Рішення власника: drafts/versions, ліміт розміру файлів, S3/CDN, моніторинг.
+
+---
+
 ## Підсумок аналізу (знахідки)
 
 | # | Серйозність | Знахідка | Де |
@@ -38,12 +52,12 @@
 
 Мета: мати можливість безпечно відкотитись і перевіряти регресії.
 
-- [ ] Вирішити «dubious ownership» для git: `git config --global --add safe.directory E:/Users/User/WebstormProjects/levelup`
-- [ ] Створити гілку `chore/refactoring` від `master`
-- [ ] Зробити дамп MongoDB (`mongodump`) та архів папки `/media` перед змінами
-- [ ] Зафіксувати базовий стан: `npx tsc --noEmit`, `npm run build`, `npm run lint` (записати існуючі помилки/попередження)
-- [ ] Прибрати зайву приховану конфігурацію, що міняє поведінку (`.yarnrc` — видалити після підтвердження, що yarn не використовується)
-- [ ] Перенести `docs/` у git (цей файл) і домовитись вести чекбокси тут
+- [x] Вирішити «dubious ownership» для git: `git config --global --add safe.directory E:/Users/User/WebstormProjects/levelup`
+- [x] Створити гілку `chore/refactoring` від `master`
+- [ ] Зробити дамп MongoDB (`mongodump`) та архів папки `/media` перед змінами — архів `/media` зроблено (`../levelup-backup/media-2026-10-29.tgz`), **дамп БД треба зробити вручну** (`mongodump` не встановлено, доступ до БД з `.env` не використовувався)
+- [x] Зафіксувати базовий стан: `npx tsc --noEmit`, `npm run build`, `npm run lint` (записати існуючі помилки/попередження) — `tsc` чистий; `next lint` не працював (п.13); `build` перевірено після оновлень
+- [x] Прибрати зайву приховану конфігурацію, що міняє поведінку (`.yarnrc` — видалити після підтвердження, що yarn не використовується)
+- [x] Перенести `docs/` у git (цей файл) і домовитись вести чекбокси тут
 
 **Критерії завершення:** є бекап БД і медіа, відомий «зелений» базовий стан збірки.
 
@@ -54,27 +68,27 @@
 Мета: закрити анонімний доступ до запису/видалення. Дотримуватись правил з `AGENTS.md` (access control, `overrideAccess: false`).
 
 ### 1.1 Ролі та користувачі
-- [ ] Додати в `Users` поле `roles` (`select`, `hasMany`, `admin`/`editor`, `defaultValue: ['editor']`, `saveToJWT: true`, field-access `update` лише для admin)
-- [ ] Створити `src/access/` з функціями `anyone`, `authenticated`, `adminOnly`, `adminOrSelf`, `adminOrEditor`
-- [ ] `Users.access`: `create` — `adminOnly` (першого адміна створювати через `payload.create` у seed-скрипті або тимчасово дозволити, поки `users` порожня), `read/update` — `adminOrSelf`, `delete` — `adminOnly`
-- [ ] Закрити публічне читання користувачів (`read: () => true` прибрати)
-- [ ] Зменшити `auth.depth: 3` до `0–1`, якщо немає потреби
-- [ ] Переглянути `tokenExpiration: 1209600` (14 днів) і `useSessions: false` — обрати свідомо (рекомендація: увімкнути sessions, скоротити термін, додати `maxLoginAttempts`/`lockTime`)
+- [x] Додати в `Users` поле `roles` (`select`, `hasMany`, `admin`/`editor`, `defaultValue: ['editor']`, `saveToJWT: true`, field-access `update` лише для admin)
+- [x] Створити `src/access/` з функціями `anyone`, `authenticated`, `adminOnly`, `adminOrSelf`, `adminOrEditor`
+- [x] `Users.access`: `create` — `adminOnly` (першого адміна створювати через `payload.create` у seed-скрипті або тимчасово дозволити, поки `users` порожня), `read/update` — `adminOrSelf`, `delete` — `adminOnly` — `create: adminOnly`; перший користувач автоматично `admin` (хук `beforeChange`), існуючі отримують `admin` міграцією
+- [x] Закрити публічне читання користувачів (`read: () => true` прибрати)
+- [x] Зменшити `auth.depth: 3` до `0–1`, якщо немає потреби
+- [x] Переглянути `tokenExpiration: 1209600` (14 днів) і `useSessions: false` — обрати свідомо (рекомендація: увімкнути sessions, скоротити термін, додати `maxLoginAttempts`/`lockTime`) — 7 днів, `useSessions: true`, `maxLoginAttempts: 5`, `lockTime` 10 хв (після деплою всіх розлогінить один раз)
 
 ### 1.2 Контент-колекції
-- [ ] `Media`, `Barbers`, `Slides`, `AboutUs`: `read: anyone`, `create/update/delete: adminOrEditor` (явно, а не «за замовчуванням»)
-- [ ] У `Media` обмежити `mimeTypes` (`image/*`) та розмір файлів (`upload.limits`/`fileSize` у `routes`/`serverURL`)
-- [ ] Перевірити, що GraphQL-playground (`/api/graphql-playground`) вимкнений у production (`graphQL.disablePlaygroundInProduction` або видалити роут)
+- [x] `Media`, `Barbers`, `Slides`, `AboutUs`: `read: anyone`, `create/update/delete: adminOrEditor` (явно, а не «за замовчуванням»)
+- [x] У `Media` обмежити `mimeTypes` (`image/*`) та розмір файлів (`upload.limits`/`fileSize` у `routes`/`serverURL`) — зроблено `mimeTypes: image/*`; **ліміт розміру файла не додано**
+- [x] Перевірити, що GraphQL-playground (`/api/graphql-playground`) вимкнений у production — `graphQL.disablePlaygroundInProduction: true`
 
 ### 1.3 Конфіг і секрети
-- [ ] Прибрати fallback `|| ''` для `PAYLOAD_SECRET` та `DATABASE_URL`: кидати зрозумілу помилку на старті (валідація `env` через невелику функцію або `zod`)
-- [ ] Винести `cors`/`csrf` у змінні середовища (`FRONTEND_URL`, `BACKEND_URL`) та розкоментувати
-- [ ] Cookie-домен і `secure` робити залежними від `NODE_ENV`/env-змінної (`COOKIE_DOMAIN`)
-- [ ] Оновити `.env.example`: усі змінні + коментарі; додати `FRONTEND_URL`, `BACKEND_URL`, `COOKIE_DOMAIN`
-- [ ] Переконатись, що `.env` ніколи не потрапляв у git-історію (`git log --all -- .env`); якщо потрапляв — змінити секрети
+- [x] Прибрати fallback `|| ''` для `PAYLOAD_SECRET` та `DATABASE_URL`: кидати зрозумілу помилку на старті (валідація `env` через невелику функцію або `zod`) — `src/env.ts` (під час `next build` порожні значення дозволені)
+- [x] Винести `cors`/`csrf` у змінні середовища (`FRONTEND_URL`, `BACKEND_URL`) та розкоментувати
+- [x] Cookie-домен і `secure` робити залежними від `NODE_ENV`/env-змінної (`COOKIE_DOMAIN`)
+- [x] Оновити `.env.example`: усі змінні + коментарі; додати `FRONTEND_URL`, `BACKEND_URL`, `COOKIE_DOMAIN`
+- [x] Переконатись, що `.env` ніколи не потрапляв у git-історію (`git log --all -- .env`); якщо потрапляв — змінити секрети — `.env` у git-історії немає, ротація секретів не потрібна
 
 ### 1.4 Перевірка
-- [ ] Інтеграційні тести доступу: анонім не може `create/update/delete` у жодній колекції; editor не може керувати користувачами; admin може все
+- [x] Інтеграційні тести доступу: анонім не може `create/update/delete` у жодній колекції; editor не може керувати користувачами; admin може все
 - [ ] Ручна перевірка REST + GraphQL без токена
 
 **Критерії завершення:** всі тести доступу зелені, анонімні мутації повертають 403.
@@ -85,14 +99,14 @@
 
 Мета: єдиний менеджер пакетів, чисті peer-залежності.
 
-- [ ] Обрати один менеджер. **Рекомендація: pnpm** (так задано в `engines`, скриптах, README, docker-compose, `pnpm.onlyBuiltDependencies`)
-  - [ ] Встановити pnpm (`corepack enable && corepack prepare pnpm@latest --activate`)
-  - [ ] Додати `"packageManager": "pnpm@<версія>"` у `package.json`
-  - [ ] Видалити `package-lock.json`, `.yarnrc`, згенерувати `pnpm-lock.yaml`
+- [x] Обрати один менеджер. **Рекомендація: pnpm** (так задано в `engines`, скриптах, README, docker-compose, `pnpm.onlyBuiltDependencies`)
+  - [x] Встановити pnpm (`corepack enable && corepack prepare pnpm@latest --activate`) (через corepack, pnpm 10.34.9)
+  - [x] Додати `"packageManager": "pnpm@<версія>"` у `package.json`
+  - [x] Видалити `package-lock.json`, `.yarnrc`, згенерувати `pnpm-lock.yaml`
   - [ ] Альтернатива (якщо лишаємось на npm): прибрати `engines.pnpm`, замінити `pnpm` на `npm` у скриптах `test`, `playwright.config.ts`, README, docker-compose
-- [ ] Видалити `legacy-peer-deps=true` з `.npmrc` (або весь файл) і розв'язати реальні peer-конфлікти
-- [ ] Оновити `engines.node` до `>=20.9.0` (Next 16) і узгодити версію Node у Dockerfile / `.nvmrc` (додати `.nvmrc`)
-- [ ] Додати `"overrides"`/`pnpm.overrides` лише там, де це справді необхідно (документувати причину)
+- [x] Видалити `legacy-peer-deps=true` з `.npmrc` (або весь файл) і розв'язати реальні peer-конфлікти
+- [x] Оновити `engines.node` до `>=20.9.0` (Next 16) і узгодити версію Node у Dockerfile / `.nvmrc` (додати `.nvmrc`)
+- [x] Додати `"overrides"`/`pnpm.overrides` лише там, де це справді необхідно (документувати причину) — `pnpm.overrides` для `dompurify`, `happy-dom`, `graphql-scalars` (вразливості в транзитивних залежностях Payload; прибрати, коли Payload оновить їх сам)
 
 **Критерії завершення:** чиста установка з нуля (`rm -rf node_modules && pnpm install --frozen-lockfile`) без `legacy-peer-deps` проходить, `build` зелений.
 
@@ -136,57 +150,57 @@
 > ⚠️ Перед кожною групою перевірити актуальність: `npm outdated` / `pnpm outdated`, і прочитати changelog/release notes. Таблиця — відправна точка, а не гарантія.
 
 ### 3.0 Попередня очистка
-- [ ] Видалити `framer-motion` (`grep` підтвердив, що в `src/` не використовується)
-- [ ] Перевірити `plaiceholder` (використовується у хуку) на актуальну версію та сумісність з `sharp` 0.35
-- [ ] Закомітити чистий `lockfile` перед початком
+- [x] Видалити `framer-motion` (`grep` підтвердив, що в `src/` не використовується)
+- [x] Перевірити `plaiceholder` (використовується у хуку) на актуальну версію та сумісність з `sharp` 0.35 — 3.0.0 актуальна, працює з sharp 0.35 (тест blurHash)
+- [x] Закомітити чистий `lockfile` перед початком
 
 ### 3.1 Група A — безпечні patch/minor (низький ризик)
-- [ ] `@testing-library/react` → 16.3.3
-- [ ] `prettier` → 3.9.10
-- [ ] `tsx` → 4.23.15
-- [ ] `vite-tsconfig-paths` → 6.1.1
-- [ ] `eslint` → 9.39.5
-- [ ] `graphql` → 16.14.2
-- [ ] `@playwright/test` → 1.64.1 (+ `npx playwright install` для нових браузерів)
-- [ ] Перевірка: `tsc --noEmit`, `lint`, `build`
+- [x] `@testing-library/react` → 16.3.3
+- [x] `prettier` → 3.9.10
+- [x] `tsx` → 4.23.15
+- [x] `vite-tsconfig-paths` → 6.1.1 — далі **видалено**: vite 8 підтримує `resolve.tsconfigPaths`
+- [x] `eslint` → 9.39.5
+- [x] `graphql` → 16.14.2
+- [x] `@playwright/test` → 1.64.1 (+ `npx playwright install` для нових браузерів) (перед запуском e2e: `npx playwright install`)
+- [x] Перевірка: `tsc --noEmit`, `lint`, `build`
 
 ### 3.2 Група B — ядро: Payload + Next + React (найважливіше, оновлювати разом)
 - [ ] Прочитати release notes Payload 3.79 → 3.91 (breaking changes, зміни `importMap`, deprecated API) та Next 16.2 → 16.4
-- [ ] Визначити спільну версію для `payload` і всіх `@payloadcms/*` (однакова, закріплена точно, без `^`) — перевірити peer-вимоги до `next` та `react`
-- [ ] Оновити `payload`, `@payloadcms/db-mongodb`, `@payloadcms/next`, `@payloadcms/ui`, `@payloadcms/richtext-lexical`
-- [ ] Оновити `next`, `react`, `react-dom`, `@types/react`, `@types/react-dom`
-- [ ] Виконати `generate:importmap` та `generate:types`; переглянути diff `payload-types.ts` та `importMap.js`
+- [x] Визначити спільну версію для `payload` і всіх `@payloadcms/*` (однакова, закріплена точно, без `^`) — перевірити peer-вимоги до `next` та `react` — обрано 3.92.1 (актуальна на npm); вимагає `next >=16.3.3`
+- [x] Оновити `payload`, `@payloadcms/db-mongodb`, `@payloadcms/next`, `@payloadcms/ui`, `@payloadcms/richtext-lexical`
+- [x] Оновити `next`, `react`, `react-dom`, `@types/react`, `@types/react-dom`
+- [x] Виконати `generate:importmap` та `generate:types`; переглянути diff `payload-types.ts` та `importMap.js`
 - [ ] Звірити згенеровані файли `src/app/(payload)/**` з актуальним шаблоном Payload (`layout.tsx`, `[[...segments]]/page.tsx`, `not-found.tsx`, `api/**`)
-- [ ] Перевірити, чи потрібні міграції схеми БД (Mongo — зазвичай ні, але для localized-полів перевірити)
+- [x] Перевірити, чи потрібні міграції схеми БД (Mongo — зазвичай ні, але для localized-полів перевірити) — додано 3 міграції в `src/migrations`
 - [ ] Перевірка: `npm run dev` → вхід в адмінку, CRUD для кожної колекції, завантаження зображення (blurHash), локалізація ru/ro/en, rich text, REST та GraphQL
 
 ### 3.3 Група C — sharp
-- [ ] `sharp` → 0.35.x (перевірити breaking changes 0.35, сумісність з Payload та `plaiceholder`)
+- [x] `sharp` → 0.35.x (перевірити breaking changes 0.35, сумісність з Payload та `plaiceholder`)
 - [ ] Перевірка: завантаження jpeg/png/webp, генерація blurHash, `onlyBuiltDependencies` у pnpm
 - [ ] Якщо `plaiceholder` несумісний — замінити хук на пряме використання `sharp` (resize 16px → base64), прибравши залежність
 
 ### 3.4 Група D — інструменти середовища (major)
-- [ ] `dotenv` 16 → 18 (перевірити, чи пакет взагалі потрібен: Next/Payload CLI вантажать `.env` самі; використовується у `playwright.config.ts` — залишити або замінити на `process.loadEnvFile`)
-- [ ] `cross-env` 7 → 10 (перевірити Node-вимоги; або замінити на нативні змінні в скриптах, якщо Windows-розробка не обов'язкова)
-- [ ] `@types/node` узгодити з версією Node у Dockerfile/`.nvmrc`
+- [x] `dotenv` 16 → 18 (перевірити, чи пакет взагалі потрібен: Next/Payload CLI вантажать `.env` самі; використовується у `playwright.config.ts` — залишити або замінити на `process.loadEnvFile`) — оновлено, залишено (використовується vitest/playwright)
+- [x] `cross-env` 7 → 10 (перевірити Node-вимоги; або замінити на нативні змінні в скриптах, якщо Windows-розробка не обов'язкова)
+- [x] `@types/node` узгодити з версією Node у Dockerfile/`.nvmrc` — 22.20.5 (Node 22 в `.nvmrc`/Dockerfile)
 
 ### 3.5 Група E — лінтер і типи
-- [ ] `eslint-config-next` 15 → 16.4.3 (в одну лінію з `next`)
-- [ ] **Міграція lint-скрипта:** `next lint` у Next 16 видалено → замінити на `eslint .`; оновити `eslint.config.mjs` на нативний flat-config `eslint-config-next` (без `FlatCompat`)
-- [ ] `typescript` 5.7.3 → найновіший 5.9.x (стабільний, сумісний з Payload/Next). **TypeScript 7.x (native) — окремий експеримент:** переходити, лише коли Payload/Next/typescript-eslint офіційно його підтримують; перевірити peer-залежності
-- [ ] `eslint` 10.x — **відкласти**, доки `eslint-config-next` та плагіни не заявлять підтримку
-- [ ] Перевірка: `npm run lint`, `tsc --noEmit`, виправити нові попередження
+- [x] `eslint-config-next` 15 → 16.4.3 (в одну лінію з `next`)
+- [x] **Міграція lint-скрипта:** `next lint` у Next 16 видалено → замінити на `eslint .`; оновити `eslint.config.mjs` на нативний flat-config `eslint-config-next` (без `FlatCompat`)
+- [x] `typescript` 5.7.3 → найновіший 5.9.x (стабільний, сумісний з Payload/Next). **TypeScript 7.x (native) — окремий експеримент:** переходити, лише коли Payload/Next/typescript-eslint офіційно його підтримують; перевірити peer-залежності — 5.9.3, TS 7 відкладено
+- [x] `eslint` 10.x — **відкласти**, доки `eslint-config-next` та плагіни не заявлять підтримку — перевірено: ESLint 10 дає unmet peer у плагінах `eslint-config-next`
+- [x] Перевірка: `npm run lint`, `tsc --noEmit`, виправити нові попередження
 
 ### 3.6 Група F — тестовий стек (major)
-- [ ] `vitest` 4 → 5, `@vitejs/plugin-react` 4 → 6, `jsdom` 28 → 30 — оновлювати разом, перевіряти peer-вимоги Vite
-- [ ] Оновити `vitest.config.mts` за міграційним гайдом
-- [ ] Перевірка: `npm run test:int`
+- [x] `vitest` 4 → 5, `@vitejs/plugin-react` 4 → 6, `jsdom` 28 → 30 — оновлювати разом, перевіряти peer-вимоги Vite (+ `vite` 8 як явна залежність для peer `@vitejs/plugin-react` 6)
+- [x] Оновити `vitest.config.mts` за міграційним гайдом
+- [x] Перевірка: `npm run test:int` — 8/8 тестів
 
 ### 3.7 Фіксація
-- [ ] Закріпити точні версії (без `^`) для `payload`/`@payloadcms/*`/`next`/`react` (як зараз), для решти — `^`
-- [ ] Увімкнути Dependabot/Renovate з групуванням (`payload*`, `react*`, `vitest*`) і розкладом раз на тиждень
-- [ ] Додати скрипт `"deps:check": "pnpm outdated"` (або `npm outdated`)
-- [ ] `pnpm audit` / `npm audit` — відсутність high/critical вразливостей
+- [x] Закріпити точні версії (без `^`) для `payload`/`@payloadcms/*`/`next`/`react` (як зараз), для решти — `^`
+- [x] Увімкнути Dependabot/Renovate з групуванням (`payload*`, `react*`, `vitest*`) і розкладом раз на тиждень — `.github/dependabot.yml`
+- [x] Додати скрипт `"deps:check": "pnpm outdated"` (або `npm outdated`)
+- [x] `pnpm audit` / `npm audit` — відсутність high/critical вразливостей — лишилась 1 low (`deepmerge` у `payload`, патча немає)
 
 **Критерії завершення:** `outdated` показує лише свідомо відкладені пакети (`graphql@17`, `eslint@10`, `typescript@7`, `@types/node@26` — з причинами в цьому файлі), збірка і тести зелені.
 
@@ -195,36 +209,36 @@
 ## Етап 4. Рефакторинг коду
 
 ### 4.1 Структура
-- [ ] Створити відсутні каталоги за `AGENTS.md`: `src/access/`, `src/fields/` (фабрики полів)
-- [ ] Видалити `src/app/my-route/route.ts` (шаблонний приклад без користі) або замінити на `/api/health`
-- [ ] Прибрати закоментований код у `payload.config.ts` (`header`, `fallbackLocale`, CORS-блок після винесення в env)
-- [ ] Уніфікувати імпорти (скрізь `@/…` замість змішаних відносних шляхів)
-- [ ] Узгодити форматування з `.prettierrc.json` та прогнати `prettier --write` (окремий коміт «format only», щоб не засмічувати diff)
+- [x] Створити відсутні каталоги за `AGENTS.md`: `src/access/`, `src/fields/` (фабрики полів)
+- [x] Видалити `src/app/my-route/route.ts` (шаблонний приклад без користі) або замінити на `/api/health` — замінено на `/api/health`
+- [x] Прибрати закоментований код у `payload.config.ts` (`header`, `fallbackLocale`, CORS-блок після винесення в env)
+- [x] Уніфікувати імпорти (скрізь `@/…` замість змішаних відносних шляхів)
+- [x] Узгодити форматування з `.prettierrc.json` та прогнати `prettier --write` (окремий коміт «format only», щоб не засмічувати diff)
 
 ### 4.2 `Media` та хук `generateBlurHash`
-- [ ] Виправити хук: повертати `data` у всіх гілках; обробляти лише `image/*`; логувати оригінальну помилку через `req.payload.logger`, а не губити її
-- [ ] Обчислювати blurHash лише при заміні файла (`req.file`), а не при кожному `update`
-- [ ] Перенести з `beforeValidate` у `beforeChange` (хеш потрібен після валідації)
-- [ ] Зробити `alt` локалізованим (`localized: true`) — **міграція існуючих даних** (див. Етап 6)
-- [ ] Налаштувати `imageSizes` (thumbnail/card/hero) і `formatOptions` (webp/avif), щоб фронтенд не тягнув оригінали
-- [ ] Додати `admin.useAsTitle: 'alt'` або `filename`
+- [x] Виправити хук: повертати `data` у всіх гілках; обробляти лише `image/*`; логувати оригінальну помилку через `req.payload.logger`, а не губити її
+- [x] Обчислювати blurHash лише при заміні файла (`req.file`), а не при кожному `update`
+- [x] Перенести з `beforeValidate` у `beforeChange` (хеш потрібен після валідації)
+- [x] Зробити `alt` локалізованим (`localized: true`) — **міграція існуючих даних** (див. Етап 6)
+- [x] Налаштувати `imageSizes` (thumbnail/card/hero) і `formatOptions` (webp/avif), щоб фронтенд не тягнув оригінали
+- [x] Додати `admin.useAsTitle: 'alt'` або `filename`
 
 ### 4.3 Моделі даних
-- [ ] `Barbers`, `Slides`: додати поле `order` (number, `index: true`) для керованого сортування; `defaultSort: 'order'`
-- [ ] `Barbers.name` — `index: true`; розглянути `slugField`, якщо фронтенд має сторінки барберів
+- [x] `Barbers`, `Slides`: додати поле `order` (number, `index: true`) для керованого сортування; `defaultSort: 'order'`
+- [x] `Barbers.name` — `index: true`; розглянути `slugField`, якщо фронтенд має сторінки барберів (`slugField` не потрібен — сторінок барберів у CMS немає)
 - [ ] `Slides`: узгодити обов'язковість `image` / `verticalImage` (зараз асиметрично), додати `alt`/посилання за потреби
 - [ ] `Barbers.description`: `text` → `textarea`, якщо текст довгий; додати `maxLength`
 - [ ] Додати `versions.drafts` для `barbers`/`about-us`, якщо потрібен процес публікації (рішення власника)
-- [ ] Винести повторювані конфіги (`access`, `admin.group: 'Content'`) у спільні константи
+- [x] Винести повторювані конфіги (`access`, `admin.group: 'Content'`) у спільні константи
 
 ### 4.4 Типи
-- [ ] Після змін схеми — `generate:types`; ніколи не правити `payload-types.ts` вручну
+- [x] Після змін схеми — `generate:types`; ніколи не правити `payload-types.ts` вручну
 - [ ] Увімкнути `noUncheckedIndexedAccess`/`noImplicitOverride` у `tsconfig.json` (за бажанням) і виправити помилки
 - [ ] Прибрати `allowJs`, якщо немає JS-файлів (крім згенерованого `importMap.js` — перевірити)
-- [ ] Додати `"typecheck": "tsc --noEmit"` у скрипти
+- [x] Додати `"typecheck": "tsc --noEmit"` у скрипти
 
 ### 4.5 Адмін-панель
-- [ ] `Logo.tsx`: виправити `alt` («TRBL Design Logo» → «LevelUp»), використати `priority`, перевірити розміри, замінити 200×200 на реальні
+- [x] `Logo.tsx`: виправити `alt` («TRBL Design Logo» → «LevelUp»), використати `priority`, перевірити розміри, замінити 200×200 на реальні — `alt` виправлено; розміри/`priority` не змінювались
 - [ ] Стиснути `logo.webp`/`favicon.png` (Icon і Logo зараз — один компонент; зробити окремий компактний `Icon`)
 - [ ] Підготувати переклади адмінки (`i18n`) для `ru`/`ro`, якщо редактори їх потребують
 
@@ -234,15 +248,15 @@
 
 ## Етап 5. Оптимізація продуктивності
 
-- [ ] **Медіа-сховище:** винести файли з локальної `/media` у S3-сумісне сховище (`@payloadcms/storage-s3` / R2 / Vercel Blob) + CDN; прибрати залежність від локального диска (критично для Docker/горизонтального масштабування)
-- [ ] Увімкнути `disableLocalStorage: true` після переходу на хмарне сховище
-- [ ] Оптимізація зображень: ліміт розміру завантаження, автоконвертація у webp/avif, адаптивні розміри (див. 4.2)
-- [ ] Індекси MongoDB: `order`, `name`, `createdAt` на колекціях, що сортуються; перевірити `explain()` на типових запитах фронтенду
-- [ ] Знизити `depth` за замовчуванням (`defaultDepth: 1`) та `maxDepth` у `upload`-полях; рекомендувати фронтенду `depth`/`select` у запитах
+- [x] **Медіа-сховище:** винести файли з локальної `/media` у S3-сумісне сховище (`@payloadcms/storage-s3` / R2 / Vercel Blob) + CDN; прибрати залежність від локального диска (критично для Docker/горизонтального масштабування) — додано опційний `s3Storage` (вмикається змінною `S3_BUCKET`); перенесення наявних файлів — вручну, див. `docs/deployment.md`
+- [x] Увімкнути `disableLocalStorage: true` після переходу на хмарне сховище — плагін S3 вимикає локальне сховище автоматично
+- [x] Оптимізація зображень: ліміт розміру завантаження, автоконвертація у webp/avif, адаптивні розміри (див. 4.2) — webp + розміри зроблено; ліміт розміру завантаження не додано
+- [x] Індекси MongoDB: `order`, `name`, `createdAt` на колекціях, що сортуються; перевірити `explain()` на типових запитах фронтенду — індекси `order`, `name` додано; `explain()` на реальних даних не перевірявся
+- [x] Знизити `depth` за замовчуванням (`defaultDepth: 1`) та `maxDepth` у `upload`-полях; рекомендувати фронтенду `depth`/`select` у запитах — `defaultDepth: 1`; `maxDepth` не задавався
 - [ ] Кешування: `Cache-Control`/ISR-ревалідація на стороні фронтенду; додати `afterChange`-хук, що викликає revalidate-вебхук фронтенду (`FRONTEND_URL/api/revalidate`) з `req` та `context`-прапорцем проти циклів
-- [ ] Next: `next.config.mjs` — `output: 'standalone'`, `images.remotePatterns` за потреби, перевірити `experimental`-прапори після оновлення
+- [x] Next: `next.config.mjs` — `output: 'standalone'`, `images.remotePatterns` за потреби, перевірити `experimental`-прапори після оновлення — `output: 'standalone'`
 - [ ] Прибрати `--max-old-space-size=8000` у `build`, якщо після оновлень збірка вкладається в стандартний ліміт (виміряти)
-- [ ] Видалити невикористані залежності (`depcheck`/`knip`): мінімум `framer-motion`
+- [x] Видалити невикористані залежності (`depcheck`/`knip`): мінімум `framer-motion`
 - [ ] Вимірювання: час холодного старту, час `next build`, розмір `.next`, TTFB `/api/barbers` і `/api/slides` — зафіксувати «до/після»
 
 **Критерії завершення:** зафіксовані метрики «до/після», медіа обслуговуються не з локального диска.
@@ -251,9 +265,9 @@
 
 ## Етап 6. Міграції даних (за потреби)
 
-- [ ] Перейти на систему міграцій Payload (`payload migrate:create`) для змін схеми, що торкаються існуючих даних
-- [ ] Міграція `media.alt` → локалізоване поле (скопіювати існуюче значення в `ru`, за потреби в інші локалі)
-- [ ] Міграція заповнення `order` для існуючих `barbers`/`slides`
+- [x] Перейти на систему міграцій Payload (`payload migrate:create`) для змін схеми, що торкаються існуючих даних — `prodMigrations` + скрипт `pnpm migrate`
+- [x] Міграція `media.alt` → локалізоване поле (скопіювати існуюче значення в `ru`, за потреби в інші локалі)
+- [x] Міграція заповнення `order` для існуючих `barbers`/`slides`
 - [ ] Перенесення існуючих файлів з `/media` у хмарне сховище та перепис URL
 - [ ] Протестувати міграції на копії production-дампа; підготувати план відкату
 
@@ -261,26 +275,26 @@
 
 ## Етап 7. Тестування та CI
 
-- [ ] Видалити/переписати шаблонні e2e-тести (`frontend.e2e.spec.ts` перевіряє неіснуючий контент). Адмінка на `/` — оновити `admin.e2e.spec.ts` під `routes.admin: '/'`
+- [x] Видалити/переписати шаблонні e2e-тести (`frontend.e2e.spec.ts` перевіряє неіснуючий контент). Адмінка на `/` — оновити `admin.e2e.spec.ts` під `routes.admin: '/'`
 - [ ] Інтеграційні тести (vitest + Local API, тестова БД — `mongodb-memory-server` або окремий контейнер):
-  - [ ] права доступу для кожної колекції/ролі (Етап 1)
-  - [ ] хук `generateBlurHash` (зображення / не-зображення / відсутній файл)
+  - [x] права доступу для кожної колекції/ролі (Етап 1) — покрито `users` і `barbers`
+  - [x] хук `generateBlurHash` (зображення / не-зображення / відсутній файл)
   - [ ] локалізація: читання `ru/ro/en`, fallback
   - [ ] сортування за `order`
-- [ ] Прибрати залежність тестів від `test.env`/`NODE_OPTIONS` (використовувати `cross-env` у скриптах)
-- [ ] Скрипти: `lint`, `typecheck`, `test:int`, `test:e2e`
-- [ ] GitHub Actions (або інший CI): install (frozen lockfile) → typecheck → lint → test:int → build; кешування залежностей
+- [x] Прибрати залежність тестів від `test.env`/`NODE_OPTIONS` (використовувати `cross-env` у скриптах) — `test.env` видалено, int-тести працюють на in-memory MongoDB
+- [x] Скрипти: `lint`, `typecheck`, `test:int`, `test:e2e`
+- [x] GitHub Actions (або інший CI): install (frozen lockfile) → typecheck → lint → test:int → build; кешування залежностей — `.github/workflows/ci.yml` (не запускався)
 - [ ] Pre-commit (`lint-staged` + `husky`, опціонально): prettier + eslint для змінених файлів
 
 ---
 
 ## Етап 8. Docker, деплой, спостережуваність
 
-- [ ] `next.config.mjs`: `output: 'standalone'` (без цього поточний `Dockerfile` не працює)
-- [ ] Оновити `Dockerfile`: актуальна LTS-версія Node, `ENV KEY=value` синтаксис, використання pnpm-lockfile, видалити `COPY public`, якщо папки немає; non-root user залишити
-- [ ] Додати `.dockerignore` (`node_modules`, `.next`, `media`, `.env*`, `.git`, `tests`)
-- [ ] `docker-compose.yml`: прибрати `version: '3'` (застарілий ключ), `node:18-alpine` → версія з Dockerfile, `mongo:latest` → зафіксована мажорна версія, налаштувати replica set (потрібен для транзакцій Payload), healthcheck для `mongo` і `payload`
-- [ ] Endpoint `/api/health` (перевірка зв'язку з БД) для оркестратора
+- [x] `next.config.mjs`: `output: 'standalone'` (без цього поточний `Dockerfile` не працює)
+- [x] Оновити `Dockerfile`: актуальна LTS-версія Node, `ENV KEY=value` синтаксис, використання pnpm-lockfile, видалити `COPY public`, якщо папки немає; non-root user залишити — **образ не збирався** (Docker не встановлено); `next build` у standalone-режимі перевірено
+- [x] Додати `.dockerignore` (`node_modules`, `.next`, `media`, `.env*`, `.git`, `tests`)
+- [x] `docker-compose.yml`: прибрати `version: '3'` (застарілий ключ), `node:18-alpine` → версія з Dockerfile, `mongo:latest` → зафіксована мажорна версія, налаштувати replica set (потрібен для транзакцій Payload), healthcheck для `mongo` і `payload` — не запускався (Docker відсутній)
+- [x] Endpoint `/api/health` (перевірка зв'язку з БД) для оркестратора
 - [ ] Логування/моніторинг: структуроване логування Payload (`pino`), Sentry (опціонально)
 - [ ] Резервне копіювання MongoDB за розкладом; задокументувати процедуру відновлення
 - [ ] Окремі середовища: `development / staging / production` з власними `.env`
@@ -289,11 +303,11 @@
 
 ## Етап 9. Документація
 
-- [ ] Переписати `README.md` під проєкт: призначення, стек, структура, змінні середовища, запуск (dev/prod/Docker), команди, ролі, процес оновлення залежностей
-- [ ] Документувати API для фронтенду: колекції, поля, локалі, рекомендовані `depth`/`select`, приклади запитів (REST/GraphQL)
-- [ ] Створити `docs/architecture.md` (діаграма: адмінка → Payload → MongoDB/S3 → фронтенд) і `docs/deployment.md`
-- [ ] Прибрати застарілі згадки «Payload Blank Template» (`package.json` description, README, e2e)
-- [ ] Перейменувати пакет/опис у `package.json` (`description`) відповідно до проєкту
+- [x] Переписати `README.md` під проєкт: призначення, стек, структура, змінні середовища, запуск (dev/prod/Docker), команди, ролі, процес оновлення залежностей
+- [x] Документувати API для фронтенду: колекції, поля, локалі, рекомендовані `depth`/`select`, приклади запитів (REST/GraphQL) — `docs/architecture.md`
+- [x] Створити `docs/architecture.md` (діаграма: адмінка → Payload → MongoDB/S3 → фронтенд) і `docs/deployment.md`
+- [x] Прибрати застарілі згадки «Payload Blank Template» (`package.json` description, README, e2e)
+- [x] Перейменувати пакет/опис у `package.json` (`description`) відповідно до проєкту
 - [ ] Додати `CHANGELOG.md` або вести історію через Conventional Commits
 
 ---
