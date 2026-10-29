@@ -9,6 +9,7 @@ export const Barbers: CollectionConfig = {
     group: contentGroup,
   },
   defaultSort: 'order',
+  versions: { maxPerDoc: 20 },
   fields: [
     {
       name: 'order',

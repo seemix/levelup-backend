@@ -11,5 +11,6 @@ export const AboutUs: GlobalConfig = {
   admin: {
     group: contentGroup,
   },
+  versions: { max: 20 },
   fields: [{ name: 'content', type: 'richText', localized: true }],
 }

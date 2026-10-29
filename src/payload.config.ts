@@ -26,6 +26,11 @@ export default buildConfig({
   },
   cors: env.allowedOrigins,
   csrf: env.allowedOrigins,
+  upload: {
+    // 5 MB per file; larger uploads are rejected instead of being truncated.
+    limits: { fileSize: 5 * 1024 * 1024 },
+    abortOnLimit: true,
+  },
   graphQL: {
     disablePlaygroundInProduction: true,
   },

@@ -19,7 +19,7 @@
 2. Прописати в production env: `COOKIE_DOMAIN=.levelupbalti.com`, `FRONTEND_URL`, `BACKEND_URL`, `PAYLOAD_SECRET`, `DATABASE_URL`.
 3. Ручно перевірити `pnpm dev`: вхід в адмінку, CRUD, завантаження зображення, ru/ro/en; запустити `npx playwright install` і `pnpm test:e2e`.
 4. Зібрати Docker-образ (`docker compose up --build`) — Docker у цьому середовищі відсутній.
-5. Рішення власника: drafts/versions, ліміт розміру файлів, S3/CDN, моніторинг.
+5. Прийняті рішення: лише версії без чернеток (`maxPerDoc: 20`), ліміт файлу 5 МБ, медіа на локальному диску + `scripts/backup.sh` за cron, моніторинг через `/api/health` + uptime-сервіс (треба налаштувати на сервері).
 
 ---
 
@@ -77,7 +77,7 @@
 
 ### 1.2 Контент-колекції
 - [x] `Media`, `Barbers`, `Slides`, `AboutUs`: `read: anyone`, `create/update/delete: adminOrEditor` (явно, а не «за замовчуванням»)
-- [x] У `Media` обмежити `mimeTypes` (`image/*`) та розмір файлів (`upload.limits`/`fileSize` у `routes`/`serverURL`) — зроблено `mimeTypes: image/*`; **ліміт розміру файла не додано**
+- [x] У `Media` обмежити `mimeTypes` (`image/*`) та розмір файлів (`upload.limits`/`fileSize` у `routes`/`serverURL`) — зроблено `mimeTypes: image/*`; ліміт розміру файла 5 МБ додано (`upload.limits.fileSize`)
 - [x] Перевірити, що GraphQL-playground (`/api/graphql-playground`) вимкнений у production — `graphQL.disablePlaygroundInProduction: true`
 
 ### 1.3 Конфіг і секрети
@@ -228,7 +228,7 @@
 - [x] `Barbers.name` — `index: true`; розглянути `slugField`, якщо фронтенд має сторінки барберів (`slugField` не потрібен — сторінок барберів у CMS немає)
 - [ ] `Slides`: узгодити обов'язковість `image` / `verticalImage` (зараз асиметрично), додати `alt`/посилання за потреби
 - [ ] `Barbers.description`: `text` → `textarea`, якщо текст довгий; додати `maxLength`
-- [ ] Додати `versions.drafts` для `barbers`/`about-us`, якщо потрібен процес публікації (рішення власника)
+- [x] Додати `versions.drafts` для `barbers`/`about-us`, якщо потрібен процес публікації — **рішення: лише версії без чернеток** (`maxPerDoc: 20`), публікація лишається миттєвою
 - [x] Винести повторювані конфіги (`access`, `admin.group: 'Content'`) у спільні константи
 
 ### 4.4 Типи
@@ -248,9 +248,9 @@
 
 ## Етап 5. Оптимізація продуктивності
 
-- [x] **Медіа-сховище:** винести файли з локальної `/media` у S3-сумісне сховище (`@payloadcms/storage-s3` / R2 / Vercel Blob) + CDN; прибрати залежність від локального диска (критично для Docker/горизонтального масштабування) — додано опційний `s3Storage` (вмикається змінною `S3_BUCKET`); перенесення наявних файлів — вручну, див. `docs/deployment.md`
+- [x] **Медіа-сховище (рішення: локальний диск + бекапи, S3 лишається опцією):** винести файли з локальної `/media` у S3-сумісне сховище (`@payloadcms/storage-s3` / R2 / Vercel Blob) + CDN; прибрати залежність від локального диска (критично для Docker/горизонтального масштабування) — додано опційний `s3Storage` (вмикається змінною `S3_BUCKET`); перенесення наявних файлів — вручну, див. `docs/deployment.md`
 - [x] Увімкнути `disableLocalStorage: true` після переходу на хмарне сховище — плагін S3 вимикає локальне сховище автоматично
-- [x] Оптимізація зображень: ліміт розміру завантаження, автоконвертація у webp/avif, адаптивні розміри (див. 4.2) — webp + розміри зроблено; ліміт розміру завантаження не додано
+- [x] Оптимізація зображень: ліміт розміру завантаження, автоконвертація у webp/avif, адаптивні розміри (див. 4.2) — webp + розміри + ліміт 5 МБ
 - [x] Індекси MongoDB: `order`, `name`, `createdAt` на колекціях, що сортуються; перевірити `explain()` на типових запитах фронтенду — індекси `order`, `name` додано; `explain()` на реальних даних не перевірявся
 - [x] Знизити `depth` за замовчуванням (`defaultDepth: 1`) та `maxDepth` у `upload`-полях; рекомендувати фронтенду `depth`/`select` у запитах — `defaultDepth: 1`; `maxDepth` не задавався
 - [ ] Кешування: `Cache-Control`/ISR-ревалідація на стороні фронтенду; додати `afterChange`-хук, що викликає revalidate-вебхук фронтенду (`FRONTEND_URL/api/revalidate`) з `req` та `context`-прапорцем проти циклів
@@ -295,8 +295,8 @@
 - [x] Додати `.dockerignore` (`node_modules`, `.next`, `media`, `.env*`, `.git`, `tests`)
 - [x] `docker-compose.yml`: прибрати `version: '3'` (застарілий ключ), `node:18-alpine` → версія з Dockerfile, `mongo:latest` → зафіксована мажорна версія, налаштувати replica set (потрібен для транзакцій Payload), healthcheck для `mongo` і `payload` — не запускався (Docker відсутній)
 - [x] Endpoint `/api/health` (перевірка зв'язку з БД) для оркестратора
-- [ ] Логування/моніторинг: структуроване логування Payload (`pino`), Sentry (опціонально)
-- [ ] Резервне копіювання MongoDB за розкладом; задокументувати процедуру відновлення
+- [x] Логування/моніторинг: структуроване логування Payload (`pino`), Sentry (опціонально) — **рішення: `/api/health` + зовнішній uptime-сервіс, без Sentry**; логи Payload (pino) йдуть у stdout, див. `docs/deployment.md`
+- [x] Резервне копіювання MongoDB за розкладом; задокументувати процедуру відновлення — `scripts/backup.sh` + cron-приклад, `docs/deployment.md` (розклад на сервері налаштувати вручну)
 - [ ] Окремі середовища: `development / staging / production` з власними `.env`
 
 ---
