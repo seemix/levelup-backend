@@ -117,3 +117,36 @@ export const formatDateTime = (instant: Date, locale: string = 'ru'): string =>
     dateStyle: 'long',
     timeStyle: 'short',
   }).format(instant)
+
+/** Instant shifted by whole minutes (elapsed time, so DST does not matter). */
+export const addMinutes = (instant: Date, minutes: number): Date =>
+  new Date(instant.getTime() + minutes * 60_000)
+
+/** Elapsed minutes from `from` to `to` (may be negative). */
+export const minutesBetween = (from: Date, to: Date): number =>
+  (to.getTime() - from.getTime()) / 60_000
+
+/**
+ * Every instant of the local date whose local wall-clock time lies on the grid `step` from 00:00
+ * (spec §5.3 p.3), sorted. On DST days the skipped hour has no instants and the repeated hour
+ * yields two instants per grid time.
+ */
+export const localGridInstants = (date: string, step: number = SLOT_STEP_MINUTES): Date[] => {
+  if (!Number.isInteger(step) || step <= 0 || step > 24 * 60) {
+    throw new RangeError(`Invalid grid step: ${step}`)
+  }
+  const { start, end } = localDayRange(date)
+  const seen = new Set<number>()
+  for (let m = 0; m < 24 * 60; m += step) {
+    const label = minutesToTime(m)
+    const base = localToInstant(date, label)
+    // The offset changes by one hour, so the other occurrence (if any) is one hour away.
+    for (const delta of [-60, 0, 60]) {
+      const instant = addMinutes(base, delta)
+      if (instant >= start && instant < end && toLocalTime(instant) === label) {
+        seen.add(instant.getTime())
+      }
+    }
+  }
+  return [...seen].sort((a, b) => a - b).map((ms) => new Date(ms))
+}

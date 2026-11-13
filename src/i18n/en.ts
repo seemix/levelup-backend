@@ -204,5 +204,7 @@ export const en = {
     barberUserTaken: 'This user is already linked to another barber',
     barberPriceTaken: 'This barber already has a price for this item',
     phoneTaken: 'A client with this phone number already exists',
+    serviceNotFound: 'Service not found',
+    extraNotFound: 'Add-on service not found',
   },
 }

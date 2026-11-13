@@ -206,5 +206,7 @@ export const ro: CrmTranslations = {
     barberUserTaken: 'Acest utilizator este deja legat de alt frizer',
     barberPriceTaken: 'Frizerul are deja un preț pentru această poziție',
     phoneTaken: 'Există deja un client cu acest număr de telefon',
+    serviceNotFound: 'Serviciul nu a fost găsit',
+    extraNotFound: 'Serviciul suplimentar nu a fost găsit',
   },
 }

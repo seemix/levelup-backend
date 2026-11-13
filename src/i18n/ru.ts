@@ -206,5 +206,7 @@ export const ru: CrmTranslations = {
     barberUserTaken: 'Этот пользователь уже привязан к другому барберу',
     barberPriceTaken: 'У барбера уже есть цена для этой позиции',
     phoneTaken: 'Клиент с таким номером телефона уже существует',
+    serviceNotFound: 'Услуга не найдена',
+    extraNotFound: 'Дополнительная услуга не найдена',
   },
 }
