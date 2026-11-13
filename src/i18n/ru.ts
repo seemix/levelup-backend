@@ -472,6 +472,9 @@ export const ru: CrmTranslations = {
       clientComment: 'Комментарий клиента',
       internalNote: 'Внутренняя заметка',
     },
+    move: {
+      title: 'Перенос записи',
+    },
     warnings: {
       title: 'Подтвердите действие',
       hint: 'Подтвердите, чтобы всё равно сохранить изменение.',

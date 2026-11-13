@@ -764,3 +764,37 @@ $column-min: 168px;
     }
   }
 }
+
+.calendar-block--draggable {
+  cursor: grab;
+}
+
+.calendar-block--dragging {
+  opacity: 0.35;
+}
+
+.calendar-block--overlay {
+  z-index: 20;
+  cursor: grabbing;
+  opacity: 0.92;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
+}
+
+.calendar-grid__column--over {
+  background: color-mix(in srgb, var(--theme-elevation-100) 60%, transparent);
+}
+
+.calendar__toast {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--theme-error-500);
+  color: #fff;
+}

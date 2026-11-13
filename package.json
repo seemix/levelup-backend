@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@date-fns/tz": "^1.5.0",
+    "@dnd-kit/core": "^6.3.1",
     "@payloadcms/db-mongodb": "3.92.1",
     "@payloadcms/email-resend": "3.92.1",
     "@payloadcms/next": "3.92.1",

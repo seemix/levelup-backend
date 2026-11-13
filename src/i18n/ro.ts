@@ -472,6 +472,9 @@ export const ro: CrmTranslations = {
       clientComment: 'Comentariul clientului',
       internalNote: 'Notă internă',
     },
+    move: {
+      title: 'Mutarea programării',
+    },
     warnings: {
       title: 'Confirmați acțiunea',
       hint: 'Confirmați pentru a salva totuși modificarea.',

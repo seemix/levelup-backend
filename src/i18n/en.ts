@@ -471,6 +471,9 @@ export const en = {
       clientComment: 'Client comment',
       internalNote: 'Internal note',
     },
+    move: {
+      title: 'Move appointment',
+    },
     warnings: {
       title: 'Please confirm',
       hint: 'Confirm to save the change anyway.',

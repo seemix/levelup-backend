@@ -1,4 +1,5 @@
 'use client'
+import { useDraggable } from '@dnd-kit/core'
 import type { CSSProperties } from 'react'
 
 import { isCancelledStatus } from '@/crm/appointment-status'
@@ -15,6 +16,10 @@ type Props = {
   lane: Lane
   /** Opens the details modal (blocks the user may read only). */
   onOpen: (id: string) => void
+  /** The user may drag this block (own column for a barber, any for admin/manager). */
+  draggable?: boolean
+  /** Rendered inside the `DragOverlay`: fills the overlay, not draggable itself. */
+  overlay?: boolean
 }
 
 const CommentIcon = () => (
@@ -33,16 +38,34 @@ const CheckIcon = () => (
 )
 
 /** Appointment block (A1): barber color, status as icon/style. Time is shown in the salon zone. */
-export const AppointmentBlock = ({ appointment, color, position, lane, onOpen }: Props) => {
+export const AppointmentBlock = ({
+  appointment,
+  color,
+  position,
+  lane,
+  onOpen,
+  draggable = false,
+  overlay = false,
+}: Props) => {
   const t = useCrmT()
+  const dragId = 'id' in appointment ? appointment.id : ''
+  const { setNodeRef, attributes, listeners, isDragging } = useDraggable({
+    id: overlay ? `${dragId}:overlay` : dragId || 'busy',
+    disabled: !draggable || overlay || !dragId,
+  })
   const start = new Date(appointment.start)
   const end = new Date(appointment.end)
   const range = `${toLocalTime(start)}-${toLocalTime(end)}`
+  const layout: CSSProperties = overlay
+    ? { position: 'relative', width: '100%', height: '100%' }
+    : {
+        top: position.top,
+        height: position.height,
+        left: `${(lane.lane / lane.lanes) * 100}%`,
+        width: `${100 / lane.lanes}%`,
+      }
   const style = {
-    top: position.top,
-    height: position.height,
-    left: `${(lane.lane / lane.lanes) * 100}%`,
-    width: `${100 / lane.lanes}%`,
+    ...layout,
     '--block-color': color,
     '--block-text': readableTextColor(color),
   } as CSSProperties
@@ -64,6 +87,9 @@ export const AppointmentBlock = ({ appointment, color, position, lane, onOpen }:
     status === 'completed' && 'calendar-block--completed',
     status === 'no_show' && 'calendar-block--no-show',
     isCancelledStatus(status) && 'calendar-block--cancelled',
+    isDragging && 'calendar-block--dragging',
+    overlay && 'calendar-block--overlay',
+    draggable && 'calendar-block--draggable',
   ]
     .filter(Boolean)
     .join(' ')
@@ -78,6 +104,9 @@ export const AppointmentBlock = ({ appointment, color, position, lane, onOpen }:
 
   return (
     <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
       className={className}
       style={style}
       role="button"

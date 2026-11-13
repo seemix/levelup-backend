@@ -11,9 +11,9 @@ import { accessFor, fieldAccessFor, type Resource } from '@/access/policy'
 import { outsideTransaction } from '@/crm/read-req'
 import { isHexColor, nextBarberColor } from '@/crm/colors'
 import { relationId, validateWeeklySchedule, WEEKDAYS, type RelationValue } from '@/crm/schedule'
-import { contentGroup, orderDescription } from '@/fields'
+import { orderDescription } from '@/fields'
 import { breaksField, scheduleErrorKey, timeField } from '@/fields/schedule'
-import { crmLabel, crmT, type CrmKey } from '@/i18n'
+import { crmLabel, crmLabels, crmT, type CrmKey } from '@/i18n'
 
 const fieldAccess = (
   resource: Resource,
@@ -89,7 +89,7 @@ export const Barbers: CollectionConfig = {
   },
   admin: {
     useAsTitle: 'name',
-    group: contentGroup,
+    group: crmLabels('groups.barbers'),
     defaultColumns: ['name', 'position', 'active', 'showOnSite', 'onlineBooking', 'order'],
   },
   defaultSort: 'order',
