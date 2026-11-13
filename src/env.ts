@@ -30,4 +30,6 @@ export const env = {
   /** `undefined` keeps Payload's defaults when no origins are configured. */
   allowedOrigins: origins.length > 0 ? origins : undefined,
   cookieDomain: process.env.COOKIE_DOMAIN || undefined,
+  /** Password of the users created by `pnpm seed` (development only). */
+  seedPassword: process.env.SEED_PASSWORD || undefined,
 }

@@ -44,6 +44,8 @@ production so the auth cookie is shared with the frontend. Set `S3_*` variables 
 | `pnpm test:e2e` | Playwright admin tests (need a running database from `.env`) |
 | `pnpm generate:types` / `generate:importmap` | Run after changing the schema / custom components |
 | `pnpm migrate` | Apply data migrations from `src/migrations` (run once per deploy) |
+| `pnpm seed` | Development data: 1 location, 3 barbers (schedules, price overrides), 5 users (`admin@`, `manager@`, `barber1..3@levelup.local`, password `SEED_PASSWORD`), catalog, 15 clients, promo code `LEVELUP10`, appointments ±7 days in various statuses. Idempotent; refuses to run with `NODE_ENV=production` |
+| `pnpm seed:reset` | Clears the CRM data (appointments, logs, clients, promo codes, price overrides, exceptions; seed catalog, barbers and users) and seeds again. Locations, site content and users not created by the seed are never touched |
 | `pnpm deps:check` | List outdated dependencies |
 
 ## Docker

@@ -121,6 +121,11 @@ CRM для барбершопу:
   - `plannedCertificate` додасться разом із колекцією `gift-certificates` (етап 18).
   - `schedule-exceptions` отримали віртуальне поле `appointmentsInRange` (запланові записи барбера в діапазоні дат; рахується лише при читанні одного документа; бачать admin і manager).
   - Лоадер слотів за замовчуванням бере зайнятість з `appointments` (`appointmentsBusySource`), а `validatePromo` рахує використання клієнтом через `appointmentsPromoUsage`.
+- A24. Етап 8, seed (`src/seed/`, `pnpm seed`, `pnpm seed:reset`):
+  - Ключі ідемпотентності: e-mail користувача, назва (ru) каталогу, телефон клієнта, код промокоду, `externalId = seed:…` запису. Наявні записи не перезаписуються. Локація — наявна (з міграції етапу 1), інакше створюється.
+  - Скидання (`seed:reset` / `SEED_RESET=true`; `payload run` забирає прапори CLI, тому `--reset` лише запасний варіант) повністю очищає `appointments`, `appointment-logs`, `booking-locks`, `barber-prices`, `schedule-exceptions`, `promo-codes`, `clients`; каталог, барберів і користувачів — лише за ключами seed. Локації, контент сайту та чужі користувачі не чіпаються.
+  - Барбери seed мають `showOnSite = false` (не потрапляють на лендинг). Записи (±7 днів від запуску) створюються сервісом від `system`, статуси `completed`/`no_show`/`cancelled_*` — переходами. Запис у статусі `paid`, каси, витрати, сертифікат — TODO етапів 17–18.
+  - `SEED_PASSWORD` читається через `env.seedPassword`; дефолт — у `.env.example`.
 
 ## 2. Загальні правила
 

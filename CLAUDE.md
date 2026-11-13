@@ -40,7 +40,8 @@ pnpm test:e2e
 pnpm generate:types      # після будь-якої зміни схеми
 pnpm generate:importmap  # після додавання/зміни компонентів адмінки
 pnpm migrate             # застосувати міграції
-pnpm seed                # seed-дані (не в production)
+pnpm seed                # seed-дані (не в production); ідемпотентний, паролі — SEED_PASSWORD з .env
+pnpm seed:reset          # очистити CRM-дані (не контент сайту й не чужих admin/editor) і засіяти заново
 docker compose up mongo  # локальна MongoDB з replica set
 ```
 Готовність етапу: `typecheck` + `lint` + `test:int` зелені.
