@@ -10,6 +10,7 @@ import {
   offHoursSegments,
   visibleRange,
 } from '@/crm/calendar-layout'
+import { slotStartAt } from '@/crm/appointment-form'
 import { barberColorAt } from '@/crm/colors'
 import { toLocalTime } from '@/crm/time'
 
@@ -23,7 +24,16 @@ const PX_PER_MINUTE = 2
 const MIN_BLOCK_HEIGHT = 22
 const NOW_REFRESH_MS = 30_000
 
-export const DayGrid = ({ data, busy }: { data: CalendarData; busy: boolean }) => {
+type Props = {
+  data: CalendarData
+  busy: boolean
+  /** May the user book into this column (admin/manager — any, barber — their own)? */
+  canCreate: (column: CalendarData['columns'][number]) => boolean
+  onOpen: (id: string) => void
+  onCreate: (barberId: string, start: Date) => void
+}
+
+export const DayGrid = ({ data, busy, canCreate, onOpen, onCreate }: Props) => {
   const t = useCrmT()
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -103,7 +113,14 @@ export const DayGrid = ({ data, busy }: { data: CalendarData; busy: boolean }) =
           return (
             <div
               key={`${column.barber.id}-${column.date}`}
-              className={`calendar-grid__column${column.barber.own ? ' calendar-grid__column--own' : ''}`}
+              className={`calendar-grid__column${column.barber.own ? ' calendar-grid__column--own' : ''}${canCreate(column) ? ' calendar-grid__column--bookable' : ''}`}
+              onClick={(event) => {
+                // A click on a block opens it; a click on an empty slot starts a new appointment.
+                if (!canCreate(column) || (event.target as HTMLElement).closest('.calendar-block'))
+                  return
+                const y = event.clientY - event.currentTarget.getBoundingClientRect().top
+                onCreate(column.barber.id, slotStartAt(date, range.from + y / PX_PER_MINUTE, step))
+              }}
             >
               {offHoursSegments(date, column.intervals, range, PX_PER_MINUTE).map((segment) => (
                 <div
@@ -122,6 +139,7 @@ export const DayGrid = ({ data, busy }: { data: CalendarData; busy: boolean }) =
                   color={color}
                   position={position}
                   lane={lanes[itemIndex]}
+                  onOpen={onOpen}
                 />
               ))}
             </div>

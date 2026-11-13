@@ -24,7 +24,10 @@ import {
   type AppointmentServiceResult,
 } from '@/crm/appointments'
 import { ruleError } from '@/crm/errors'
+import { tryNormalizePhone } from '@/crm/phone'
 import { findPromoByCode } from '@/crm/promo'
+
+import { SYSTEM_READ } from '../booking/context'
 
 import { InputErrors, isId, isLocale, localeOf, ok, optionalText, readBody } from '../booking/http'
 import {
@@ -38,12 +41,17 @@ import {
 import { detailView, loadNames, scopeOf, type AppointmentRow } from './view'
 
 export const NOTE_MAX = 1000
+export const NAME_MAX = 60
 export const REASON_MAX = 500
 const MAX_BLOCK_MINUTES = 24 * 60
 
 /** Body fields of create/patch; `undefined` = not sent (patch leaves the stored value). */
+type ClientSpec = { phone: string; firstName: string | null; lastName: string | null }
+
 type ParsedInput = {
   data: AppointmentInput
+  /** A client given by phone (and name for a new card): linked on the server (see `resolveClient`). */
+  clientSpec: ClientSpec | null
   /** Raw promo code text: resolved to the document inside the transaction. */
   promoCode: string | null | undefined
   confirm: boolean
@@ -56,6 +64,9 @@ const PATCH_FIELDS = [
   'location',
   'barber',
   'client',
+  'clientPhone',
+  'clientFirstName',
+  'clientLastName',
   'service',
   'extras',
   'start',
@@ -104,6 +115,18 @@ export const parseAppointmentBody = (
     if (body.client === null) data.client = null
     else if (isId(body.client)) data.client = body.client
     else errors.add('client')
+  }
+  let clientSpec: ClientSpec | null = null
+  if (has(body, 'clientPhone') && body.clientPhone !== null) {
+    // A bad phone has its own code (the form highlights the field).
+    const raw = typeof body.clientPhone === 'string' ? body.clientPhone : ''
+    const phone = raw.length <= 32 ? tryNormalizePhone(raw) : null
+    if (!phone) throw crmError('PHONE_INVALID', 400)
+    clientSpec = {
+      phone,
+      firstName: optionalText(errors, 'clientFirstName', body.clientFirstName, NAME_MAX),
+      lastName: optionalText(errors, 'clientLastName', body.clientLastName, NAME_MAX),
+    }
   }
   if (has(body, 'extras')) {
     const extras = body.extras
@@ -164,7 +187,7 @@ export const parseAppointmentBody = (
     else errors.add('language')
   }
   errors.throwIfAny()
-  return { data, promoCode, confirm: isConfirmed(body.confirm) }
+  return { data, clientSpec, promoCode, confirm: isConfirmed(body.confirm) }
 }
 
 /** Promo code text → document id (`PROMO_NOT_FOUND`); full validation happens in the service. */
@@ -176,6 +199,39 @@ const resolvePromo = async (
   const promo = await findPromoByCode(req, code)
   if (!promo) throw ruleError(req.t, 'PROMO_NOT_FOUND', 404)
   return String(promo.id)
+}
+
+/**
+ * Links the client typed as phone (+ name): the card of that phone, or a new one (`source = staff`).
+ * Read and written on behalf of the system — a barber has no access to `clients` (decision 36) and
+ * the server links the card for them; an existing card is never changed. Runs in the booking transaction.
+ */
+const resolveClient = async (req: PayloadRequest, spec: ClientSpec): Promise<string> => {
+  const { docs } = await req.payload.find({
+    collection: 'clients',
+    ...SYSTEM_READ,
+    req,
+    where: { phone: { equals: spec.phone } },
+    limit: 1,
+    select: {},
+  })
+  if (docs[0]) return String(docs[0].id)
+  if (!spec.firstName) throw crmError('VALIDATION_ERROR', 400, { fields: ['clientFirstName'] })
+  const created = await req.payload.create({
+    collection: 'clients',
+    data: {
+      firstName: spec.firstName,
+      lastName: spec.lastName,
+      phone: spec.phone,
+      language: localeOf(req),
+      source: 'staff',
+    },
+    overrideAccess: true,
+    depth: 0,
+    select: {},
+    req,
+  })
+  return String(created.id)
 }
 
 /** Service warnings that need a confirmation (all of them at the moment). */
@@ -203,7 +259,10 @@ export const createAppointmentEndpoint = crmEndpoint(
   'post',
   '/appointments',
   async (req, staff: StaffContext) => {
-    const { data, promoCode, confirm } = parseAppointmentBody(await readBody(req), 'create')
+    const { data, clientSpec, promoCode, confirm } = parseAppointmentBody(
+      await readBody(req),
+      'create',
+    )
     // A barber creates only in their own column (decision 37): the barber defaults to them.
     if (!data.barber && staff.barberId && !staff.isAdmin && !staff.isManager)
       data.barber = staff.barberId
@@ -213,8 +272,11 @@ export const createAppointmentEndpoint = crmEndpoint(
 
     const { doc, warnings } = await runBookingTransaction(req, async () => {
       const promo = await resolvePromo(req, promoCode)
+      const client =
+        clientSpec && data.client === undefined ? await resolveClient(req, clientSpec) : undefined
       const result = await createAppointment(req, {
         ...data,
+        ...(client === undefined ? {} : { client }),
         ...(promo === undefined ? {} : { promoCode: promo }),
       })
       const warnings = confirmable(result)
@@ -229,14 +291,17 @@ export const patchAppointmentEndpoint = crmEndpoint('patch', '/appointments/:id'
   const id = routeParam(req, 'id')
   if (!isId(id)) throw crmError('NOT_FOUND', 404)
   const body = await readBody(req)
-  const { data, promoCode, confirm } = parseAppointmentBody(body, 'patch')
+  const { data, clientSpec, promoCode, confirm } = parseAppointmentBody(body, 'patch')
   const pricingTouched = PRICING_FIELDS.some((key) => has(body, key))
 
   const { doc, warnings } = await runBookingTransaction(req, async () => {
     const before = await readOwnAppointment(req, id)
     const promo = await resolvePromo(req, promoCode)
+    const client =
+      clientSpec && data.client === undefined ? await resolveClient(req, clientSpec) : undefined
     const result = await updateAppointment(req, id, {
       ...data,
+      ...(client === undefined ? {} : { client }),
       ...(promo === undefined ? {} : { promoCode: promo }),
     })
     const warnings = confirmable(result)

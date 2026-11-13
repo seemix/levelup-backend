@@ -426,3 +426,341 @@ $column-min: 168px;
     }
   }
 }
+
+// Clickable empty slots and blocks (stage 15).
+.calendar-grid__column--bookable {
+  cursor: cell;
+}
+
+.calendar-block[role='button'] {
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-text);
+    outline-offset: 1px;
+  }
+}
+
+.calendar__button--primary {
+  border-color: var(--theme-success-500);
+  background: var(--theme-success-500);
+  color: #fff;
+  font-weight: 600;
+}
+
+.calendar__button--danger {
+  border-color: var(--theme-error-500);
+  color: var(--theme-error-500);
+}
+
+.calendar__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+// Modal: rendered in a portal, so it uses Payload variables only (works in both themes).
+.calendar-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--base) * 1);
+  background: color-mix(in srgb, var(--theme-elevation-1000) 45%, transparent);
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    width: min(640px, 100%);
+    max-height: 100%;
+    border-radius: var(--style-radius-m);
+    background: var(--theme-bg);
+    color: var(--theme-text);
+    box-shadow: 0 12px 40px rgb(0 0 0 / 0.3);
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  &__header,
+  &__footer {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--base) * 0.5);
+    padding: calc(var(--base) * 0.75) calc(var(--base) * 1);
+  }
+
+  &__header {
+    border-bottom: 1px solid var(--theme-elevation-100);
+  }
+
+  &__footer {
+    border-top: 1px solid var(--theme-elevation-100);
+  }
+
+  &__title {
+    margin: 0;
+    font-size: var(--font-size-h4, 20px);
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--base) * 0.75);
+    overflow-y: auto;
+    padding: calc(var(--base) * 1);
+  }
+
+  &__details,
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--base) * 0.75);
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--base) * 0.4);
+    margin: 0;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: minmax(110px, 30%) 1fr;
+    gap: calc(var(--base) * 0.5);
+
+    dt {
+      color: var(--theme-elevation-600);
+    }
+
+    dd {
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__section {
+    display: flex;
+    flex-direction: column;
+    gap: calc(var(--base) * 0.4);
+
+    h3 {
+      margin: 0;
+      font-size: var(--font-size-base);
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: calc(var(--base) * 0.6);
+  }
+
+  &__field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+
+    legend {
+      padding: 0;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    > span {
+      color: var(--theme-elevation-700);
+      font-size: var(--font-size-xs);
+    }
+
+    input[type='text'],
+    input[type='tel'],
+    input[type='date'],
+    input[type='time'],
+    input[type='number'],
+    select,
+    textarea {
+      width: 100%;
+      min-height: 40px;
+      padding: 6px 10px;
+      border: 1px solid var(--theme-elevation-150);
+      border-radius: var(--style-radius-s);
+      background: var(--theme-input-bg, var(--theme-elevation-0));
+      color: var(--theme-text);
+      font: inherit;
+    }
+  }
+
+  &__client {
+    padding: calc(var(--base) * 0.5);
+    border: 1px solid var(--theme-elevation-100);
+    border-radius: var(--style-radius-m);
+    gap: calc(var(--base) * 0.5);
+  }
+
+  &__checks {
+    gap: 6px;
+  }
+
+  &__check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    cursor: pointer;
+  }
+
+  &__tabs {
+    display: flex;
+    gap: 6px;
+  }
+
+  &__tab {
+    flex: 1;
+    min-height: 40px;
+    border: 1px solid var(--theme-elevation-150);
+    border-radius: var(--style-radius-m);
+    background: var(--theme-elevation-0);
+    color: var(--theme-text);
+    font: inherit;
+    cursor: pointer;
+
+    &--active {
+      border-color: var(--theme-elevation-1000);
+      background: var(--theme-elevation-1000);
+      color: var(--theme-elevation-0);
+      font-weight: 600;
+    }
+  }
+
+  &__price {
+    width: 100%;
+    border-collapse: collapse;
+
+    td {
+      padding: 4px 0;
+      border-bottom: 1px solid var(--theme-elevation-100);
+
+      &:last-child {
+        text-align: right;
+        white-space: nowrap;
+      }
+    }
+  }
+
+  &__total td {
+    border-bottom: 0;
+    font-weight: 700;
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: calc(var(--base) * 0.5);
+  }
+
+  &__muted,
+  &__hint {
+    margin: 0;
+    color: var(--theme-elevation-600);
+    font-size: var(--font-size-xs);
+  }
+
+  &__warn {
+    color: var(--theme-warning-600, var(--theme-error-500));
+  }
+
+  &__error {
+    margin: 0;
+    color: var(--theme-error-500);
+    font-size: var(--font-size-small, 13px);
+  }
+}
+
+.calendar-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.5);
+  padding: calc(var(--base) * 0.75);
+  border: 1px solid var(--theme-warning-500, var(--theme-error-500));
+  border-radius: var(--style-radius-m);
+  background: color-mix(
+    in srgb,
+    var(--theme-warning-500, var(--theme-error-500)) 12%,
+    var(--theme-bg)
+  );
+
+  ul,
+  p {
+    margin: 0;
+  }
+
+  ul {
+    padding-left: 1.2em;
+  }
+
+  &__hint {
+    color: var(--theme-elevation-700);
+  }
+}
+
+.calendar-history {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  &__item {
+    padding-left: calc(var(--base) * 0.6);
+    border-left: 3px solid var(--theme-elevation-150);
+  }
+
+  &__head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    align-items: baseline;
+  }
+
+  &__changes {
+    margin: 2px 0 0;
+    padding-left: 1.1em;
+    font-size: var(--font-size-xs);
+    color: var(--theme-elevation-800);
+    overflow-wrap: anywhere;
+  }
+}
+
+// Phone: the modal fills the screen.
+@media (max-width: 640px) {
+  .calendar-modal {
+    padding: 0;
+    align-items: stretch;
+
+    &__card {
+      width: 100%;
+      max-height: none;
+      border-radius: 0;
+    }
+
+    &__row {
+      grid-template-columns: 1fr;
+      gap: 0;
+    }
+
+    &__actions > .calendar__button {
+      flex: 1 1 auto;
+    }
+  }
+}

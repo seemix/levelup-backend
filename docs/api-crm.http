@@ -134,3 +134,39 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "status": "cancelled_by_salon", "reason": "Barber is ill" }
+
+### Modal data (stage 15): details, price lines with names, promo code text, change history (newest first)
+### and what the role may do. A barber gets their own appointments only (404 otherwise); user e-mails in
+### the history — admin/manager only.
+GET {{api}}/crm/appointments/{{appointment}}?locale=ru
+Authorization: Bearer {{token}}
+
+### Price preview (no write): the same pricing as on save. Barber: own column, no manualDiscount (403).
+POST {{api}}/crm/appointments/preview
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "location": "{{location}}",
+  "barber": "{{barber}}",
+  "service": "{{service}}",
+  "extras": ["{{extra}}"],
+  "promoCode": "LEVELUP10",
+  "manualDiscount": { "type": "percent", "value": 10, "reason": "Regular client" }
+}
+
+### A client typed as phone (+ name): the server links the card of that phone or creates one (source "staff").
+### Works for every role (a barber has no lookup). An explicit "client" id wins; also accepted by PATCH.
+POST {{api}}/crm/appointments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "location": "{{location}}",
+  "barber": "{{barber}}",
+  "service": "{{service}}",
+  "start": "2026-12-14T08:00:00.000Z",
+  "clientPhone": "069 123 456",
+  "clientFirstName": "Vlad",
+  "clientLastName": "Popa"
+}

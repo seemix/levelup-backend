@@ -13,6 +13,8 @@ type Props = {
   color: string
   position: BlockPosition
   lane: Lane
+  /** Opens the details modal (blocks the user may read only). */
+  onOpen: (id: string) => void
 }
 
 const CommentIcon = () => (
@@ -31,7 +33,7 @@ const CheckIcon = () => (
 )
 
 /** Appointment block (A1): barber color, status as icon/style. Time is shown in the salon zone. */
-export const AppointmentBlock = ({ appointment, color, position, lane }: Props) => {
+export const AppointmentBlock = ({ appointment, color, position, lane, onOpen }: Props) => {
   const t = useCrmT()
   const start = new Date(appointment.start)
   const end = new Date(appointment.end)
@@ -75,7 +77,20 @@ export const AppointmentBlock = ({ appointment, color, position, lane }: Props) 
   const service = [appointment.service?.name, ...extras].filter(Boolean).join(' + ')
 
   return (
-    <div className={className} style={style} title={`${range} ${isBlock ? '' : clientName}`.trim()}>
+    <div
+      className={className}
+      style={style}
+      role="button"
+      tabIndex={0}
+      title={`${range} ${isBlock ? '' : clientName}`.trim()}
+      onClick={() => onOpen(appointment.id)}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onOpen(appointment.id)
+        }
+      }}
+    >
       <div className="calendar-block__head">
         <span>{range}</span>
         <span className="calendar-block__icons">

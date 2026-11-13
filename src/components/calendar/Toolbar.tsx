@@ -13,6 +13,7 @@ type Props = {
   onShift: (days: number) => void
   onLocation: (id: string) => void
   onCancelled: (value: boolean) => void
+  onNew: () => void
 }
 
 /** Day and weekday of a `YYYY-MM-DD` in the admin language (UTC noon: no zone shift). */
@@ -33,6 +34,7 @@ export const Toolbar = ({
   onShift,
   onLocation,
   onCancelled,
+  onNew,
 }: Props) => {
   const t = useCrmT()
   const { i18n } = useTranslation()
@@ -40,6 +42,13 @@ export const Toolbar = ({
   return (
     <div className="calendar-toolbar">
       <div className="calendar-toolbar__group">
+        <button
+          type="button"
+          className="calendar__button calendar__button--primary"
+          onClick={onNew}
+        >
+          + {t('calendar.newBooking')}
+        </button>
         <span className="calendar__pill">{t('calendar.day')}</span>
         <button type="button" className="calendar__button calendar__button--dark" onClick={onToday}>
           {t('calendar.today')}

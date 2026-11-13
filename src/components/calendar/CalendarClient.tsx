@@ -1,10 +1,12 @@
 'use client'
-import { useConfig, useTranslation } from '@payloadcms/ui'
+import { useAuth, useConfig, useTranslation } from '@payloadcms/ui'
 import { useEffect, useState } from 'react'
 
+import { defaultNewStart } from '@/crm/appointment-form'
 import { addLocalDays, todayLocal } from '@/crm/time'
 
 import './calendar.scss'
+import { AppointmentModal, type ModalTarget } from './AppointmentModal'
 import { DayGrid } from './DayGrid'
 import { Toolbar } from './Toolbar'
 import type { CalendarData } from './types'
@@ -19,6 +21,11 @@ export const CalendarClient = () => {
   const [location, setLocation] = useState<string | null>(null)
   const [cancelled, setCancelled] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  const [modal, setModal] = useState<ModalTarget | null>(null)
+  const { user } = useAuth()
+  const roles = ((user as { roles?: string[] } | null)?.roles ?? []) as string[]
+  // Convenience only: the server checks every request (decisions 30, 36, 37).
+  const isManager = roles.includes('admin') || roles.includes('manager')
   // The result is stored with the key of its request: "loading" = the key of the screen differs.
   const [result, setResult] = useState<{ key: string; data: CalendarData | null }>({
     key: '',
@@ -63,6 +70,17 @@ export const CalendarClient = () => {
         onShift={(days) => setDate((current) => addLocalDays(current, days))}
         onLocation={setLocation}
         onCancelled={setCancelled}
+        onNew={() => {
+          const columns = data?.columns ?? []
+          const column =
+            columns.find((item) => item.barber.own) ?? (isManager ? columns[0] : undefined)
+          if (!data || !column) return
+          setModal({
+            type: 'create',
+            barberId: column.barber.id,
+            start: defaultNewStart(date, new Date(), data.slotStepMinutes),
+          })
+        }}
       />
       {error ? (
         <div className="calendar__state" role="alert">
@@ -80,7 +98,22 @@ export const CalendarClient = () => {
       ) : data.columns.length === 0 ? (
         <div className="calendar__state">{t('calendar.noBarbers')}</div>
       ) : (
-        <DayGrid data={data} busy={!settled} />
+        <DayGrid
+          data={data}
+          busy={!settled}
+          canCreate={(column) => isManager || column.barber.own}
+          onOpen={(id) => setModal({ type: 'view', id })}
+          onCreate={(barberId, start) => setModal({ type: 'create', barberId, start })}
+        />
+      )}
+      {modal && data && (
+        <AppointmentModal
+          target={modal}
+          data={data}
+          isManager={isManager}
+          onClose={() => setModal(null)}
+          onChanged={() => setAttempt((value) => value + 1)}
+        />
       )}
     </div>
   )

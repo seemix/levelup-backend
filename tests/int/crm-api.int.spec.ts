@@ -184,6 +184,8 @@ describe('CRM API', () => {
       ['/crm/appointments/000000000000000000000000', 'PATCH', {}],
       ['/crm/appointments/000000000000000000000000/status', 'POST', {}],
       ['/crm/clients/lookup?phone=069100001', 'GET'],
+      ['/crm/appointments/000000000000000000000000', 'GET'],
+      ['/crm/appointments/preview', 'POST', {}],
     ]
 
     it('rejects anonymous requests (401) and the editor role (403) on every endpoint', async () => {
@@ -705,6 +707,220 @@ describe('CRM API', () => {
       const bad = await call('admin', 'GET', '/crm/clients/lookup?phone=123')
       expect(bad.status).toBe(400)
       expect(bad.json.error.code).toBe('PHONE_INVALID')
+    })
+  })
+
+  describe('GET /crm/appointments/:id (modal data)', () => {
+    it('admin: details, price lines with names, history and what the role may do', async () => {
+      const { status, json } = await call('admin', 'GET', `/crm/appointments/${ids.a1}?locale=en`)
+      expect(status).toBe(200)
+      expect(json.appointment).toMatchObject({ id: ids.a1, status: 'scheduled', total: 30_000 })
+      expect(json.appointment.client).toMatchObject({ id: ids.c1, phone: '+37369100001' })
+      expect(json.lines).toEqual([
+        { itemType: 'service', item: ids.cut, name: 'Cut', price: 30_000, durationMinutes: 30 },
+      ])
+      expect(json.promoCode).toBeNull()
+      expect(json.history.length).toBeGreaterThan(0)
+      expect(json.history[0]).toMatchObject({ action: 'create', actorType: 'system', actor: null })
+      expect(json.can).toEqual({ restore: true, discount: true, paid: true, update: true })
+      expect(JSON.stringify(json)).not.toContain('ion@example.com')
+    })
+
+    it('barber: own appointment only (404 for a colleague), no restore or discount', async () => {
+      const own = await call('barber1', 'GET', `/crm/appointments/${ids.a1}`)
+      expect(own.status).toBe(200)
+      expect(own.json.can).toEqual({ restore: false, discount: false, paid: false, update: true })
+      const other = await call('barber1', 'GET', `/crm/appointments/${ids.a2}`)
+      expect(other.status).toBe(404)
+      expect(other.json.error.code).toBe('NOT_FOUND')
+    })
+
+    it('manager: only their locations', async () => {
+      expect((await call('manager', 'GET', `/crm/appointments/${ids.a1}`)).status).toBe(200)
+      expect((await call('managerB', 'GET', `/crm/appointments/${ids.a1}`)).status).toBe(404)
+      expect((await call('admin', 'GET', '/crm/appointments/not-an-id')).status).toBe(404)
+    })
+  })
+
+  describe('POST /crm/appointments/preview', () => {
+    const body = (patch: Record<string, unknown> = {}) => ({
+      location: ids.locA,
+      barber: ids.b1,
+      service: ids.cut,
+      ...patch,
+    })
+
+    it('prices the selection with barber prices, promo and discount; nothing is saved', async () => {
+      const before = (await payload.count({ collection: 'appointments' })).totalDocs
+      const base = await call(
+        'admin',
+        'POST',
+        '/crm/appointments/preview',
+        body({ extras: [ids.wash] }),
+      )
+      expect(base.status).toBe(200)
+      expect(base.json).toMatchObject({ subtotal: 35_000, total: 35_000, durationMinutes: 40 })
+      const pricey = await call(
+        'manager',
+        'POST',
+        '/crm/appointments/preview',
+        body({ barber: ids.b2 }),
+      )
+      expect(pricey.json.total).toBe(40_000)
+      const discount = await call(
+        'manager',
+        'POST',
+        '/crm/appointments/preview',
+        body({ manualDiscount: { type: 'percent', value: 10, reason: 'Regular' } }),
+      )
+      expect(discount.json).toMatchObject({ manualDiscount: 3_000, total: 27_000 })
+      expect((await payload.count({ collection: 'appointments' })).totalDocs).toBe(before)
+    })
+
+    it('a barber prices their own column and cannot preview a discount', async () => {
+      const own = await call(
+        'barber1',
+        'POST',
+        '/crm/appointments/preview',
+        body({ barber: undefined }),
+      )
+      expect(own.status).toBe(200)
+      expect(own.json.total).toBe(30_000)
+      const forced = await call(
+        'barber1',
+        'POST',
+        '/crm/appointments/preview',
+        body({ barber: ids.b2 }),
+      )
+      expect(forced.json.total).toBe(30_000)
+      const discount = await call(
+        'barber1',
+        'POST',
+        '/crm/appointments/preview',
+        body({ manualDiscount: { type: 'percent', value: 10, reason: 'x' } }),
+      )
+      expect(discount.status).toBe(403)
+      expect(discount.json.error.code).toBe('DISCOUNT_FORBIDDEN')
+    })
+
+    it('rules: location scope, unknown promo code, discount larger than the price, bad body', async () => {
+      const scope = await call('managerB', 'POST', '/crm/appointments/preview', body())
+      expect(scope.status).toBe(403)
+      const promo = await call(
+        'admin',
+        'POST',
+        '/crm/appointments/preview',
+        body({ promoCode: 'nope' }),
+      )
+      expect(promo.json.error.code).toBe('PROMO_NOT_FOUND')
+      const big = await call(
+        'admin',
+        'POST',
+        '/crm/appointments/preview',
+        body({ manualDiscount: { type: 'amount', value: 99_999_999, reason: 'x' } }),
+      )
+      expect(big.json.error.code).toBe('DISCOUNT_TOO_LARGE')
+      const bad = await call('admin', 'POST', '/crm/appointments/preview', { location: 'x' })
+      expect(bad.status).toBe(400)
+      expect(bad.json.error.details.fields).toEqual(expect.arrayContaining(['location', 'service']))
+    })
+  })
+
+  describe('POST /crm/appointments with a client phone (the server links the card)', () => {
+    const DAY2 = '2026-12-18'
+    const body = (patch: Record<string, unknown> = {}) => ({
+      location: ids.locA,
+      service: ids.cut,
+      start: iso('09:00', DAY2),
+      ...patch,
+    })
+    const clientCount = async () => (await payload.count({ collection: 'clients' })).totalDocs
+    const appointmentCount = async () =>
+      (await payload.count({ collection: 'appointments' })).totalDocs
+
+    it('a barber enters the phone of a known client: linked, no new card, card untouched', async () => {
+      const before = await clientCount()
+      const { status, json } = await call(
+        'barber1',
+        'POST',
+        '/crm/appointments',
+        body({ clientPhone: '069 100 001', clientFirstName: 'Other name' }),
+      )
+      expect(status).toBe(200)
+      expect(json.appointment.client).toMatchObject({ id: ids.c1, firstName: 'Ion' })
+      expect(await clientCount()).toBe(before)
+    })
+
+    it('an unknown phone creates a card (source staff) with the given name', async () => {
+      const before = await clientCount()
+      const { status, json } = await call(
+        'barber1',
+        'POST',
+        '/crm/appointments',
+        body({
+          start: iso('10:00', DAY2),
+          clientPhone: '+37369777000',
+          clientFirstName: 'Vlad',
+          clientLastName: 'Popa',
+        }),
+      )
+      expect(status).toBe(200)
+      expect(json.appointment.client).toMatchObject({ firstName: 'Vlad', lastName: 'Popa' })
+      expect(await clientCount()).toBe(before + 1)
+      const card = (await payload.findByID({
+        collection: 'clients',
+        id: json.appointment.client.id,
+        overrideAccess: true,
+      })) as unknown as Doc
+      expect(card).toMatchObject({ phone: '+37369777000', source: 'staff' })
+    })
+
+    it('a new phone without a name is rejected and nothing is saved; a bad phone is PHONE_INVALID', async () => {
+      const clients = await clientCount()
+      const appointments = await appointmentCount()
+      const noName = await call(
+        'admin',
+        'POST',
+        '/crm/appointments',
+        body({ start: iso('11:00', DAY2), barber: ids.b1, clientPhone: '069555000' }),
+      )
+      expect(noName.status).toBe(400)
+      expect(noName.json.error).toMatchObject({
+        code: 'VALIDATION_ERROR',
+        details: { fields: ['clientFirstName'] },
+      })
+      const bad = await call(
+        'admin',
+        'POST',
+        '/crm/appointments',
+        body({ start: iso('11:00', DAY2), barber: ids.b1, clientPhone: '123' }),
+      )
+      expect(bad.json.error.code).toBe('PHONE_INVALID')
+      expect(await clientCount()).toBe(clients)
+      expect(await appointmentCount()).toBe(appointments)
+    })
+
+    it('an explicit client id wins over the phone; PATCH can relink by phone', async () => {
+      const created = await call(
+        'admin',
+        'POST',
+        '/crm/appointments',
+        body({
+          start: iso('12:00', DAY2),
+          barber: ids.b1,
+          client: ids.c2,
+          clientPhone: '069100001',
+        }),
+      )
+      expect(created.json.appointment.client.id).toBe(ids.c2)
+      const patched = await call(
+        'admin',
+        'PATCH',
+        `/crm/appointments/${created.json.appointment.id}`,
+        { clientPhone: '069100001' },
+      )
+      expect(patched.status).toBe(200)
+      expect(patched.json.appointment.client.id).toBe(ids.c1)
     })
   })
 })
