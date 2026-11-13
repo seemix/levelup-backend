@@ -5,6 +5,7 @@
  */
 import type { Payload, PayloadRequest } from 'payload'
 
+import { CANCELLED_STATUSES } from './appointment-status'
 import { ruleError } from './errors'
 import type { PriceLine, PromoRule } from './pricing'
 import { promoApplicableLines } from './pricing'
@@ -116,9 +117,62 @@ export type PromoUsageSource = (args: {
   excludeAppointmentId?: string
 }) => Promise<number>
 
-// TODO(stage 7): count `appointments` with `promoCode = promoId`, `client = clientId`,
-// status not cancelled, `id != excludeAppointmentId`.
+/** Test helper: the client has never used the code. */
 export const noPromoUsages: PromoUsageSource = async () => 0
+
+/** Non-cancelled appointments of the client holding the code (A5), except the edited one. */
+export const appointmentsPromoUsage: PromoUsageSource = async ({
+  payload,
+  req,
+  promoId,
+  clientId,
+  excludeAppointmentId,
+}) => {
+  const { totalDocs } = await payload.count({
+    collection: 'appointments',
+    where: {
+      and: [
+        { promoCode: { equals: promoId } },
+        { client: { equals: clientId } },
+        { status: { not_in: [...CANCELLED_STATUSES] } },
+        ...(excludeAppointmentId ? [{ id: { not_equals: excludeAppointmentId } }] : []),
+      ],
+    },
+    overrideAccess: true,
+    req,
+  })
+  return totalDocs
+}
+
+const PROMO_SELECT = {
+  code: true,
+  active: true,
+  discountType: true,
+  value: true,
+  validFrom: true,
+  validTo: true,
+  maxUses: true,
+  maxUsesPerClient: true,
+  appliesToServices: true,
+  appliesToExtras: true,
+  onlineAllowed: true,
+  usedCount: true,
+} as const
+
+/** System read of a promo code by id (the appointment holds the relation). */
+export const findPromoById = async (req: PayloadRequest, id: string): Promise<PromoDoc | null> => {
+  const { docs } = await req.payload.find({
+    collection: 'promo-codes',
+    where: { id: { equals: id } },
+    depth: 0,
+    limit: 1,
+    pagination: false,
+    overrideAccess: true,
+    select: PROMO_SELECT,
+    req,
+  })
+  return (docs[0] as PromoDoc | undefined) ?? null
+}
 
 /** System read of a code (no `user`: anonymous visitors validate codes via the booking endpoint). */
 export const findPromoByCode = async (
@@ -133,20 +187,8 @@ export const findPromoByCode = async (
     depth: 0,
     limit: 1,
     pagination: false,
-    select: {
-      code: true,
-      active: true,
-      discountType: true,
-      value: true,
-      validFrom: true,
-      validTo: true,
-      maxUses: true,
-      maxUsesPerClient: true,
-      appliesToServices: true,
-      appliesToExtras: true,
-      onlineAllowed: true,
-      usedCount: true,
-    },
+    overrideAccess: true,
+    select: PROMO_SELECT,
     req,
   })
   return (docs[0] as PromoDoc | undefined) ?? null
@@ -182,7 +224,7 @@ const PROMO_ERROR_STATUS: Record<PromoErrorCode, number> = {
 export const validatePromo = async (
   args: ValidatePromoArgs,
 ): Promise<{ promoId: string; rule: PromoRule }> => {
-  const { req, mode, lines, now, clientId, usageSource = noPromoUsages } = args
+  const { req, mode, lines, now, clientId, usageSource = appointmentsPromoUsage } = args
   const promo = await findPromoByCode(req, args.code)
 
   const clientUses =

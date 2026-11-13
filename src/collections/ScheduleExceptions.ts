@@ -4,13 +4,9 @@ import type {
   CollectionConfig,
   RelationshipFieldSingleValidation,
 } from 'payload'
-import { scopedAccessFor } from '@/access/policy'
-import {
-  EXCEPTION_KINDS,
-  relationId,
-  validateDateRange,
-  type RelationValue,
-} from '@/crm/schedule'
+import { fieldAccessFor, scopedAccessFor } from '@/access/policy'
+import { scheduledAppointmentIds } from '@/crm/appointments'
+import { EXCEPTION_KINDS, relationId, validateDateRange, type RelationValue } from '@/crm/schedule'
 import { breaksField, dateField, scheduleErrorKey, timeField } from '@/fields/schedule'
 import { outsideTransaction } from '@/crm/read-req'
 import { crmLabel, crmLabels, crmT } from '@/i18n'
@@ -38,7 +34,9 @@ const barberLocationIds = async (
   const doc = await req.payload
     .findByID({ collection: 'barbers', id, depth: 0, select: { locations: true }, req })
     .catch(() => null)
-  return (doc?.locations ?? []).map((loc) => relationId(loc as RelationValue)).filter(Boolean) as string[]
+  return (doc?.locations ?? [])
+    .map((loc) => relationId(loc as RelationValue))
+    .filter(Boolean) as string[]
 }
 
 /** `custom_hours` without a location gets the barber's only location (spec §5.2 p.3). */
@@ -60,8 +58,6 @@ const clearUnusedFields: CollectionBeforeChangeHook = ({ data }) => {
     data.end = null
     data.breaks = []
   }
-  // TODO(stage 7): when appointments exist, warn admin/manager about scheduled appointments
-  // in [dateFrom, dateTo] (spec §4.5) — a list in the response, no automatic cancellation.
   return data
 }
 
@@ -111,29 +107,33 @@ export const ScheduleExceptions: CollectionConfig = {
       type: 'row',
       fields: [
         // Exceptions of one barber must not overlap (spec §4.5).
-        dateField('dateFrom', 'scheduleExceptions.dateFrom', async (dateFrom, { data, id, req }) => {
-          const { dateTo, barber } = data as ExceptionData
-          const barberId = relationId(barber)
-          // An invalid range is reported on `dateTo`.
-          if (!barberId || validateDateRange(dateFrom, dateTo)) return true
-          const { docs } = await req.payload.find({
-            collection: 'schedule-exceptions',
-            where: {
-              and: [
-                { barber: { equals: barberId } },
-                { dateFrom: { less_than_equal: dateTo } },
-                { dateTo: { greater_than_equal: dateFrom } },
-                ...(id === undefined ? [] : [{ id: { not_equals: id } }]),
-              ],
-            },
-            depth: 0,
-            limit: 1,
-            pagination: false,
-            select: {},
-            req: outsideTransaction(req),
-          })
-          return docs.length > 0 ? crmT(req.t, 'errors.exceptionOverlap') : true
-        }),
+        dateField(
+          'dateFrom',
+          'scheduleExceptions.dateFrom',
+          async (dateFrom, { data, id, req }) => {
+            const { dateTo, barber } = data as ExceptionData
+            const barberId = relationId(barber)
+            // An invalid range is reported on `dateTo`.
+            if (!barberId || validateDateRange(dateFrom, dateTo)) return true
+            const { docs } = await req.payload.find({
+              collection: 'schedule-exceptions',
+              where: {
+                and: [
+                  { barber: { equals: barberId } },
+                  { dateFrom: { less_than_equal: dateTo } },
+                  { dateTo: { greater_than_equal: dateFrom } },
+                  ...(id === undefined ? [] : [{ id: { not_equals: id } }]),
+                ],
+              },
+              depth: 0,
+              limit: 1,
+              pagination: false,
+              select: {},
+              req: outsideTransaction(req),
+            })
+            return docs.length > 0 ? crmT(req.t, 'errors.exceptionOverlap') : true
+          },
+        ),
         dateField('dateTo', 'scheduleExceptions.dateTo', (dateTo, { data, req }) => {
           const error = validateDateRange((data as ExceptionData).dateFrom, dateTo)
           // An invalid `dateFrom` is reported on its own field.
@@ -177,6 +177,34 @@ export const ScheduleExceptions: CollectionConfig = {
       name: 'comment',
       type: 'textarea',
       label: crmLabel('scheduleExceptions.comment'),
+    },
+    {
+      // Warning for admin/manager (spec §4.5): scheduled appointments of the barber on these dates.
+      // Computed on read of a single document; nothing is cancelled automatically.
+      name: 'appointmentsInRange',
+      type: 'relationship',
+      relationTo: 'appointments',
+      hasMany: true,
+      virtual: true,
+      label: crmLabel('scheduleExceptions.appointmentsInRange'),
+      access: { read: fieldAccessFor('read', 'schedule-exceptions.appointments') },
+      admin: {
+        readOnly: true,
+        description: crmLabel('scheduleExceptions.appointmentsInRangeDescription'),
+        condition: (data) =>
+          ((data as { appointmentsInRange?: unknown[] }).appointmentsInRange ?? []).length > 0,
+      },
+      hooks: {
+        afterRead: [
+          async ({ siblingData, findMany, req }) => {
+            if (findMany) return undefined
+            const { barber, dateFrom, dateTo } = siblingData as ExceptionData
+            const barberId = relationId(barber)
+            if (!barberId || validateDateRange(dateFrom, dateTo)) return []
+            return scheduledAppointmentIds(req, barberId, dateFrom!, dateTo!)
+          },
+        ],
+      },
     },
   ],
 }

@@ -43,6 +43,18 @@ export type Resource =
   | 'promo-codes'
   /** `promo-codes.usedCount`: staff reads; nobody writes it through the API (the appointments service uses `$inc`). */
   | 'promo-codes.usage'
+  /** Needs a `PolicyScope` (barber link): manager — own locations, barber — own appointments. */
+  | 'appointments'
+  /** Restore cancelled / no-show / completed appointments to `scheduled`. */
+  | 'appointments.restore'
+  /** Manual discount fields. */
+  | 'appointments.discount'
+  /** Change composition, prices or discounts of a paid appointment. */
+  | 'appointments.paid'
+  | 'appointment-logs'
+  | 'booking-locks'
+  /** Warning list of scheduled appointments on a schedule exception (§4.5): admin and manager. */
+  | 'schedule-exceptions.appointments'
 
 /** `true`/`false` or a row-level `Where` constraint (only for collection-level `read`/`update`/`delete`). */
 export type Decision = boolean | Where
@@ -225,6 +237,46 @@ const rules: Record<Resource, Rule> = {
       action === 'read' && own ? { barber: { equals: own } } : false,
     )
   },
+
+  // Manager: appointments of their locations; barber: their own appointments (§3.1, decision 37).
+  // Delete is admin-only (others cancel). With `doc` both the location and the barber are checked.
+  appointments: (user, action, doc, scope) => {
+    if (isAdmin(user)) return true
+    if (action === 'delete') return false
+    const locations = hasRole(user, 'manager') ? userLocationIds(user) : []
+    const own = hasRole(user, 'barber') ? (scope?.barberId ?? null) : null
+    if (doc !== undefined) {
+      const row = doc as { location?: unknown; barber?: unknown } | null
+      const location = relId(row?.location)
+      const barber = relId(row?.barber)
+      return (
+        (location !== undefined && locations.includes(location)) || (own !== null && barber === own)
+      )
+    }
+    return anyOf(
+      locations.length > 0 ? { location: { in: locations } } : false,
+      own ? { barber: { equals: own } } : false,
+    )
+  },
+
+  // Restoring cancelled / no-show / completed appointments (§5.1).
+  'appointments.restore': (user) => isAdmin(user) || hasRole(user, 'manager'),
+
+  // Manual discount (decision 30).
+  'appointments.discount': (user) => isAdmin(user) || hasRole(user, 'manager'),
+
+  // Composition, prices and discounts of a paid appointment (§5.1).
+  'appointments.paid': (user) => isAdmin(user),
+
+  // Logs are written by the server only; reading follows the appointment (denormalized location/barber).
+  'appointment-logs': (user, action, doc, scope) =>
+    action === 'read' ? rules.appointments(user, action, doc, scope) : false,
+
+  // Service documents of the double-booking guard (§5.9): no API access at all.
+  'booking-locks': () => false,
+
+  'schedule-exceptions.appointments': (user, action) =>
+    action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
 }
 
 /**
@@ -271,6 +323,21 @@ export const scopedAccessFor =
     const target = action === 'update' ? (data as { barber?: unknown } | undefined)?.barber : null
     if (target && decision !== true && !allowed(user, action, resource, data, scope)) return false
     return decision
+  }
+
+/**
+ * Row-level access for scoped resources whose target is re-checked on write by a hook
+ * (`appointments`): `create` checks the incoming `data`; other actions return the row filter.
+ */
+export const rowAccessFor =
+  (action: Action, resource: Resource): Access =>
+  async ({ req, data }) => {
+    const user = req.user as PolicyUser
+    if (!user) return can(user, action, resource)
+    const { barberId, managedBarberIds } = await getStaffContext(req)
+    const scope: PolicyScope = { barberId, managedBarberIds }
+    if (action === 'create') return can(user, action, resource, data ?? {}, scope)
+    return can(user, action, resource, undefined, scope)
   }
 
 /** Field access function backed by the policy (field access must be boolean). */

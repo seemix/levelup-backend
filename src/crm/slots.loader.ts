@@ -22,6 +22,7 @@ import type {
   SlotSettings,
 } from './slots'
 import { DEFAULT_SLOT_SETTINGS, resolveDuration } from './slots'
+import { ACTIVE_STATUSES } from './appointment-status'
 import { addMinutes, isLocalDate, localDayRange } from './time'
 
 export type SlotQuery = {
@@ -35,6 +36,13 @@ export type SlotQuery = {
   extraIds?: readonly string[]
   now: Date
   clientBlocked?: boolean
+  /** The appointment being edited: its own interval is not "busy". */
+  excludeAppointmentId?: string | null
+  /**
+   * Fixed duration for the requested barber (an edited appointment keeps its price snapshot
+   * durations); without it the duration comes from the catalog and `barber-prices`.
+   */
+  durationMinutes?: number | null
 }
 
 export type BarberBusyInterval = BusyInterval & { barberId: string }
@@ -49,11 +57,57 @@ export type BusySource = (args: {
   barberIds: readonly string[]
   from: Date
   to: Date
+  excludeAppointmentId?: string | null
 }) => Promise<BarberBusyInterval[]>
 
-// TODO(stage 7): replace with a query on `appointments` (status scheduled | completed | paid, any kind,
-// `barber in barberIds`, `startAt < to`, `endAt > from`, depth 0, select startAt/endAt/kind/barber).
+/** Test helper: nobody is busy. */
 export const noBusyIntervals: BusySource = async () => []
+
+type BusyRow = {
+  barber: RelationValue
+  startAt: string
+  endAt: string
+  kind: 'appointment' | 'block'
+}
+
+/**
+ * Active appointments and blocks (`scheduled | completed | paid`, spec §5.3 p.2) of the barbers
+ * overlapping `[from, to)`, in any location, in one query. Runs inside the caller's transaction.
+ */
+export const appointmentsBusySource: BusySource = async ({
+  payload,
+  req,
+  barberIds,
+  from,
+  to,
+  excludeAppointmentId,
+}) => {
+  if (barberIds.length === 0) return []
+  const { docs } = await payload.find({
+    collection: 'appointments',
+    where: {
+      and: [
+        { barber: { in: [...barberIds] } },
+        { status: { in: [...ACTIVE_STATUSES] } },
+        { startAt: { less_than: to.toISOString() } },
+        { endAt: { greater_than: from.toISOString() } },
+        ...(excludeAppointmentId ? [{ id: { not_equals: excludeAppointmentId } }] : []),
+      ],
+    },
+    depth: 0,
+    limit: 0,
+    pagination: false,
+    overrideAccess: true,
+    select: { barber: true, startAt: true, endAt: true, kind: true },
+    req,
+  })
+  return (docs as unknown as BusyRow[]).map((row) => ({
+    barberId: relationId(row.barber) ?? '',
+    start: new Date(row.startAt),
+    end: new Date(row.endAt),
+    kind: row.kind,
+  }))
+}
 
 type BarberRow = {
   id: string
@@ -88,7 +142,7 @@ export const loadSlotInput = async (
   payload: Payload,
   params: SlotQuery,
   req: PayloadRequest,
-  { busySource = noBusyIntervals }: { busySource?: BusySource } = {},
+  { busySource = appointmentsBusySource }: { busySource?: BusySource } = {},
 ): Promise<SlotInput> => {
   if (!isLocalDate(params.date)) throw new RangeError(`Invalid date: ${params.date}`)
   const extraIds = [...new Set(params.extraIds ?? [])]
@@ -222,6 +276,7 @@ export const loadSlotInput = async (
       barberIds,
       from: addMinutes(range.start, -settings.bufferMinutes),
       to: addMinutes(range.end, settings.bufferMinutes),
+      excludeAppointmentId: params.excludeAppointmentId,
     })
   }
 
@@ -256,7 +311,10 @@ export const loadSlotInput = async (
       active: barber.active === true,
       onlineBooking: barber.onlineBooking === true,
       providesService: (barber.services ?? []).some((item) => relationId(item) === serviceItem.id),
-      durationMinutes: resolveDuration(serviceItem, extraItems, overrides),
+      durationMinutes:
+        params.barberId && typeof params.durationMinutes === 'number'
+          ? params.durationMinutes
+          : resolveDuration(serviceItem, extraItems, overrides),
       schedule,
       exceptions: exceptions.filter((exception) => relationId(exception.barber) === id),
       busy: busy

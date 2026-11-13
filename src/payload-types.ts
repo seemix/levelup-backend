@@ -79,6 +79,9 @@ export interface Config {
     'barber-prices': BarberPrice;
     clients: Client;
     'promo-codes': PromoCode;
+    appointments: Appointment;
+    'appointment-logs': AppointmentLog;
+    'booking-locks': BookingLock;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -103,6 +106,9 @@ export interface Config {
     'barber-prices': BarberPricesSelect<false> | BarberPricesSelect<true>;
     clients: ClientsSelect<false> | ClientsSelect<true>;
     'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
+    appointments: AppointmentsSelect<false> | AppointmentsSelect<true>;
+    'appointment-logs': AppointmentLogsSelect<false> | AppointmentLogsSelect<true>;
+    'booking-locks': BookingLocksSelect<false> | BookingLocksSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -390,19 +396,59 @@ export interface ScheduleException {
       }[]
     | null;
   comment?: string | null;
+  appointmentsInRange?: (string | Appointment)[] | null;
   updatedAt: string;
   createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "slides".
+ * via the `definition` "appointments".
  */
-export interface Slide {
+export interface Appointment {
   id: string;
-  order?: number | null;
-  title?: string | null;
-  image?: (string | null) | Media;
-  verticalImage: string | Media;
+  kind: 'appointment' | 'block';
+  location: string | Location;
+  barber: string | Barber;
+  client?: (string | null) | Client;
+  service?: (string | null) | Service;
+  extras?: (string | Extra)[] | null;
+  startAt: string;
+  durationMinutes?: number | null;
+  endAt?: string | null;
+  promoCode?: (string | null) | PromoCode;
+  manualDiscountType?: ('amount' | 'percent') | null;
+  manualDiscountValue?: number | null;
+  manualDiscountReason?: string | null;
+  lines?:
+    | {
+        itemType: 'service' | 'extra';
+        item: string;
+        price?: number | null;
+        durationMinutes?: number | null;
+        id?: string | null;
+      }[]
+    | null;
+  subtotal?: number | null;
+  promoDiscount?: number | null;
+  manualDiscount?: number | null;
+  total?: number | null;
+  clientComment?: string | null;
+  internalNote?: string | null;
+  status: 'scheduled' | 'completed' | 'paid' | 'cancelled_by_client' | 'cancelled_by_salon' | 'no_show';
+  cancelReason?: string | null;
+  paymentStatus?: ('unpaid' | 'partial' | 'paid' | 'refunded') | null;
+  paidAmount?: number | null;
+  certificateAmount?: number | null;
+  tipAmount?: number | null;
+  language?: ('ru' | 'ro' | 'en') | null;
+  source?: ('online' | 'staff' | 'import') | null;
+  createdBy?: (string | null) | User;
+  statusChangedAt?: string | null;
+  cancelledAt?: string | null;
+  confirmationSentAt?: string | null;
+  reminderSentAt?: string | null;
+  externalId?: string | null;
+  cancelTokenHash?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -443,6 +489,71 @@ export interface PromoCode {
   active?: boolean | null;
   onlineAllowed?: boolean | null;
   usedCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "slides".
+ */
+export interface Slide {
+  id: string;
+  order?: number | null;
+  title?: string | null;
+  image?: (string | null) | Media;
+  verticalImage: string | Media;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "appointment-logs".
+ */
+export interface AppointmentLog {
+  id: string;
+  appointment: string | Appointment;
+  location?: (string | null) | Location;
+  barber?: (string | null) | Barber;
+  actorType: 'user' | 'client' | 'system';
+  actor?: (string | null) | User;
+  action: 'create' | 'update' | 'move' | 'status' | 'payment' | 'refund' | 'email';
+  at: string;
+  changes?:
+    | {
+        field: string;
+        from?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        to?:
+          | {
+              [k: string]: unknown;
+            }
+          | unknown[]
+          | string
+          | number
+          | boolean
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "booking-locks".
+ */
+export interface BookingLock {
+  id: string;
+  barber: string;
+  date: string;
+  version?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -517,6 +628,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'promo-codes';
         value: string | PromoCode;
+      } | null)
+    | ({
+        relationTo: 'appointments';
+        value: string | Appointment;
+      } | null)
+    | ({
+        relationTo: 'appointment-logs';
+        value: string | AppointmentLog;
+      } | null)
+    | ({
+        relationTo: 'booking-locks';
+        value: string | BookingLock;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -769,6 +892,7 @@ export interface ScheduleExceptionsSelect<T extends boolean = true> {
         id?: T;
       };
   comment?: T;
+  appointmentsInRange?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -819,6 +943,91 @@ export interface PromoCodesSelect<T extends boolean = true> {
   active?: T;
   onlineAllowed?: T;
   usedCount?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "appointments_select".
+ */
+export interface AppointmentsSelect<T extends boolean = true> {
+  kind?: T;
+  location?: T;
+  barber?: T;
+  client?: T;
+  service?: T;
+  extras?: T;
+  startAt?: T;
+  durationMinutes?: T;
+  endAt?: T;
+  promoCode?: T;
+  manualDiscountType?: T;
+  manualDiscountValue?: T;
+  manualDiscountReason?: T;
+  lines?:
+    | T
+    | {
+        itemType?: T;
+        item?: T;
+        price?: T;
+        durationMinutes?: T;
+        id?: T;
+      };
+  subtotal?: T;
+  promoDiscount?: T;
+  manualDiscount?: T;
+  total?: T;
+  clientComment?: T;
+  internalNote?: T;
+  status?: T;
+  cancelReason?: T;
+  paymentStatus?: T;
+  paidAmount?: T;
+  certificateAmount?: T;
+  tipAmount?: T;
+  language?: T;
+  source?: T;
+  createdBy?: T;
+  statusChangedAt?: T;
+  cancelledAt?: T;
+  confirmationSentAt?: T;
+  reminderSentAt?: T;
+  externalId?: T;
+  cancelTokenHash?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "appointment-logs_select".
+ */
+export interface AppointmentLogsSelect<T extends boolean = true> {
+  appointment?: T;
+  location?: T;
+  barber?: T;
+  actorType?: T;
+  actor?: T;
+  action?: T;
+  at?: T;
+  changes?:
+    | T
+    | {
+        field?: T;
+        from?: T;
+        to?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "booking-locks_select".
+ */
+export interface BookingLocksSelect<T extends boolean = true> {
+  barber?: T;
+  date?: T;
+  version?: T;
   updatedAt?: T;
   createdAt?: T;
 }

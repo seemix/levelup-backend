@@ -21,6 +21,9 @@ import { ScheduleExceptions } from '@/collections/ScheduleExceptions'
 import { BarberPrices } from '@/collections/BarberPrices'
 import { Clients } from '@/collections/Clients'
 import { PromoCodes } from '@/collections/PromoCodes'
+import { Appointments } from '@/collections/Appointments'
+import { AppointmentLogs } from '@/collections/AppointmentLogs'
+import { BookingLocks } from '@/collections/BookingLocks'
 import { AboutUs } from '@/globals/AboutUs'
 import { BookingSettings } from '@/globals/BookingSettings'
 import { env } from '@/env'
@@ -82,6 +85,9 @@ export default buildConfig({
     BarberPrices,
     Clients,
     PromoCodes,
+    Appointments,
+    AppointmentLogs,
+    BookingLocks,
   ],
   globals: [AboutUs, BookingSettings],
   editor: lexicalEditor(),
