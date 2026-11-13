@@ -65,6 +65,14 @@ export default buildConfig({
         Logo: '@/app/(payload)/components/Logo',
         Icon: '@/app/(payload)/components/Logo',
       },
+      afterNavLinks: ['@/components/calendar/CalendarNavLink#CalendarNavLink'],
+      views: {
+        calendar: {
+          Component: '@/components/calendar/CalendarPage#CalendarPage',
+          path: '/calendar',
+          exact: true,
+        },
+      },
     },
   },
   i18n: {

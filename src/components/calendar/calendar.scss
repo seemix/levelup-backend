@@ -1,0 +1,428 @@
+// Calendar (spec A1, §9). Colors come from Payload CSS variables, so the light and dark themes work.
+// --theme-elevation-0 … 1000 go from the background color to the text color in both themes.
+
+$time-width: 64px;
+$column-min: 168px;
+
+.calendar {
+  --calendar-line: var(--theme-elevation-100);
+  --calendar-line-strong: var(--theme-elevation-150);
+  --calendar-now: var(--theme-error-500);
+
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.75);
+  padding-block: calc(var(--base) * 0.75);
+
+  &__state {
+    padding: calc(var(--base) * 2);
+    text-align: center;
+    color: var(--theme-elevation-600);
+  }
+
+  &__button,
+  &__select,
+  &__pill,
+  &__icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 calc(var(--base) * 0.9);
+    border: 1px solid var(--theme-elevation-150);
+    border-radius: var(--style-radius-m);
+    background: var(--theme-elevation-0);
+    color: var(--theme-text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  &__pill {
+    cursor: default;
+  }
+
+  &__button--dark {
+    border-color: var(--theme-elevation-1000);
+    background: var(--theme-elevation-1000);
+    color: var(--theme-elevation-0);
+    font-weight: 600;
+  }
+
+  &__icon-button {
+    width: 40px;
+    padding: 0;
+    font-size: 22px;
+    line-height: 1;
+  }
+}
+
+.calendar-nav-link {
+  display: block;
+  padding-block: calc(var(--base) * 0.25);
+  color: var(--theme-elevation-800);
+  text-decoration: none;
+
+  &:hover,
+  &--active {
+    color: var(--theme-text);
+    font-weight: 600;
+  }
+}
+
+.calendar-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--base) * 0.75);
+
+  &__group,
+  &__date {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--base) * 0.5);
+  }
+
+  &__current {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 120px;
+    cursor: pointer;
+
+    span {
+      color: var(--theme-elevation-600);
+      font-size: var(--font-size-xs);
+    }
+  }
+
+  // The native picker covers the date text: a click opens the calendar of the browser.
+  &__picker {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  &__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: calc(var(--base) * 0.4);
+    cursor: pointer;
+  }
+}
+
+.calendar-grid {
+  position: relative;
+  overflow: auto;
+  max-height: calc(100vh - 220px);
+  min-height: 320px;
+  border: 1px solid var(--calendar-line-strong);
+  border-radius: var(--style-radius-m);
+  background: var(--theme-bg);
+
+  &--busy {
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  }
+
+  &__head,
+  &__body {
+    display: grid;
+    grid-template-columns: $time-width repeat(var(--calendar-columns), minmax($column-min, 1fr));
+    min-width: 100%;
+    width: max-content;
+  }
+
+  &__head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-bottom: 1px solid var(--calendar-line-strong);
+    background: var(--theme-elevation-50);
+  }
+
+  &__corner,
+  &__times {
+    position: sticky;
+    left: 0;
+    background: var(--theme-elevation-50);
+  }
+
+  &__corner {
+    z-index: 6;
+  }
+
+  &__body {
+    position: relative;
+    height: var(--calendar-height);
+  }
+
+  &__times {
+    z-index: 4;
+    border-right: 1px solid var(--calendar-line-strong);
+  }
+
+  &__time {
+    position: absolute;
+    left: 0;
+    right: 0;
+    padding-left: calc(var(--base) * 0.5);
+    transform: translateY(-50%);
+    color: var(--theme-elevation-600);
+    font-size: var(--font-size-xs);
+    // The first label is not cut by the top edge.
+    &:first-child {
+      transform: translateY(2px);
+    }
+  }
+
+  &__column {
+    position: relative;
+    border-right: 1px solid var(--calendar-line);
+    // 15-minute rows (thin) and hours (stronger).
+    background-image:
+      repeating-linear-gradient(
+        to bottom,
+        var(--calendar-line-strong) 0,
+        var(--calendar-line-strong) 1px,
+        transparent 1px,
+        transparent var(--calendar-hour)
+      ),
+      repeating-linear-gradient(
+        to bottom,
+        var(--calendar-line) 0,
+        var(--calendar-line) 1px,
+        transparent 1px,
+        transparent var(--calendar-row)
+      );
+
+    &--own {
+      background-color: var(--theme-elevation-50);
+    }
+  }
+
+  // Non-working time: diagonal hatching.
+  &__off {
+    position: absolute;
+    left: 0;
+    right: 0;
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0,
+      transparent 6px,
+      var(--theme-elevation-200) 6px,
+      var(--theme-elevation-200) 7px
+    );
+    background-color: color-mix(in srgb, var(--theme-elevation-100) 60%, transparent);
+    pointer-events: none;
+  }
+
+  &__off-label {
+    position: absolute;
+    top: calc(var(--base) * 0.5);
+    left: 0;
+    right: 0;
+    text-align: center;
+    color: var(--theme-elevation-600);
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  &__now {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    height: 2px;
+    background: var(--calendar-now);
+    pointer-events: none;
+  }
+
+  &__now-badge {
+    position: absolute;
+    left: calc(var(--base) * 0.25);
+    z-index: 2;
+    padding: 1px 6px;
+    transform: translateY(-50%);
+    border-radius: 999px;
+    background: var(--calendar-now);
+    color: #fff;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+  }
+}
+
+.calendar-head {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--base) * 0.5);
+  min-width: 0;
+  padding: calc(var(--base) * 0.5);
+  border-right: 1px solid var(--calendar-line);
+
+  &--own {
+    box-shadow: inset 0 -3px 0 var(--theme-success-500);
+  }
+
+  &__avatar {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+
+    &--empty {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--theme-elevation-150);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+    }
+  }
+
+  &__text {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+  }
+
+  &__name,
+  &__position {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__position {
+    color: var(--theme-elevation-600);
+    font-size: var(--font-size-xs);
+  }
+
+  &__count {
+    flex: none;
+    min-width: 24px;
+    padding: 2px 6px;
+    border-radius: var(--style-radius-s);
+    background: var(--theme-elevation-150);
+    text-align: center;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+  }
+}
+
+.calendar-block {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--block-color) 28%, var(--theme-bg));
+  color: var(--theme-text);
+  font-size: var(--font-size-xs);
+  line-height: 1.3;
+  box-shadow: 0 0 0 1px var(--theme-bg);
+
+  &__head {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    padding: 2px 6px;
+    background: var(--block-color);
+    color: var(--block-text);
+    font-weight: 600;
+  }
+
+  &__icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 2px 6px;
+  }
+
+  &__service {
+    font-style: italic;
+  }
+
+  &__note {
+    color: var(--theme-elevation-600);
+  }
+
+  &--busy {
+    opacity: 0.85;
+    background: var(--theme-elevation-150);
+
+    .calendar-block__head {
+      background: var(--theme-elevation-500);
+      color: var(--theme-elevation-0);
+    }
+  }
+
+  &--time-off {
+    background-image: repeating-linear-gradient(
+      45deg,
+      transparent 0,
+      transparent 5px,
+      var(--theme-elevation-200) 5px,
+      var(--theme-elevation-200) 6px
+    );
+  }
+
+  &--completed {
+    opacity: 0.65;
+  }
+
+  &--no-show {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0,
+      transparent 5px,
+      color-mix(in srgb, var(--block-color) 55%, transparent) 5px,
+      color-mix(in srgb, var(--block-color) 55%, transparent) 6px
+    );
+  }
+
+  &--cancelled {
+    opacity: 0.45;
+
+    .calendar-block__body {
+      text-decoration: line-through;
+    }
+  }
+}
+
+// Phone: the time column stays, columns scroll horizontally; blocks are a bit tighter.
+@media (max-width: 640px) {
+  .calendar {
+    gap: calc(var(--base) * 0.5);
+
+    &-toolbar {
+      justify-content: center;
+    }
+
+    &-grid {
+      max-height: calc(100vh - 260px);
+
+      &__head,
+      &__body {
+        grid-template-columns: 52px repeat(var(--calendar-columns), minmax(150px, 1fr));
+      }
+    }
+  }
+}

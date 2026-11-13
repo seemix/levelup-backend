@@ -160,6 +160,7 @@ CRM для барбершопу:
   - Попередження потребують підтвердження: `OUTSIDE_SCHEDULE`, `PRICE_CHANGED` (`total` змінився без явної зміни складу/промокоду/знижки, тобто через зміну барбера), `HAS_PAYMENTS` (`total` змінився при `paidAmount > 0`), `REFUND_REQUIRED` (скасування з оплатою). Без `confirm: true` транзакція відкочується (нічого не змінено, лист не поставлено в чергу) і повертається 409 `CONFIRMATION_REQUIRED` з `details.warnings` (для PATCH ще `details.total {from, to}`). Успіх → `{ appointment, warnings }`.
   - `GET /crm/clients/lookup?phone=` — точний пошук за E.164 з правами користувача (`clients` read: admin, manager) → `{ client | null }`.
   - Автентифікація — `Authorization: Bearer <token>` або cookie адмінки (префікс `JWT` у цій версії Payload не приймається).
+- A30. Етап 14, календар (денний перегляд): admin view `/calendar` (`src/components/calendar/`), пункт меню — `afterNavLinks`, доступ — policy `calendar` (інакше 404). Дані — `GET /api/crm/calendar?view=day`. Позиціонування — чисті функції `src/crm/calendar-layout.ts` (відступи в хвилинах від локальної півночі, коректно на DST); видиме вікно дня = робочі інтервали й записи ± 1 год (за замовчуванням 09:00–20:00); 120 px = година. Накладені блоки — смуги поруч. Блок «Новий запис» і клік по блоку — етап 15; на телефоні колонка часу липка, колонки скролляться, власна колонка барбера — перша (сортування в API).
 
 ## 2. Загальні правила
 
