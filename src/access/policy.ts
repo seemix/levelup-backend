@@ -39,6 +39,10 @@ export type Resource =
   | 'clients.email'
   /** Needs a `PolicyScope` (barber link / managed barbers). */
   | 'schedule-exceptions'
+  /** Promo codes: admin CRUD; manager and barber read; anonymous checks codes only via the booking endpoint. */
+  | 'promo-codes'
+  /** `promo-codes.usedCount`: staff reads; nobody writes it through the API (the appointments service uses `$inc`). */
+  | 'promo-codes.usage'
 
 /** `true`/`false` or a row-level `Where` constraint (only for collection-level `read`/`update`/`delete`). */
 export type Decision = boolean | Where
@@ -202,6 +206,10 @@ const rules: Record<Resource, Rule> = {
   'clients.email': (user, action) =>
     action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
 
+  'promo-codes': (user, action) => (action === 'read' ? isStaff(user) : isAdmin(user)),
+
+  'promo-codes.usage': (user, action) => action === 'read' && isStaff(user),
+
   'schedule-exceptions': (user, action, doc, scope) => {
     if (isAdmin(user)) return true
     const managed = hasRole(user, 'manager') ? [...(scope?.managedBarberIds ?? [])] : []
@@ -350,9 +358,7 @@ export const getStaffContext = async (req: PayloadRequest): Promise<StaffContext
     isStaff: isStaff(user),
     locationIds,
     barberId: isBarber && userId ? await findBarberId(req, userId) : null,
-    managedBarberIds: roles.includes('manager')
-      ? await findManagedBarberIds(req, locationIds)
-      : [],
+    managedBarberIds: roles.includes('manager') ? await findManagedBarberIds(req, locationIds) : [],
   }
   req.context[CONTEXT_KEY] = { userId, value } satisfies CachedContext
   return value

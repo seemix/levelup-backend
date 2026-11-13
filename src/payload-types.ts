@@ -78,6 +78,7 @@ export interface Config {
     'schedule-exceptions': ScheduleException;
     'barber-prices': BarberPrice;
     clients: Client;
+    'promo-codes': PromoCode;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -101,6 +102,7 @@ export interface Config {
     'schedule-exceptions': ScheduleExceptionsSelect<false> | ScheduleExceptionsSelect<true>;
     'barber-prices': BarberPricesSelect<false> | BarberPricesSelect<true>;
     clients: ClientsSelect<false> | ClientsSelect<true>;
+    'promo-codes': PromoCodesSelect<false> | PromoCodesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -424,6 +426,28 @@ export interface Client {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promo-codes".
+ */
+export interface PromoCode {
+  id: string;
+  code: string;
+  description?: string | null;
+  discountType: 'percent' | 'fixed';
+  value: number;
+  validFrom?: string | null;
+  validTo?: string | null;
+  maxUses?: number | null;
+  maxUsesPerClient?: number | null;
+  appliesToServices?: (string | Service)[] | null;
+  appliesToExtras?: (string | Extra)[] | null;
+  active?: boolean | null;
+  onlineAllowed?: boolean | null;
+  usedCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -489,6 +513,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'clients';
         value: string | Client;
+      } | null)
+    | ({
+        relationTo: 'promo-codes';
+        value: string | PromoCode;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -770,6 +798,27 @@ export interface ClientsSelect<T extends boolean = true> {
   source?: T;
   externalId?: T;
   notes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "promo-codes_select".
+ */
+export interface PromoCodesSelect<T extends boolean = true> {
+  code?: T;
+  description?: T;
+  discountType?: T;
+  value?: T;
+  validFrom?: T;
+  validTo?: T;
+  maxUses?: T;
+  maxUsesPerClient?: T;
+  appliesToServices?: T;
+  appliesToExtras?: T;
+  active?: T;
+  onlineAllowed?: T;
+  usedCount?: T;
   updatedAt?: T;
   createdAt?: T;
 }
