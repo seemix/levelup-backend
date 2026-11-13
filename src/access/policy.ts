@@ -20,6 +20,8 @@ export type Resource =
   | 'booking-settings'
   /** Non-public booking-settings fields (`senderName`, `replyTo`). */
   | 'booking-settings.private'
+  /** Service catalog: service-categories, services, extras (spec §3.1). */
+  | 'catalog'
 
 /** `true`/`false` or a row-level `Where` constraint (only for collection-level `read`/`update`/`delete`). */
 export type Decision = boolean | Where
@@ -100,6 +102,17 @@ const rules: Record<Resource, Rule> = {
   'booking-settings': (user, action) => (action === 'read' ? true : isAdmin(user)),
 
   'booking-settings.private': (user, action) => (action === 'read' ? Boolean(user) : isAdmin(user)),
+
+  // Anonymous sees active items only; any CRM/content role reads everything; admin alone writes.
+  catalog: (user, action) => {
+    if (action !== 'read') return isAdmin(user)
+    const privileged =
+      hasRole(user, 'admin') ||
+      hasRole(user, 'manager') ||
+      hasRole(user, 'barber') ||
+      hasRole(user, 'editor')
+    return privileged ? true : { active: { equals: true } }
+  },
 }
 
 /**

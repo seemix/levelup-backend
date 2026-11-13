@@ -1,5 +1,37 @@
 import { describe, expect, it } from 'vitest'
-import { baniToLei, formatMoney, leiToBani, percentOf, sumBani } from '@/crm/money'
+import {
+  baniToLei,
+  baniToLeiText,
+  formatMoney,
+  leiToBani,
+  parseLeiInput,
+  percentOf,
+  sumBani,
+} from '@/crm/money'
+
+describe('money input helpers', () => {
+  it('formats bani as an input string', () => {
+    expect(baniToLeiText(1250)).toBe('12.50')
+    expect(baniToLeiText(5)).toBe('0.05')
+    expect(baniToLeiText(0)).toBe('0.00')
+    expect(baniToLeiText(-350)).toBe('-3.50')
+  })
+
+  it('parses input strictly', () => {
+    expect(parseLeiInput('12')).toBe(1200)
+    expect(parseLeiInput(' 12,5 ')).toBe(1250)
+    expect(parseLeiInput('0.05')).toBe(5)
+    for (const bad of ['', 'abc', '1.234', '-1', '1,2,3', '1e3']) {
+      expect(parseLeiInput(bad)).toBeNull()
+    }
+  })
+
+  it('round-trips bani -> text -> bani', () => {
+    for (const bani of [0, 1, 99, 100, 12345, 99999]) {
+      expect(parseLeiInput(baniToLeiText(bani))).toBe(bani)
+    }
+  })
+})
 
 describe('money', () => {
   it('converts lei to bani', () => {

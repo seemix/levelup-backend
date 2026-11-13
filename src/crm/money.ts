@@ -50,3 +50,20 @@ export const sumBani = (values: readonly number[]): number =>
 /** Formats bani as currency in the given locale. */
 export const formatMoney = (bani: number, locale: string = 'ru'): string =>
   new Intl.NumberFormat(locale, { style: 'currency', currency: CURRENCY }).format(baniToLei(bani))
+
+/** Bani -> plain decimal string for inputs ("1250" -> "12.50"), integer math only. */
+export const baniToLeiText = (bani: number): string => {
+  assertBani(bani)
+  const abs = Math.abs(bani)
+  const text = `${Math.floor(abs / BANI_PER_LEU)}.${String(abs % BANI_PER_LEU).padStart(2, '0')}`
+  return bani < 0 ? `-${text}` : text
+}
+
+/**
+ * Strict parse of user input in lei ("12", "12.5", "12,50") -> bani.
+ * Returns `null` for anything else (more than two decimals, letters, empty).
+ */
+export const parseLeiInput = (text: string): number | null => {
+  const normalized = text.trim().replace(/\s/g, '').replace(',', '.')
+  return /^\d+(\.\d{1,2})?$/.test(normalized) ? leiToBani(normalized) : null
+}

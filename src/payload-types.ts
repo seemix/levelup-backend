@@ -72,6 +72,9 @@ export interface Config {
     barbers: Barber;
     slides: Slide;
     locations: Location;
+    'service-categories': ServiceCategory;
+    services: Service;
+    extras: Extra;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -84,6 +87,9 @@ export interface Config {
     barbers: BarbersSelect<false> | BarbersSelect<true>;
     slides: SlidesSelect<false> | SlidesSelect<true>;
     locations: LocationsSelect<false> | LocationsSelect<true>;
+    'service-categories': ServiceCategoriesSelect<false> | ServiceCategoriesSelect<true>;
+    services: ServicesSelect<false> | ServicesSelect<true>;
+    extras: ExtrasSelect<false> | ExtrasSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -262,6 +268,52 @@ export interface Slide {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-categories".
+ */
+export interface ServiceCategory {
+  id: string;
+  order?: number | null;
+  active: boolean;
+  name: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "services".
+ */
+export interface Service {
+  id: string;
+  order?: number | null;
+  active: boolean;
+  onlineBooking: boolean;
+  name: string;
+  description?: string | null;
+  category?: (string | null) | ServiceCategory;
+  durationMinutes: number;
+  price: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "extras".
+ */
+export interface Extra {
+  id: string;
+  order?: number | null;
+  active: boolean;
+  onlineBooking: boolean;
+  name: string;
+  description?: string | null;
+  appliesTo?: (string | Service)[] | null;
+  durationMinutes: number;
+  price: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -303,6 +355,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'locations';
         value: string | Location;
+      } | null)
+    | ({
+        relationTo: 'service-categories';
+        value: string | ServiceCategory;
+      } | null)
+    | ({
+        relationTo: 'services';
+        value: string | Service;
+      } | null)
+    | ({
+        relationTo: 'extras';
+        value: string | Extra;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -461,6 +525,49 @@ export interface LocationsSelect<T extends boolean = true> {
   address?: T;
   phone?: T;
   mapUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-categories_select".
+ */
+export interface ServiceCategoriesSelect<T extends boolean = true> {
+  order?: T;
+  active?: T;
+  name?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "services_select".
+ */
+export interface ServicesSelect<T extends boolean = true> {
+  order?: T;
+  active?: T;
+  onlineBooking?: T;
+  name?: T;
+  description?: T;
+  category?: T;
+  durationMinutes?: T;
+  price?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "extras_select".
+ */
+export interface ExtrasSelect<T extends boolean = true> {
+  order?: T;
+  active?: T;
+  onlineBooking?: T;
+  name?: T;
+  description?: T;
+  appliesTo?: T;
+  durationMinutes?: T;
+  price?: T;
   updatedAt?: T;
   createdAt?: T;
 }
