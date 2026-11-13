@@ -410,7 +410,7 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
       })
     ).docs.map((doc) => (doc as unknown as { externalId?: string }).externalId),
   )
-  const serviceOptions = { actorType: 'system', mode: 'staff', now } as const
+  const serviceOptions = { actorType: 'system', mode: 'staff', now, skipEmail: true } as const
   const book = async (externalId: string, data: AppointmentInput): Promise<Doc | null> => {
     if (known.has(externalId)) return null
     try {

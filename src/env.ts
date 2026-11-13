@@ -23,6 +23,16 @@ const s3 = process.env.S3_BUCKET
   : undefined
 
 export const env = {
+  /** Resend credentials; without `apiKey` emails are only logged to the console (dev, tests). */
+  email: {
+    apiKey: process.env.RESEND_API_KEY || undefined,
+    fromAddress: process.env.EMAIL_FROM_ADDRESS || 'noreply@levelupbalti.com',
+    fromName: process.env.EMAIL_FROM_NAME || 'LevelUp Barbershop',
+  },
+  /** Public site (cancel links in emails). */
+  frontendUrl: (process.env.FRONTEND_URL || 'http://localhost:3001').replace(/\/+$/, ''),
+  /** The jobs queue runs inside the server process; off under tests and during `next build`. */
+  jobsAutoRun: !process.env.VITEST && !isBuildPhase && process.env.JOBS_AUTORUN !== 'false',
   s3,
   isProduction: process.env.NODE_ENV === 'production',
   secret: getRequired('PAYLOAD_SECRET'),

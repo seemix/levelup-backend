@@ -126,6 +126,12 @@ CRM для барбершопу:
   - Скидання (`seed:reset` / `SEED_RESET=true`; `payload run` забирає прапори CLI, тому `--reset` лише запасний варіант) повністю очищає `appointments`, `appointment-logs`, `booking-locks`, `barber-prices`, `schedule-exceptions`, `promo-codes`, `clients`; каталог, барберів і користувачів — лише за ключами seed. Локації, контент сайту та чужі користувачі не чіпаються.
   - Барбери seed мають `showOnSite = false` (не потрапляють на лендинг). Записи (±7 днів від запуску) створюються сервісом від `system`, статуси `completed`/`no_show`/`cancelled_*` — переходами. Запис у статусі `paid`, каси, витрати, сертифікат — TODO етапів 17–18.
   - `SEED_PASSWORD` читається через `env.seedPassword`; дефолт — у `.env.example`.
+- A25. Етап 9, email і jobs (`src/emails/`, `src/crm/appointment-emails.ts`, `src/crm/reminders.ts`, `src/jobs/tasks.ts`):
+  - Листи ставляться в чергу з `afterChange`-хука `appointments` (а не лише з сервісу), тож покриті й адмінка, і CRM-endpoints, і публічний запис; job додається в ту саму транзакцію, що й запис. Типи: створення → `confirmation`; зміна `startAt`/`barber`/`location` у `scheduled` → `moved`; `scheduled` → `cancelled_*` → `cancelled`. Не надсилаються: блоки, клієнт без email, запис у минулому, `options.skipEmail` (seed, імпорт). Відновлення запису листа не створює.
+  - Мова листа: `appointments.language` → `clients.language` → `ru`. Без `RESEND_API_KEY` підключається консольний адаптер (лист у лог). `FRONTEND_URL` потрібен для посилання скасування.
+  - Токен скасування (plain) лежить у input job `confirmation` до успішного завершення (job видаляється); у `appointment-logs` лист пишеться без адреси й токена (`changes: email {type, language}`) — лише після успішної відправки.
+  - Нагадування: `reminderSentAt` захоплюється атомарно (`updateOne` з умовою `null`) перед відправкою й повертається в `null`, якщо відправка впала (job повторює). Перенесення запису скидає `reminderSentAt`. `confirmationSentAt` ставиться після підтвердження.
+  - `jobs.autoRun` (кожну хвилину, черга `default`) вимкнено під vitest, під час `next build` і при `JOBS_AUTORUN=false`; розклад `queueAppointmentReminders` — `*/5 * * * *`.
 
 ## 2. Загальні правила
 

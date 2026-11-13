@@ -7,6 +7,7 @@ import {
   PAYMENT_STATUSES,
 } from '@/crm/appointment-status'
 import { logAppointmentChange, prepareAppointment } from '@/crm/appointments'
+import { queueAppointmentEmails } from '@/crm/appointment-emails'
 import { moneyField } from '@/fields/money'
 import { crmLabel, crmLabels, supportedLocales, type CrmKey } from '@/i18n'
 
@@ -67,7 +68,7 @@ export const Appointments: CollectionConfig = {
   ],
   hooks: {
     beforeChange: [prepareAppointment],
-    afterChange: [logAppointmentChange],
+    afterChange: [logAppointmentChange, queueAppointmentEmails],
   },
   fields: [
     {

@@ -94,9 +94,9 @@
 **Перевірка:** запустити двічі, увійти як `manager@levelup.local`, `barber1@levelup.local`.
 
 ## Етап 9. Email та jobs — sonnet
-- [ ] `@payloadcms/email-resend`; `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME` в `env.ts` і `.env.example` (без ключа — лог листа в консоль).
-- [ ] Шаблони (підтвердження, перенесення, скасування, нагадування) ru/ro/en; job `sendAppointmentEmail`; запланований job нагадувань.
-- [ ] Тести: вибір мови листа, вибір записів для нагадування (без повторів).
+- [x] `@payloadcms/email-resend`; `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME` в `env.ts` і `.env.example` (без ключа — лог листа в консоль).
+- [x] Шаблони (підтвердження, перенесення, скасування, нагадування) ru/ro/en; job `sendAppointmentEmail`; запланований job нагадувань.
+- [x] Тести: вибір мови листа, вибір записів для нагадування (без повторів).
 
 **Готово:** створення, перенесення й скасування запису ставлять лист у чергу; нагадування надсилаються один раз.
 **Перевірка:** тести; локально — лог консолі або тестова адреса Resend `delivered@resend.dev`.

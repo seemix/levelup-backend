@@ -65,6 +65,8 @@ export type AppointmentOptions = {
   now?: Date
   /** Log action override for the payment/refund flow (stage 18). */
   logAction?: LogAction
+  /** Do not queue emails (seed, import). */
+  skipEmail?: boolean
 }
 
 export type AppointmentWarning = 'OUTSIDE_SCHEDULE' | 'REFUND_REQUIRED'

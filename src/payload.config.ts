@@ -4,6 +4,7 @@ import { lexicalEditor } from '@payloadcms/richtext-lexical'
 import { en } from '@payloadcms/translations/languages/en'
 import { ro } from '@payloadcms/translations/languages/ro'
 import { ru } from '@payloadcms/translations/languages/ru'
+import { resendAdapter } from '@payloadcms/email-resend'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import path from 'path'
@@ -26,7 +27,9 @@ import { AppointmentLogs } from '@/collections/AppointmentLogs'
 import { BookingLocks } from '@/collections/BookingLocks'
 import { AboutUs } from '@/globals/AboutUs'
 import { BookingSettings } from '@/globals/BookingSettings'
+import { consoleEmailAdapter } from '@/emails/adapter'
 import { env } from '@/env'
+import { jobTasks } from '@/jobs/tasks'
 import { crmTranslations } from '@/i18n'
 import { migrations } from '@/migrations'
 
@@ -99,6 +102,21 @@ export default buildConfig({
     url: env.databaseUrl,
     prodMigrations: migrations,
   }),
+  email: env.email.apiKey
+    ? resendAdapter({
+        apiKey: env.email.apiKey,
+        defaultFromAddress: env.email.fromAddress,
+        defaultFromName: env.email.fromName,
+      })
+    : consoleEmailAdapter({
+        defaultFromAddress: env.email.fromAddress,
+        defaultFromName: env.email.fromName,
+      }),
+  jobs: {
+    tasks: jobTasks,
+    // Runs inside the server process (not for serverless); emails need a minute at most.
+    autoRun: env.jobsAutoRun ? [{ cron: '* * * * *', queue: 'default', limit: 20 }] : undefined,
+  },
   sharp,
   plugins: [
     // Media goes to S3-compatible storage (S3, R2, MinIO...) only when S3_BUCKET is configured.
