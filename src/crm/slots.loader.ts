@@ -138,13 +138,28 @@ type PriceRow = {
 /** Shared options of every query: system read, raw ids, inside the caller's transaction (if any). */
 const readOptions = (req: PayloadRequest) => ({ depth: 0, overrideAccess: true, req }) as const
 
-export const loadSlotInput = async (
+/** Same as `SlotQuery`, for an inclusive range of local dates (calendar of available days). */
+export type SlotRangeQuery = Omit<SlotQuery, 'date'> & { from: string; to: string }
+
+export type SlotRange = {
+  settings: SlotSettings
+  /** Input of `computeSlots` for one date of the loaded range. */
+  inputFor: (date: string) => SlotInput
+}
+
+/**
+ * Loads everything for one location and a range of dates with the same fixed number of queries
+ * as a single day (exceptions and busy intervals are read for the whole range).
+ */
+export const loadSlotRange = async (
   payload: Payload,
-  params: SlotQuery,
+  params: SlotRangeQuery,
   req: PayloadRequest,
   { busySource = appointmentsBusySource }: { busySource?: BusySource } = {},
-): Promise<SlotInput> => {
-  if (!isLocalDate(params.date)) throw new RangeError(`Invalid date: ${params.date}`)
+): Promise<SlotRange> => {
+  if (!isLocalDate(params.from)) throw new RangeError(`Invalid date: ${params.from}`)
+  if (!isLocalDate(params.to) || params.to < params.from)
+    throw new RangeError(`Invalid date: ${params.to}`)
   const extraIds = [...new Set(params.extraIds ?? [])]
   const options = readOptions(req)
   // Queries run one after another: parallel operations on one MongoDB transaction session are unsafe.
@@ -220,12 +235,12 @@ export const loadSlotInput = async (
   const barbers = barberDocs as unknown as BarberRow[]
   const barberIds = barbers.map((barber) => String(barber.id))
 
-  const range = localDayRange(params.date)
+  const range = { start: localDayRange(params.from).start, end: localDayRange(params.to).end }
   let exceptions: ExceptionRow[] = []
   let prices: PriceRow[] = []
   let busy: BarberBusyInterval[] = []
   if (barberIds.length > 0) {
-    // 5. Exceptions covering the date.
+    // 5. Exceptions overlapping the range.
     exceptions = (
       await payload.find({
         collection: 'schedule-exceptions',
@@ -233,8 +248,8 @@ export const loadSlotInput = async (
         where: {
           and: [
             { barber: { in: barberIds } },
-            { dateFrom: { less_than_equal: params.date } },
-            { dateTo: { greater_than_equal: params.date } },
+            { dateFrom: { less_than_equal: params.to } },
+            { dateTo: { greater_than_equal: params.from } },
           ],
         },
         limit: 0,
@@ -286,7 +301,7 @@ export const loadSlotInput = async (
     return { id, durationMinutes: extra.durationMinutes }
   })
 
-  const slotBarbers = barbers.map((barber): SlotBarber => {
+  const barberBase = barbers.map((barber) => {
     const id = String(barber.id)
     const overrides: DurationOverride[] = prices
       .filter((price) => relationId(price.barber) === id)
@@ -317,19 +332,45 @@ export const loadSlotInput = async (
           : resolveDuration(serviceItem, extraItems, overrides),
       schedule,
       exceptions: exceptions.filter((exception) => relationId(exception.barber) === id),
-      busy: busy
-        .filter((item) => item.barberId === id)
-        .map(({ start, end, kind }) => ({ start, end, kind })),
+      busy: busy.filter((item) => item.barberId === id),
     }
   })
 
-  return {
-    mode: params.mode,
-    date: params.date,
-    locationId: params.locationId,
-    now: params.now,
-    settings,
-    barbers: slotBarbers,
-    clientBlocked: params.clientBlocked,
+  const inputFor = (date: string): SlotInput => {
+    if (!isLocalDate(date) || date < params.from || date > params.to)
+      throw new RangeError(`Date ${date} is outside the loaded range`)
+    // Only intervals that can touch the day (with the buffer) are passed on.
+    const day = localDayRange(date)
+    const from = addMinutes(day.start, -settings.bufferMinutes)
+    const to = addMinutes(day.end, settings.bufferMinutes)
+    return {
+      mode: params.mode,
+      date,
+      locationId: params.locationId,
+      now: params.now,
+      settings,
+      barbers: barberBase.map(({ busy: barberBusy, ...barber }): SlotBarber => ({
+        ...barber,
+        busy: barberBusy
+          .filter((item) => item.start < to && item.end > from)
+          .map(({ start, end, kind }) => ({ start, end, kind })),
+      })),
+      clientBlocked: params.clientBlocked,
+    }
   }
+
+  return { settings, inputFor }
+}
+
+/** Input of `computeSlots` / `checkSlot` for one location and date. */
+export const loadSlotInput = async (
+  payload: Payload,
+  params: SlotQuery,
+  req: PayloadRequest,
+  options: { busySource?: BusySource } = {},
+): Promise<SlotInput> => {
+  if (!isLocalDate(params.date)) throw new RangeError(`Invalid date: ${params.date}`)
+  const { date, ...rest } = params
+  const range = await loadSlotRange(payload, { ...rest, from: date, to: date }, req, options)
+  return range.inputFor(date)
 }

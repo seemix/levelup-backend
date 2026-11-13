@@ -28,6 +28,7 @@ import { BookingLocks } from '@/collections/BookingLocks'
 import { AboutUs } from '@/globals/AboutUs'
 import { BookingSettings } from '@/globals/BookingSettings'
 import { consoleEmailAdapter } from '@/emails/adapter'
+import { bookingEndpoints } from '@/endpoints/booking'
 import { env } from '@/env'
 import { jobTasks } from '@/jobs/tasks'
 import { crmTranslations } from '@/i18n'
@@ -93,6 +94,7 @@ export default buildConfig({
     BookingLocks,
   ],
   globals: [AboutUs, BookingSettings],
+  endpoints: [...bookingEndpoints],
   editor: lexicalEditor(),
   secret: env.secret,
   typescript: {

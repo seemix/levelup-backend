@@ -40,6 +40,11 @@ export const env = {
   /** `undefined` keeps Payload's defaults when no origins are configured. */
   allowedOrigins: origins.length > 0 ? origins : undefined,
   cookieDomain: process.env.COOKIE_DOMAIN || undefined,
+  /**
+   * Reverse proxies in front of the app that append to `X-Forwarded-For` (rate limit by client IP).
+   * The client IP is the entry this many positions from the right; `0` ignores the header.
+   */
+  trustedProxyHops: Math.max(0, Number.parseInt(process.env.TRUSTED_PROXY_HOPS ?? '1', 10) || 0),
   /** Password of the users created by `pnpm seed` (development only). */
   seedPassword: process.env.SEED_PASSWORD || undefined,
 }

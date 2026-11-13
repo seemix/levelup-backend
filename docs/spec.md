@@ -133,6 +133,15 @@ CRM для барбершопу:
   - Нагадування: `reminderSentAt` захоплюється атомарно (`updateOne` з умовою `null`) перед відправкою й повертається в `null`, якщо відправка впала (job повторює). Перенесення запису скидає `reminderSentAt`. `confirmationSentAt` ставиться після підтвердження.
   - `jobs.autoRun` (кожну хвилину, черга `default`) вимкнено під vitest, під час `next build` і при `JOBS_AUTORUN=false`; розклад `queueAppointmentReminders` — `*/5 * * * *`.
 
+- A26. Етап 10, публічний API запису (`src/endpoints/booking/*`, `src/crm/rate-limit.ts`, `src/crm/certificates.ts`, приклади — `docs/api-booking.http`):
+  - Актор: усі записи йдуть через `publicRequest(req)` — локальний запит **без `user`** (навіть якщо прийшла cookie персоналу), тож сервіс записів застосовує онлайн-правила (`mode = online`, `actorType = client`, `source = online`, `createdBy = null`). Системні читання — явно через `SYSTEM_READ` (`overrideAccess`, `depth: 0`, завжди `select`); назовні йдуть лише похідні публічні дані. Картка нового клієнта — системний запис з `overrideAccess: true`.
+  - Відповіді: `config` — локації, барбери (`active` + `onlineBooking` в активній локації; лише `name`, `position`, `description`, `image`, `locations` і їхні ціни/тривалості послуг і додаткових послуг), категорії, послуги, які хоч хтось надає онлайн (`priceFrom` = мінімум серед барберів), додаткові послуги (`appliesTo`, `appliesToAll`), публічні налаштування; кеш 60 с. `days` → `{ from, to, days[] }`: діапазон обрізається до [сьогодні, сьогодні + horizon] і ≤ 62 днів, фіксована кількість запитів (`loadSlotRange`). `slots` → `{ date, slots: [{ start, time, barbers: [{ id, end, durationMinutes }] }] }`, перший барбер = автовибір. `quote` без барбера (`any`) — найдешевший із можливих барберів, `priceFrom: true`; ліміт промокоду на клієнта тут не перевіряється (телефон невідомий). `POST /booking` → `{ id, start, end, barber: { id, name }, location, service, total }` — однаково для нового й відомого телефону. Токен скасування у відповіді не повертається — лише в листі (клієнт без email онлайн не скасує).
+  - Клієнт за телефоном (E.164): знайдений — не змінюється; розбіжні ім'я/прізвище/email і код сертифіката дописуються в `clientComment` рядком `[online] firstName: …; lastName: …; email: …; certificate: …` (машинні ключі, без перекладу) після коментаря відвідувача. Лист іде на збережений email клієнта, а не на введений. Мова запису = мова форми. Новий клієнт створюється в тій самій транзакції (`source = online`); паралельне створення того самого телефону → повтор транзакції.
+  - Ліміти (in-memory, A11; сховище замінюється `setRateLimitStore`): читання (`config`, `days`, `slots`, `quote`, обидва `cancel`) — 30/хв на IP; створення — 5 успішних/год і 20 спроб/год на IP, 10 спроб/год на телефон; ≤ 3 активних майбутніх (`scheduled`) записів на телефон (`ACTIVE_BOOKINGS_LIMIT`, 409). IP — запис `X-Forwarded-For` на позиції `TRUSTED_PROXY_HOPS` справа (за замовчуванням 1, див. `docs/deployment.md`). Honeypot — поле `honeypot`; непорожнє → `BOOKING_REJECTED` (400), рахується як спроба.
+  - Коди помилок API: `VALIDATION_ERROR` (`details.fields`), `PHONE_INVALID`, `RATE_LIMITED` (429 + `Retry-After`), `BOOKING_REJECTED`, `BOOKING_DISABLED`, `LOCATION_NOT_FOUND`, `BARBER_NOT_FOUND`, `CERTIFICATE_NOT_FOUND`, `ACTIVE_BOOKINGS_LIMIT`, `TOKEN_INVALID` (404), `CANCEL_NOT_ALLOWED` (409, запис уже не `scheduled`), а також коди сервісів (`SLOT_*`, `SERVICE_*`, `EXTRA_*`, `PROMO_*`, `CANCEL_TOO_LATE`). `message` = код, текст перекладає фронт.
+  - Сертифікат: до етапу 18 `findCertificate` — заглушка (`CERTIFICATE_NOT_FOUND`); етап 18 підключає `gift-certificates` через `setCertificateLookup` і переносить код із `clientComment` у `plannedCertificate`.
+  - CORS — `config.cors` (`FRONTEND_URL`, `BACKEND_URL`): Payload додає заголовки й відповідає на preflight для custom endpoints.
+
 ## 2. Загальні правила
 
 ### 2.1 Гроші
@@ -404,6 +413,7 @@ scheduled ──► completed ──► paid
 - `GET /booking/cancel/:token` → короткі деталі (дата, час, барбер, послуга) і `canCancel`.
 - `POST /booking/cancel/:token` → скасування.
 - Rate limit: 30 запитів/хв на IP для читання; 5 створень/год на IP і 3 активні майбутні записи на телефон.
+- Формати відповідей, коди помилок і ліміти спроб — A26; приклади запитів — [api-booking.http](api-booking.http).
 
 ### 6.2 CRM (`/api/crm/*`, тільки персонал, права через policy)
 - `GET /crm/calendar?date&view=day|week&location&barber` — колонки (барбери), робочі інтервали, записи. Поля фільтруються за роллю: у чужих записах барбер бачить лише `{ start, end, busy }`.

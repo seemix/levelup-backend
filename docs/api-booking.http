@@ -1,0 +1,92 @@
+### Public booking API (spec §6.1) — manual scenario
+# Works with the REST Client (VS Code) / JetBrains HTTP Client.
+# 1. `docker compose up mongo`, `pnpm seed`, `pnpm dev`.
+# 2. Run "config", copy ids into the variables below (location, barber, service, extra).
+# 3. Run "days" → "slots" → "quote" → "create". The cancel token is in the confirmation email
+#    (without RESEND_API_KEY it is printed to the server console) — put it into @token.
+#
+# Errors: `{ "error": { "code": "SLOT_TAKEN", "details": { ... } } }`, the HTTP status matches the type.
+# Codes: VALIDATION_ERROR (details.fields), PHONE_INVALID, RATE_LIMITED (429, Retry-After),
+# BOOKING_REJECTED (honeypot), BOOKING_DISABLED, LOCATION_NOT_FOUND, BARBER_NOT_FOUND,
+# SERVICE_NOT_FOUND, EXTRA_NOT_FOUND, EXTRA_NOT_APPLICABLE, SLOT_TAKEN, SLOT_UNAVAILABLE,
+# PROMO_NOT_FOUND, PROMO_EXPIRED, PROMO_LIMIT, PROMO_CLIENT_LIMIT, PROMO_NOT_APPLICABLE,
+# CERTIFICATE_NOT_FOUND, ACTIVE_BOOKINGS_LIMIT, TOKEN_INVALID, CANCEL_NOT_ALLOWED, CANCEL_TOO_LATE.
+# Money — integer bani (MDL × 100); instants — ISO UTC; dates — local `YYYY-MM-DD` (Europe/Chisinau).
+# Limits: reads 30/min per IP; bookings 5 created/h and 20 attempts/h per IP, 10 attempts/h per phone,
+# 3 active future bookings per phone.
+
+@api = http://localhost:3000/api
+@location = 000000000000000000000000
+@barber = 000000000000000000000000
+@service = 000000000000000000000000
+@extra = 000000000000000000000000
+@date = 2026-12-01
+@token = paste-the-token-from-the-email
+
+### Config: locations, barbers (online), categories, services ("from" prices), extras, settings
+GET {{api}}/booking/config?locale=ro
+
+### Days with free slots (barber = id or `any`; range clamped to today … today + horizon, ≤ 62 days)
+GET {{api}}/booking/days?location={{location}}&barber=any&service={{service}}&extras[]={{extra}}&from={{date}}&to=2026-12-31
+
+### Slots of a day; `barbers` — who is free, the auto-pick first
+GET {{api}}/booking/slots?location={{location}}&barber={{barber}}&service={{service}}&extras[]={{extra}}&date={{date}}
+
+### Quote for a barber (without `barber` / `any` → cheapest of the possible barbers, `priceFrom: true`)
+POST {{api}}/booking/quote
+Content-Type: application/json
+
+{
+  "location": "{{location}}",
+  "barber": "{{barber}}",
+  "service": "{{service}}",
+  "extras": ["{{extra}}"],
+  "promoCode": "LEVELUP10",
+  "certificateCode": null
+}
+
+### Create (new or known phone — the response is the same; known client data are not changed)
+POST {{api}}/booking
+Content-Type: application/json
+
+{
+  "location": "{{location}}",
+  "barber": "any",
+  "service": "{{service}}",
+  "extras": [],
+  "start": "2026-12-01T08:00:00.000Z",
+  "phone": "069 123 456",
+  "firstName": "Ion",
+  "lastName": "Popescu",
+  "email": "delivered@resend.dev",
+  "language": "ro",
+  "promoCode": null,
+  "certificateCode": null,
+  "comment": "Prima vizită",
+  "honeypot": ""
+}
+
+### Honeypot filled → 400 BOOKING_REJECTED
+POST {{api}}/booking
+Content-Type: application/json
+
+{ "honeypot": "http://spam.example" }
+
+### Invalid phone → 400 PHONE_INVALID
+POST {{api}}/booking
+Content-Type: application/json
+
+{
+  "location": "{{location}}",
+  "service": "{{service}}",
+  "start": "2026-12-01T08:00:00.000Z",
+  "phone": "123",
+  "firstName": "Ion",
+  "language": "ru"
+}
+
+### Cancel: details and `canCancel` (scheduled and ≥ clientCancelMinHours before the start)
+GET {{api}}/booking/cancel/{{token}}?locale=ro
+
+### Cancel (→ cancelled_by_client; too late → CANCEL_TOO_LATE, already cancelled → CANCEL_NOT_ALLOWED)
+POST {{api}}/booking/cancel/{{token}}

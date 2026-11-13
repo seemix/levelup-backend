@@ -555,6 +555,17 @@ const priceItems = async (
 }
 
 /**
+ * Validated catalog items and `barber-prices` of a selection for one barber, read on behalf of the
+ * system (public quote, stage 10): the same checks as on creation (`SERVICE_NOT_FOUND`,
+ * `EXTRA_NOT_FOUND`, `EXTRA_NOT_APPLICABLE`; online — only `active` + `onlineBooking`).
+ */
+export const loadPriceItems = (
+  req: PayloadRequest,
+  args: { mode: BookingMode; serviceId: string; extraIds: string[]; barberId: string },
+): Promise<{ service: CatalogItem; extras: CatalogItem[]; overrides: PriceOverride[] }> =>
+  priceItems(req, systemReads(req), { ...args, fromCatalog: true, lines: [] })
+
+/**
  * The rules of §4.11 / §5.1 / §5.4 / §5.5 / §5.9 for every write of `appointments`.
  * `data` is the full document (Payload merges the stored values in `beforeValidate`).
  */

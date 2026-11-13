@@ -59,3 +59,9 @@ Emails are sent by Payload Jobs, so a Resend failure never breaks a booking and 
 - The queue runs **inside the server process** (`jobs.autoRun`, every minute, `default` queue). Requirements: run a single long-lived Node process (Docker `payload` service); this does not work on serverless platforms. With several instances jobs are still safe (Payload locks jobs), but one instance is enough. Set `JOBS_AUTORUN=false` to disable the runner (e.g. for a separate worker started with `pnpm payload jobs:run --queue default`).
 - The plain cancel token of a new appointment is stored in the confirmation job's input until it completes (deleted on success). If the job fails after all retries it stays in the `payload-jobs` collection with the error — review failed jobs there (Admin → Payload Jobs) and delete them after fixing the cause.
 - Monitoring: `docker compose logs -f payload` shows job errors; the `payload-jobs` collection with `hasError = true` lists the failed ones.
+
+## Public booking API
+- `/api/booking/*` (spec §6.1) is public; CORS allows `FRONTEND_URL` (and `BACKEND_URL`) via `config.cors`.
+- Rate limits are kept **in process memory** (A11): run one instance, or plug a shared store into `setRateLimitStore` (`src/crm/rate-limit.ts`).
+- The limits are per client IP taken from `X-Forwarded-For`: set `TRUSTED_PROXY_HOPS` to the number of reverse proxies in front of the app that append to it (default `1`, e.g. nginx/Caddy with `proxy_add_x_forwarded_for`; `0` = no proxy, the header is ignored and all clients share one bucket). A wrong value lets clients spoof their IP or puts everyone into one bucket.
+- Manual check: `docs/api-booking.http`.

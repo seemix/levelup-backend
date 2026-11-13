@@ -102,10 +102,10 @@
 **Перевірка:** тести; локально — лог консолі або тестова адреса Resend `delivered@resend.dev`.
 
 ## Етап 10. Публічний API запису — opus
-- [ ] Endpoints §6.1: config, days, slots, quote, create, cancel (GET/POST).
-- [ ] Пошук або створення клієнта за телефоном без розкриття даних (A4, рішення 26); токен скасування (sha256).
-- [ ] Rate limit + honeypot; CORS для `FRONTEND_URL`.
-- [ ] Integration-тести: повний сценарій запису, наявний клієнт (дані не повертаються й не перезаписуються), промокод + сертифікат, скасування в межах і поза межами `clientCancelMinHours`, rate limit.
+- [x] Endpoints §6.1: config, days, slots, quote, create, cancel (GET/POST).
+- [x] Пошук або створення клієнта за телефоном без розкриття даних (A4, рішення 26); токен скасування (sha256).
+- [x] Rate limit + honeypot; CORS для `FRONTEND_URL`.
+- [x] Integration-тести: повний сценарій запису, наявний клієнт (дані не повертаються й не перезаписуються), промокод + сертифікат, скасування в межах і поза межами `clientCancelMinHours`, rate limit.
 
 **Готово:** запис можна повністю пройти через `curl`.
 **Перевірка:** тести; ручний сценарій з `docs/api-booking.http`.
