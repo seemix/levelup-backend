@@ -2,8 +2,8 @@
 # Works with the REST Client (VS Code) / JetBrains HTTP Client.
 # 1. `docker compose up mongo`, `pnpm seed`, `pnpm dev`.
 # 2. Run "config", copy ids into the variables below (location, barber, service, extra).
-# 3. Run "days" → "slots" → "quote" → "create". The cancel token is in the confirmation email
-#    (without RESEND_API_KEY it is printed to the server console) — put it into @token.
+# 3. Run "days" → "slots" → "quote" → "create". Put `cancelToken` from the create response into @token
+#    (the same token is in the confirmation email link).
 #
 # Errors: `{ "error": { "code": "SLOT_TAKEN", "details": { ... } } }`, the HTTP status matches the type.
 # Codes: VALIDATION_ERROR (details.fields), PHONE_INVALID, RATE_LIMITED (429, Retry-After),
@@ -21,7 +21,7 @@
 @service = 000000000000000000000000
 @extra = 000000000000000000000000
 @date = 2026-12-01
-@token = paste-the-token-from-the-email
+@token = paste-cancelToken-from-the-create-response
 
 ### Config: locations, barbers (online), categories, services ("from" prices), extras, settings
 GET {{api}}/booking/config?locale=ro
@@ -46,6 +46,7 @@ Content-Type: application/json
 }
 
 ### Create (new or known phone — the response is the same; known client data are not changed)
+# → { id, start, end, barber: { id, name }, location, service, total, cancelToken }
 POST {{api}}/booking
 Content-Type: application/json
 

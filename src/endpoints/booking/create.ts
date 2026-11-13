@@ -1,7 +1,7 @@
 /**
  * `POST /api/booking` (spec §6.1, decisions 22, 25, 26, A4):
  * `{ location, barber?, service, extras?, start, phone, firstName, lastName?, email?, language,
- *    promoCode?, certificateCode?, comment?, honeypot }` → `{ id, start, end, barber, total }`.
+ *    promoCode?, certificateCode?, comment?, honeypot }` → `{ id, start, end, barber, location, service, total, cancelToken }`.
  *
  * - The client is found by phone or created; an existing client's data are never overwritten and
  *   never returned — differing name/email go to `clientComment` (decision 26). The response is the
@@ -260,6 +260,8 @@ export type BookingResult = {
   location: string
   service: string
   total: number
+  /** Plain cancel token of the new booking (for the link on the success screen; also in the email). */
+  cancelToken: string
 }
 
 export const createBooking = async (
@@ -279,7 +281,7 @@ export const createBooking = async (
   }
 
   const actor = await publicRequest(req)
-  const { doc } = await runBookingTransaction(actor, async () => {
+  const { doc, cancelToken } = await runBookingTransaction(actor, async () => {
     const existing = await findClient(actor, input.phone)
     if (
       existing &&
@@ -331,6 +333,7 @@ export const createBooking = async (
     location: String(doc.location),
     service: String(doc.service),
     total: doc.total as number,
+    cancelToken: cancelToken!,
   }
 }
 

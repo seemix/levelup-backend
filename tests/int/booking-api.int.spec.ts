@@ -385,7 +385,7 @@ describe('public booking API', () => {
       })
       expect(status).toBe(200)
       expect(Object.keys(json).sort()).toEqual(
-        ['barber', 'end', 'id', 'location', 'service', 'start', 'total'].sort(),
+        ['barber', 'cancelToken', 'end', 'id', 'location', 'service', 'start', 'total'].sort(),
       )
       expect(json).toMatchObject({
         start: iso('10:00'),
@@ -434,8 +434,10 @@ describe('public booking API', () => {
       })
       expect([again.status, again.json.error.code]).toEqual([409, 'SLOT_TAKEN'])
 
-      // Cancel by the token from the confirmation email.
-      const token = await tokenOf(json.id)
+      // Cancel by the token: the response and the confirmation email carry the same one.
+      const token = json.cancelToken as string
+      expect(token).toMatch(/^[\w-]{43}$/)
+      expect(await tokenOf(json.id)).toBe(token)
       expect(hashCancelToken(token)).toBe(appointment.cancelTokenHash)
       const info = await call('GET', `/booking/cancel/${token}?locale=ro`, { ip })
       expect(info.status).toBe(200)
