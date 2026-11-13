@@ -6,6 +6,9 @@ type MoneyFieldOptions = {
   name: string
   label: CrmKey
   required?: boolean
+  /** Signed amount (ledger entries, balances): negative values are allowed. */
+  signed?: boolean
+  description?: CrmKey
 }
 
 /**
@@ -13,14 +16,21 @@ type MoneyFieldOptions = {
  * (spec §2.1). Edit/display conversion lives in the `MoneyField`/`MoneyCell` admin components,
  * which use `src/crm/money.ts`; the server only ever sees bani.
  */
-export const moneyField = ({ name, label, required = true }: MoneyFieldOptions): NumberField => ({
+export const moneyField = ({
+  name,
+  label,
+  required = true,
+  signed = false,
+  description = 'fields.moneyDescription',
+}: MoneyFieldOptions): NumberField => ({
   name,
   type: 'number',
   required,
-  min: 0,
+  // The edit component reads `min`: without it a leading minus is accepted.
+  ...(signed ? {} : { min: 0 }),
   label: crmLabel(label),
   admin: {
-    description: crmLabel('fields.moneyDescription'),
+    description: crmLabel(description),
     components: {
       Field: '@/components/money/MoneyField#MoneyField',
       Cell: '@/components/money/MoneyCell#MoneyCell',
@@ -28,6 +38,7 @@ export const moneyField = ({ name, label, required = true }: MoneyFieldOptions):
   },
   validate: ((value, { req: { t } }) => {
     if (value === null || value === undefined) return required ? crmT(t, 'errors.required') : true
+    if (signed) return isBani(value) ? true : crmT(t, 'errors.amountInvalid')
     return isBani(value) && value >= 0 ? true : crmT(t, 'errors.priceInvalid')
   }) satisfies NumberFieldSingleValidation,
 })

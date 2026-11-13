@@ -137,9 +137,10 @@ export const isTransientError = (error: unknown, depth = 0): boolean => {
 const conflictError = (req: PayloadRequest): APIError =>
   new APIError(crmT(req.t, 'errors.slotTaken'), 409, { code: 'SLOT_TAKEN', retryable: true }, true)
 
-const mongo = (req: PayloadRequest) => req.payload.db as unknown as MongooseAdapter
+export const mongo = (req: PayloadRequest) => req.payload.db as unknown as MongooseAdapter
 
-const sessionOf = async (req: PayloadRequest) => {
+/** Mongo session of the request's transaction (for raw atomic updates such as `$inc`). */
+export const sessionOf = async (req: PayloadRequest) => {
   const id = req.transactionID instanceof Promise ? await req.transactionID : req.transactionID
   return id ? mongo(req).sessions[id] : undefined
 }
@@ -186,11 +187,12 @@ const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
  * Runs `fn` in a MongoDB transaction and retries it up to 3 times on a write conflict,
- * then fails with `SLOT_TAKEN` (§5.9). Inside an existing transaction `fn` runs as is.
+ * then fails with `SLOT_TAKEN` (§5.9) or `exhausted()`. Inside an existing transaction `fn` runs as is.
  */
 export const runBookingTransaction = async <T>(
   req: PayloadRequest,
   fn: () => Promise<T>,
+  exhausted: () => Error = () => ruleError(req.t, 'SLOT_TAKEN', 409),
 ): Promise<T> => {
   if (req.transactionID) return fn()
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -212,7 +214,7 @@ export const runBookingTransaction = async <T>(
       await pause(5 + Math.floor(Math.random() * 20) * (attempt + 1))
     }
   }
-  throw ruleError(req.t, 'SLOT_TAKEN', 409)
+  throw exhausted()
 }
 
 // ---------------------------------------------------------------------------

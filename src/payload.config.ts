@@ -25,6 +25,9 @@ import { PromoCodes } from '@/collections/PromoCodes'
 import { Appointments } from '@/collections/Appointments'
 import { AppointmentLogs } from '@/collections/AppointmentLogs'
 import { BookingLocks } from '@/collections/BookingLocks'
+import { CashRegisters } from '@/collections/CashRegisters'
+import { ExpenseCategories } from '@/collections/ExpenseCategories'
+import { Transactions } from '@/collections/Transactions'
 import { AboutUs } from '@/globals/AboutUs'
 import { BookingSettings } from '@/globals/BookingSettings'
 import { consoleEmailAdapter } from '@/emails/adapter'
@@ -101,6 +104,9 @@ export default buildConfig({
     Appointments,
     AppointmentLogs,
     BookingLocks,
+    CashRegisters,
+    ExpenseCategories,
+    Transactions,
   ],
   globals: [AboutUs, BookingSettings],
   endpoints: [...bookingEndpoints, ...crmEndpoints],

@@ -67,3 +67,11 @@ export const parseLeiInput = (text: string): number | null => {
   const normalized = text.trim().replace(/\s/g, '').replace(',', '.')
   return /^\d+(\.\d{1,2})?$/.test(normalized) ? leiToBani(normalized) : null
 }
+
+/** `parseLeiInput` that also accepts a leading minus ("-12.50"), for signed ledger amounts. */
+export const parseSignedLeiInput = (text: string): number | null => {
+  const normalized = text.trim().replace(/^[−–]/, '-')
+  if (!normalized.startsWith('-')) return parseLeiInput(normalized)
+  const bani = parseLeiInput(normalized.slice(1))
+  return bani === null ? null : -bani
+}

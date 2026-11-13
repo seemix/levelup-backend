@@ -27,6 +27,23 @@ export const RULE_ERROR_KEYS = {
   DISCOUNT_INVALID: 'errors.discountInvalid',
   DISCOUNT_TOO_LARGE: 'errors.discountTooLarge',
   DISCOUNT_REASON_REQUIRED: 'errors.discountReasonRequired',
+  // Ledger (§4.15, §5.6): `src/crm/ledger.ts`, `src/crm/ledger.service.ts`.
+  LEDGER_ENTRIES_INVALID: 'errors.ledgerEntriesInvalid',
+  LEDGER_SUM_INVALID: 'errors.ledgerSumInvalid',
+  LEDGER_SAME_REGISTER: 'errors.ledgerSameRegister',
+  LEDGER_AMOUNT_INVALID: 'errors.ledgerAmountInvalid',
+  LEDGER_CONFLICT: 'errors.ledgerConflict',
+  EXPENSE_CATEGORY_REQUIRED: 'errors.expenseCategoryRequired',
+  EXPENSE_CATEGORY_NOT_ALLOWED: 'errors.expenseCategoryNotAllowed',
+  EXPENSE_CATEGORY_INVALID: 'errors.expenseCategoryInvalid',
+  EXPENSE_CATEGORY_IN_USE: 'errors.expenseCategoryInUse',
+  COMMENT_REQUIRED: 'errors.commentRequired',
+  APPOINTMENT_REQUIRED: 'errors.appointmentRequired',
+  REVERSAL_TARGET_INVALID: 'errors.reversalTargetInvalid',
+  ALREADY_REVERSED: 'errors.alreadyReversed',
+  CASH_REGISTER_INVALID: 'errors.cashRegisterInvalid',
+  TRANSACTION_FORBIDDEN: 'errors.transactionForbidden',
+  TRANSACTION_TYPE_UNSUPPORTED: 'errors.transactionTypeUnsupported',
 } as const satisfies Record<string, CrmKey>
 
 /** Codes of the CRM API itself (`src/endpoints/crm/http.ts`) and of client rules. */

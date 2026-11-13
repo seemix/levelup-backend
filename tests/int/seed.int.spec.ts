@@ -2,6 +2,7 @@
 import { createLocalReq, getPayload, type Payload } from 'payload'
 import { beforeAll, describe, expect, it } from 'vitest'
 
+import { recalculateBalances } from '@/crm/ledger.service'
 import { up as appointmentsUp } from '@/migrations/20261113_000004_appointments'
 import config from '@/payload.config'
 import { resetSeed, runSeed } from '@/seed/run'
@@ -29,6 +30,9 @@ describe('seed', { timeout: 300_000 }, () => {
           'clients',
           'promo-codes',
           'appointments',
+          'cash-registers',
+          'expense-categories',
+          'transactions',
         ].map(async (collection) => [collection, await total(collection)] as const),
       ),
     )
@@ -56,6 +60,22 @@ describe('seed', { timeout: 300_000 }, () => {
     expect(created.clients).toBe(15)
     expect(created['promo-codes']).toBe(1)
     expect(created.appointments).toBeGreaterThan(20)
+    expect(created['cash-registers']).toBe(2)
+    expect(created['expense-categories']).toBe(4)
+    // Opening balance + 3 expenses + 1 transfer.
+    expect(created.transactions).toBe(5)
+    const registers = await payload.find({
+      collection: 'cash-registers',
+      locale: 'en',
+      pagination: false,
+      overrideAccess: true,
+      select: { name: true, balance: true },
+    })
+    expect(Object.fromEntries(registers.docs.map((doc) => [doc.name, doc.balance]))).toEqual({
+      Cash: 300_000 - 45_000 - 150_000 - 8_000,
+      'Card terminal': 150_000 - 120_000,
+    })
+    expect((await recalculateBalances(payload, { apply: false })).diffs).toEqual([])
 
     const { docs } = await payload.find({
       collection: 'appointments',
@@ -102,6 +122,8 @@ describe('seed', { timeout: 300_000 }, () => {
     expect(removed.users).toBe(5)
     expect(await total('appointments')).toBe(0)
     expect(await total('clients')).toBe(0)
+    expect(await total('transactions')).toBe(0)
+    expect(await total('cash-registers')).toBe(0)
     // Locations and users that the seed did not create are kept.
     expect(await total('locations')).toBe(before.locations)
     const editor = await payload.find({
@@ -114,5 +136,6 @@ describe('seed', { timeout: 300_000 }, () => {
     await runSeed(payload, { password: PASSWORD, reset: true })
     expect((await snapshot()).users).toBe(before.users)
     expect((await snapshot()).clients).toBe(15)
+    expect((await snapshot()).transactions).toBe(before.transactions)
   })
 })

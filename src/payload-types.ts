@@ -82,6 +82,9 @@ export interface Config {
     appointments: Appointment;
     'appointment-logs': AppointmentLog;
     'booking-locks': BookingLock;
+    'cash-registers': CashRegister;
+    'expense-categories': ExpenseCategory;
+    transactions: Transaction;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -110,6 +113,9 @@ export interface Config {
     appointments: AppointmentsSelect<false> | AppointmentsSelect<true>;
     'appointment-logs': AppointmentLogsSelect<false> | AppointmentLogsSelect<true>;
     'booking-locks': BookingLocksSelect<false> | BookingLocksSelect<true>;
+    'cash-registers': CashRegistersSelect<false> | CashRegistersSelect<true>;
+    'expense-categories': ExpenseCategoriesSelect<false> | ExpenseCategoriesSelect<true>;
+    transactions: TransactionsSelect<false> | TransactionsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -570,6 +576,60 @@ export interface BookingLock {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cash-registers".
+ */
+export interface CashRegister {
+  id: string;
+  name: string;
+  type: 'cash' | 'account';
+  location: string | Location;
+  active?: boolean | null;
+  balance?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "expense-categories".
+ */
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  order?: number | null;
+  active?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transactions".
+ */
+export interface Transaction {
+  id: string;
+  type: 'appointment_payment' | 'certificate_sale' | 'expense' | 'transfer' | 'refund' | 'reversal' | 'adjustment';
+  occurredAt: string;
+  location?: (string | null) | Location;
+  reverses?: (string | null) | Transaction;
+  entries?:
+    | {
+        cashRegister: string | CashRegister;
+        amount: number;
+        id?: string | null;
+      }[]
+    | null;
+  expenseCategory?: (string | null) | ExpenseCategory;
+  comment?: string | null;
+  appointment?: (string | null) | Appointment;
+  barber?: (string | null) | Barber;
+  certificateAmount?: number | null;
+  tipAmount?: number | null;
+  author?: (string | null) | User;
+  reversed?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -752,6 +812,18 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'booking-locks';
         value: string | BookingLock;
+      } | null)
+    | ({
+        relationTo: 'cash-registers';
+        value: string | CashRegister;
+      } | null)
+    | ({
+        relationTo: 'expense-categories';
+        value: string | ExpenseCategory;
+      } | null)
+    | ({
+        relationTo: 'transactions';
+        value: string | Transaction;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1140,6 +1212,57 @@ export interface BookingLocksSelect<T extends boolean = true> {
   barber?: T;
   date?: T;
   version?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cash-registers_select".
+ */
+export interface CashRegistersSelect<T extends boolean = true> {
+  name?: T;
+  type?: T;
+  location?: T;
+  active?: T;
+  balance?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "expense-categories_select".
+ */
+export interface ExpenseCategoriesSelect<T extends boolean = true> {
+  name?: T;
+  order?: T;
+  active?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transactions_select".
+ */
+export interface TransactionsSelect<T extends boolean = true> {
+  type?: T;
+  occurredAt?: T;
+  location?: T;
+  reverses?: T;
+  entries?:
+    | T
+    | {
+        cashRegister?: T;
+        amount?: T;
+        id?: T;
+      };
+  expenseCategory?: T;
+  comment?: T;
+  appointment?: T;
+  barber?: T;
+  certificateAmount?: T;
+  tipAmount?: T;
+  author?: T;
+  reversed?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -42,6 +42,7 @@ pnpm generate:importmap  # після додавання/зміни компон
 pnpm migrate             # застосувати міграції
 pnpm seed                # seed-дані (не в production); ідемпотентний, паролі — SEED_PASSWORD з .env
 pnpm seed:reset          # очистити CRM-дані (не контент сайту й не чужих admin/editor) і засіяти заново
+pnpm crm:recalc-balances # перерахувати баланси кас з усіх операцій (RECALC_DRY_RUN=true — лише звіт)
 docker compose up mongo  # локальна MongoDB з replica set
 ```
 Готовність етапу: `typecheck` + `lint` + `test:int` зелені.

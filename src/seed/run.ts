@@ -13,14 +13,19 @@ import {
   createAppointment,
   type AppointmentInput,
 } from '@/crm/appointments'
+import { createTransaction } from '@/crm/ledger.service'
 import { normalizePhone } from '@/crm/phone'
 import { addLocalDays, isoWeekday, localToInstant, todayLocal } from '@/crm/time'
 
 import {
   SEED_BARBERS,
+  SEED_CASH_REGISTERS,
   SEED_CATEGORIES,
   SEED_CLIENTS,
+  SEED_EXPENSE_CATEGORIES,
   SEED_EXTRAS,
+  SEED_LEDGER,
+  SEED_OPENING_CASH,
   SEED_PROMO_CODE,
   SEED_SERVICES,
   SEED_USERS,
@@ -75,8 +80,11 @@ export const resetSeed = async (payload: Payload): Promise<SeedSummary> => {
   }
   const all: Where = { id: { exists: true } }
 
-  // TODO(stage 17–18): cash-registers, expense-categories, transactions, gift-certificates.
+  // The ledger and the registers go together: balances are sums of the operations.
+  // TODO(stage 18): gift-certificates.
   for (const collection of [
+    'transactions',
+    'cash-registers',
     'appointment-logs',
     'appointments',
     'booking-locks',
@@ -99,6 +107,11 @@ export const resetSeed = async (payload: Payload): Promise<SeedSummary> => {
   if (userIds.length > 0) await wipe('barbers', { user: { in: userIds } })
   await wipe('services', { name: { in: SEED_SERVICES.map((item) => item.name.ru) } }, 'ru')
   await wipe('extras', { name: { in: SEED_EXTRAS.map((item) => item.name.ru) } }, 'ru')
+  await wipe(
+    'expense-categories',
+    { name: { in: SEED_EXPENSE_CATEGORIES.map((item) => item.name.ru) } },
+    'ru',
+  )
   await wipe(
     'service-categories',
     { name: { in: SEED_CATEGORIES.map((item) => item.name.ru) } },
@@ -187,7 +200,26 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
   }
   const locationId = id(location)
 
-  // 2. TODO(stage 17): cash registers (cash + account) in this location.
+  // 2. Cash registers (cash + account) in this location; key — name (ru) + location.
+  const registerIds = {} as Record<(typeof SEED_CASH_REGISTERS)[number]['key'], string>
+  for (const seed of SEED_CASH_REGISTERS) {
+    let register = await findOne(
+      payload,
+      'cash-registers',
+      { and: [{ name: { equals: seed.name.ru } }, { location: { equals: locationId } }] },
+      'ru',
+    )
+    if (!register) {
+      register = await createLocalized(
+        payload,
+        'cash-registers',
+        { type: seed.type, location: locationId, active: true },
+        { name: seed.name },
+      )
+      count('cash-registers')
+    }
+    registerIds[seed.key] = id(register)
+  }
 
   // 3. Users.
   const userIds: Record<string, string> = {}
@@ -378,7 +410,7 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
     clientIds.push(id(doc))
   }
 
-  // 7. Promo code (certificate: TODO(stage 17–18)).
+  // 7. Promo code (certificate: TODO(stage 18)).
   let promo = await findOne(payload, 'promo-codes', { code: { equals: SEED_PROMO_CODE } })
   if (!promo) {
     promo = (await payload.create({
@@ -396,6 +428,70 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
       ...system,
     } as never)) as unknown as Doc
     count('promo-codes')
+  }
+
+  // 7b. Expense categories and a few ledger operations (opening balance, expenses, a transfer),
+  // through the ledger service as the seed admin. Operations are added only while the seed registers
+  // have none, so a repeated run does not duplicate them.
+  const expenseCategoryIds: Record<string, string> = {}
+  for (const [order, seed] of SEED_EXPENSE_CATEGORIES.entries()) {
+    let category = await findOne(
+      payload,
+      'expense-categories',
+      { name: { equals: seed.name.ru } },
+      'ru',
+    )
+    if (!category) {
+      category = await createLocalized(
+        payload,
+        'expense-categories',
+        { order, active: true },
+        { name: seed.name },
+      )
+      count('expense-categories')
+    }
+    expenseCategoryIds[seed.key] = id(category)
+  }
+  const { totalDocs: ledgerDocs } = await payload.count({
+    collection: 'transactions',
+    where: { 'entries.cashRegister': { in: Object.values(registerIds) } },
+    overrideAccess: true,
+  })
+  if (ledgerDocs === 0) {
+    const admin = { id: userIds.admin, roles: ['admin'], collection: 'users' }
+    const atNoon = (daysAgo: number) =>
+      localToInstant(addLocalDays(todayLocal(now), -daysAgo), '12:00').toISOString()
+    const post = async (data: Parameters<typeof createTransaction>[1]) => {
+      const req = await createLocalReq({ user: admin as never }, payload)
+      await createTransaction(req, { location: locationId, ...data }, { now })
+      count('transactions')
+    }
+    await post({
+      type: 'adjustment',
+      occurredAt: atNoon(7),
+      entries: [{ cashRegister: registerIds.cash, amount: SEED_OPENING_CASH }],
+      comment: 'Начальный остаток',
+    })
+    for (const op of SEED_LEDGER) {
+      if (op.kind === 'expense')
+        await post({
+          type: 'expense',
+          occurredAt: atNoon(op.daysAgo),
+          expenseCategory: expenseCategoryIds[op.category],
+          entries: [{ cashRegister: registerIds[op.register], amount: op.amount }],
+          comment: op.comment,
+        })
+      else
+        await post({
+          type: 'transfer',
+          occurredAt: atNoon(op.daysAgo),
+          entries: [
+            { cashRegister: registerIds[op.from], amount: -op.amount },
+            { cashRegister: registerIds[op.to], amount: op.amount },
+          ],
+          comment: op.comment,
+        })
+    }
   }
 
   // 8. Appointments ±7 days through the service (slot, price and status rules apply).

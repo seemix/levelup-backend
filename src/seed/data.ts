@@ -310,3 +310,77 @@ export const SEED_CLIENTS: SeedClient[] = [
 ]
 
 export const SEED_PROMO_CODE = 'LEVELUP10'
+
+/** Cash registers of the seed location (spec §9: two registers). */
+export const SEED_CASH_REGISTERS: { key: 'cash' | 'card'; type: 'cash' | 'account'; name: L10n }[] =
+  [
+    { key: 'cash', type: 'cash', name: { ru: 'Наличные', ro: 'Numerar', en: 'Cash' } },
+    {
+      key: 'card',
+      type: 'account',
+      name: { ru: 'Терминал (карта)', ro: 'Terminal (card)', en: 'Card terminal' },
+    },
+  ]
+
+export const SEED_EXPENSE_CATEGORIES: { key: string; name: L10n }[] = [
+  { key: 'supplies', name: { ru: 'Расходники', ro: 'Consumabile', en: 'Supplies' } },
+  { key: 'rent', name: { ru: 'Аренда', ro: 'Chirie', en: 'Rent' } },
+  { key: 'utilities', name: { ru: 'Коммунальные услуги', ro: 'Utilități', en: 'Utilities' } },
+  { key: 'household', name: { ru: 'Хозяйственные нужды', ro: 'Gospodărie', en: 'Household' } },
+]
+
+/** Opening balance of the cash register (adjustment), bani. */
+export const SEED_OPENING_CASH = 300_000
+
+/** Ledger operations (bani, negative = money out); `daysAgo` from the seed date, local 12:00. */
+export const SEED_LEDGER: (
+  | {
+      kind: 'expense'
+      category: string
+      register: 'cash' | 'card'
+      amount: number
+      daysAgo: number
+      comment: string
+    }
+  | {
+      kind: 'transfer'
+      from: 'cash' | 'card'
+      to: 'cash' | 'card'
+      amount: number
+      daysAgo: number
+      comment: string
+    }
+)[] = [
+  {
+    kind: 'expense',
+    category: 'supplies',
+    register: 'cash',
+    amount: -45_000,
+    daysAgo: 5,
+    comment: 'Шампуни, воск',
+  },
+  {
+    kind: 'expense',
+    category: 'utilities',
+    register: 'card',
+    amount: -120_000,
+    daysAgo: 4,
+    comment: 'Электричество',
+  },
+  {
+    kind: 'transfer',
+    from: 'cash',
+    to: 'card',
+    amount: 150_000,
+    daysAgo: 3,
+    comment: 'Внесение на счёт',
+  },
+  {
+    kind: 'expense',
+    category: 'household',
+    register: 'cash',
+    amount: -8_000,
+    daysAgo: 1,
+    comment: 'Бумажные полотенца',
+  },
+]

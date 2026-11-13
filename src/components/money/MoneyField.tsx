@@ -2,7 +2,7 @@
 import { FieldDescription, FieldError, FieldLabel, useField } from '@payloadcms/ui'
 import type { NumberFieldClientComponent } from 'payload'
 import { useEffect, useRef, useState } from 'react'
-import { baniToLeiText, CURRENCY, isBani, parseLeiInput } from '@/crm/money'
+import { baniToLeiText, CURRENCY, isBani, parseLeiInput, parseSignedLeiInput } from '@/crm/money'
 
 const toText = (value: unknown): string => (isBani(value) ? baniToLeiText(value) : '')
 
@@ -12,6 +12,9 @@ const toText = (value: unknown): string => (isBani(value) ? baniToLeiText(value)
  */
 export const MoneyField: NumberFieldClientComponent = ({ field, path, readOnly }) => {
   const { label, required, admin } = field
+  // Fields without `min` hold signed amounts (ledger entries).
+  const parse =
+    typeof field.min === 'number' && field.min >= 0 ? parseLeiInput : parseSignedLeiInput
   const { value, setValue, showError } = useField<number | null>({ path })
   const [text, setText] = useState(() => toText(value))
   const [invalid, setInvalid] = useState(false)
@@ -34,7 +37,7 @@ export const MoneyField: NumberFieldClientComponent = ({ field, path, readOnly }
       setValue(null)
       return
     }
-    const bani = parseLeiInput(next)
+    const bani = parse(next)
     setInvalid(bani === null)
     if (bani !== null) {
       lastEmitted.current = bani

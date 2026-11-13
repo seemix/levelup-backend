@@ -170,3 +170,26 @@ Content-Type: application/json
   "clientFirstName": "Vlad",
   "clientLastName": "Popa"
 }
+
+### Ledger (stage 17). Expenses, transfers and adjustments go through the standard REST collection
+### `/api/transactions` (the hook checks the type rules, registers, role, day; balances change by `$inc`).
+POST {{api}}/transactions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "expense",
+  "location": "{{location}}",
+  "expenseCategory": "{{expenseCategory}}",
+  "entries": [{ "cashRegister": "{{cashRegister}}", "amount": -45000 }],
+  "comment": "Shampoo"
+}
+
+### Reversal: the mirror operation; the original gets `reversed = true` (once).
+### Manager: own locations, operations of the current day (expense/transfer); out of scope → 404.
+### → { transaction, original, warnings: ["NEGATIVE_BALANCE"]? }
+POST {{api}}/crm/transactions/{{transaction}}/reverse
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "comment": "Wrong amount" }

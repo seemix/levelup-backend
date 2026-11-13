@@ -20,6 +20,7 @@
     "deps:check": "pnpm outdated",
     "seed": "cross-env NODE_OPTIONS=--no-deprecation payload run src/seed/index.ts",
     "seed:reset": "cross-env SEED_RESET=true NODE_OPTIONS=--no-deprecation payload run src/seed/index.ts",
+    "crm:recalc-balances": "cross-env NODE_OPTIONS=--no-deprecation payload run src/scripts/recalc-balances.ts",
     "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate"
   },
   "dependencies": {

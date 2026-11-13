@@ -1,5 +1,7 @@
 import type { Access, FieldAccess, PayloadRequest, Where } from 'payload'
 
+import { toLocalDate } from '@/crm/time'
+
 /**
  * Single source of access rules (spec §3, matrix §3.1).
  * Collection/field access functions and custom endpoints must ask `can()` instead of checking roles directly.
@@ -57,6 +59,18 @@ export type Resource =
   | 'schedule-exceptions.appointments'
   /** CRM calendar (§3.1): admin — all locations, manager — own, barber — own column + busy time of the location. */
   | 'calendar'
+  /** Cash registers (§4.13): admin CRUD; manager reads own locations; barber reads all (no balance). */
+  | 'cash-registers'
+  /** `cash-registers.balance`: admin and manager read; nobody writes it (ledger hook, `$inc`). */
+  | 'cash-registers.balance'
+  /** Expense categories (§4.14): admin CRUD, manager reads. */
+  | 'expense-categories'
+  /**
+   * Ledger (§4.15, §3.1). Needs a `PolicyScope` (barber link) for reads; `create` with a
+   * `TransactionPolicyDoc` checks the type, the location and the day; update — admin (comment and
+   * expense category only), delete — nobody.
+   */
+  | 'transactions'
 
 /** `true`/`false` or a row-level `Where` constraint (only for collection-level `read`/`update`/`delete`). */
 export type Decision = boolean | Where
@@ -128,6 +142,51 @@ export type PolicyScope = {
   barberId?: string | null
   /** Barbers working in the manager's locations. */
   managedBarberIds?: readonly string[]
+}
+
+/** What the `transactions` create rule needs to know about a new operation. */
+export type TransactionPolicyDoc = {
+  type: string
+  location?: unknown
+  barber?: unknown
+  occurredAt?: Date | string | null
+  /** Current time (the manager works within the current local day). */
+  now?: Date
+  /** `refund` / `reversal`: the operation being undone. */
+  target?: { type: string; location?: unknown; occurredAt?: Date | string | null } | null
+}
+
+/** Operation types a manager creates (§3.1); payment and certificate sale come in stage 18. */
+const MANAGER_TRANSACTION_TYPES = [
+  'expense',
+  'transfer',
+  'reversal',
+  'appointment_payment',
+  'certificate_sale',
+]
+/** Operations a manager may reverse (own locations, the current day). */
+const MANAGER_REVERSIBLE_TYPES = ['expense', 'transfer']
+
+const sameLocalDay = (a: Date | string | null | undefined, b: Date | undefined): boolean =>
+  Boolean(a && b) && toLocalDate(new Date(a as Date | string)) === toLocalDate(b as Date)
+
+const managerMayCreate = (user: PolicyUser, doc: TransactionPolicyDoc): boolean => {
+  if (!hasRole(user, 'manager') || !MANAGER_TRANSACTION_TYPES.includes(doc.type)) return false
+  const own = userLocationIds(user)
+  const location = relId(doc.location)
+  if (location === undefined || !own.includes(location)) return false
+  if (doc.type === 'appointment_payment' || doc.type === 'certificate_sale') return true
+  // Expenses, transfers and reversals: only on the current local day (no back-dating).
+  if (!sameLocalDay(doc.occurredAt, doc.now)) return false
+  if (doc.type !== 'reversal') return true
+  const target = doc.target
+  if (!target || !MANAGER_REVERSIBLE_TYPES.includes(target.type)) return false
+  const targetLocation = relId(target.location)
+  return (
+    targetLocation !== undefined &&
+    own.includes(targetLocation) &&
+    sameLocalDay(target.occurredAt, doc.now)
+  )
 }
 
 /** OR-combination: roles add permissions, they never take them away. */
@@ -282,6 +341,54 @@ const rules: Record<Resource, Rule> = {
 
   // Reading the calendar; which locations and which details are visible is decided per row (§3.1).
   calendar: (user, action) => action === 'read' && isStaff(user),
+
+  'cash-registers': (user, action, doc) => {
+    if (action !== 'read') return isAdmin(user)
+    // A barber picks registers when taking a payment (stage 18); the balance is hidden by field access.
+    if (isAdmin(user) || hasRole(user, 'barber')) return true
+    const own = hasRole(user, 'manager') ? userLocationIds(user) : []
+    if (doc !== undefined)
+      return own.includes(relId((doc as { location?: unknown } | null)?.location) ?? '')
+    return own.length > 0 ? { location: { in: own } } : false
+  },
+
+  'cash-registers.balance': (user, action) =>
+    action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
+
+  'expense-categories': (user, action) =>
+    action === 'read' ? isAdmin(user) || hasRole(user, 'manager') : isAdmin(user),
+
+  transactions: (user, action, doc, scope) => {
+    if (action === 'delete') return false
+    if (action === 'update') return isAdmin(user)
+    if (isAdmin(user)) return true
+    const locations = hasRole(user, 'manager') ? userLocationIds(user) : []
+    const own = hasRole(user, 'barber') ? (scope?.barberId ?? null) : null
+    if (action === 'read') {
+      // Barber: payments (and their refunds) of own appointments only.
+      const barberTypes = ['appointment_payment', 'refund']
+      if (doc !== undefined) {
+        const row = doc as { location?: unknown; barber?: unknown; type?: string } | null
+        const location = relId(row?.location)
+        return (
+          (location !== undefined && locations.includes(location)) ||
+          (own !== null && relId(row?.barber) === own && barberTypes.includes(row?.type ?? ''))
+        )
+      }
+      return anyOf(
+        locations.length > 0 ? { location: { in: locations } } : false,
+        own ? { and: [{ type: { in: barberTypes } }, { barber: { equals: own } }] } : false,
+      )
+    }
+    // create without a document: "may create anything at all"; the hook checks the full operation.
+    if (doc === undefined) return hasRole(user, 'manager') || hasRole(user, 'barber')
+    const operation = doc as TransactionPolicyDoc
+    if (managerMayCreate(user, operation)) return true
+    // Barber: payments of own appointments (stage 18).
+    return (
+      own !== null && operation.type === 'appointment_payment' && relId(operation.barber) === own
+    )
+  },
 }
 
 /**

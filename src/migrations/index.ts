@@ -6,6 +6,7 @@ import * as migration_20261113_000001_barbers_crm from './20261113_000001_barber
 import * as migration_20261113_000002_clients from './20261113_000002_clients'
 import * as migration_20261113_000003_promo_codes from './20261113_000003_promo_codes'
 import * as migration_20261113_000004_appointments from './20261113_000004_appointments'
+import * as migration_20261113_000005_ledger from './20261113_000005_ledger'
 
 export const migrations = [
   {
@@ -47,5 +48,10 @@ export const migrations = [
     up: migration_20261113_000004_appointments.up,
     down: migration_20261113_000004_appointments.down,
     name: '20261113_000004_appointments',
+  },
+  {
+    up: migration_20261113_000005_ledger.up,
+    down: migration_20261113_000005_ledger.down,
+    name: '20261113_000005_ledger',
   },
 ]
