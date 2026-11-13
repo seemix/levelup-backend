@@ -17,6 +17,8 @@ import { Locations } from '@/collections/Locations'
 import { ServiceCategories } from '@/collections/ServiceCategories'
 import { Services } from '@/collections/Services'
 import { Extras } from '@/collections/Extras'
+import { ScheduleExceptions } from '@/collections/ScheduleExceptions'
+import { BarberPrices } from '@/collections/BarberPrices'
 import { AboutUs } from '@/globals/AboutUs'
 import { BookingSettings } from '@/globals/BookingSettings'
 import { env } from '@/env'
@@ -65,7 +67,18 @@ export default buildConfig({
     defaultLocale: 'ru',
   },
   defaultDepth: 1,
-  collections: [Users, Media, Barbers, Slides, Locations, ServiceCategories, Services, Extras],
+  collections: [
+    Users,
+    Media,
+    Barbers,
+    Slides,
+    Locations,
+    ServiceCategories,
+    Services,
+    Extras,
+    ScheduleExceptions,
+    BarberPrices,
+  ],
   globals: [AboutUs, BookingSettings],
   editor: lexicalEditor(),
   secret: env.secret,

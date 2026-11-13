@@ -42,11 +42,11 @@
 **Перевірка:** CRUD в адмінці; `GET /api/services?locale=ro`.
 
 ## Етап 3. Барбери: CRM-поля, графік, винятки, ціни барбера — opus
-- [ ] Розширення `barbers` (§4.4), field-level read для `commission*`/`user`; умовна обов'язковість `description`/`about` (A12).
-- [ ] `weeklySchedule` з валідацією; колекції `schedule-exceptions` (без перетинів) і `barber-prices` (унікальна пара).
-- [ ] `getWorkingIntervals(barber, date)` (§5.2) + unit-тести.
-- [ ] Міграція: дефолти для наявних барберів (`active`, `showOnSite`, `onlineBooking`, `color`, `locations`).
-- [ ] Тести прав (барбер бачить свій %, чужий — ні; анонім не бачить CRM-полів).
+- [x] Розширення `barbers` (§4.4), field-level read для `commission*`/`user`; умовна обов'язковість `description`/`about` (A12).
+- [x] `weeklySchedule` з валідацією; колекції `schedule-exceptions` (без перетинів) і `barber-prices` (унікальна пара).
+- [x] `getWorkingIntervals(barber, date)` (§5.2) + unit-тести.
+- [x] Міграція: дефолти для наявних барберів (`active`, `showOnSite`, `onlineBooking`, `color`, `locations`).
+- [x] Тести прав (барбер бачить свій %, чужий — ні; анонім не бачить CRM-полів).
 
 **Готово:** у кожного барбера є графік, винятки, перевизначені ціни; лендинг показує барберів як раніше.
 **Перевірка:** тести; `GET /api/barbers` анонімом не повертає `commission*`, `user`.

@@ -22,6 +22,19 @@ export type Resource =
   | 'booking-settings.private'
   /** Service catalog: service-categories, services, extras (spec §3.1). */
   | 'catalog'
+  /** Barbers collection (documents); public profile fields use `content` at field level. */
+  | 'barbers'
+  /** Barber CRM fields: active, onlineBooking, color, locations, services. */
+  | 'barbers.crm'
+  /** `barbers.weeklySchedule` (decision 11: admin and the manager of the barber's location edit it). */
+  | 'barbers.schedule'
+  /** `barbers.commission*`: admin and the barber themselves read, admin writes. */
+  | 'barbers.commission'
+  /** `barbers.user`: admin only. */
+  | 'barbers.user'
+  | 'barber-prices'
+  /** Needs a `PolicyScope` (barber link / managed barbers). */
+  | 'schedule-exceptions'
 
 /** `true`/`false` or a row-level `Where` constraint (only for collection-level `read`/`update`/`delete`). */
 export type Decision = boolean | Where
@@ -63,6 +76,38 @@ const docId = (doc: unknown): string | undefined => {
 const isSelf = (user: PolicyUser, doc: unknown): boolean =>
   user?.id !== undefined && docId(doc) === String(user.id)
 
+const relId = (value: unknown): string | undefined => {
+  const id = value && typeof value === 'object' ? (value as { id?: Id }).id : value
+  return id === undefined || id === null || id === '' ? undefined : String(id as Id)
+}
+
+/** Is `doc` (a barbers document) linked to `user` through `barbers.user`? */
+const ownsBarber = (user: PolicyUser, doc: unknown): boolean =>
+  user?.id !== undefined &&
+  relId((doc as { user?: unknown } | null | undefined)?.user) === String(user.id)
+
+/** Does a barbers document work in one of the manager's locations? */
+const barberInManagerLocations = (user: PolicyUser, doc: unknown): boolean => {
+  if (!hasRole(user, 'manager')) return false
+  const own = new Set(userLocationIds(user))
+  const locations = (doc as { locations?: unknown[] | null } | null | undefined)?.locations ?? []
+  return locations.some((loc) => {
+    const id = relId(loc)
+    return id !== undefined && own.has(id)
+  })
+}
+
+/**
+ * Request-derived facts that rules cannot read from the JWT (resolved by `getStaffContext`).
+ * Only needed for resources documented as scoped.
+ */
+export type PolicyScope = {
+  /** `barbers` document of the current barber user. */
+  barberId?: string | null
+  /** Barbers working in the manager's locations. */
+  managedBarberIds?: readonly string[]
+}
+
 /** OR-combination: roles add permissions, they never take them away. */
 const anyOf = (...decisions: Decision[]): Decision => {
   if (decisions.includes(true)) return true
@@ -71,7 +116,7 @@ const anyOf = (...decisions: Decision[]): Decision => {
   return wheres.length === 1 ? wheres[0] : { or: wheres }
 }
 
-type Rule = (user: PolicyUser, action: Action, doc?: unknown) => Decision
+type Rule = (user: PolicyUser, action: Action, doc?: unknown, scope?: PolicyScope) => Decision
 
 const rules: Record<Resource, Rule> = {
   content: (user, action) =>
@@ -113,6 +158,55 @@ const rules: Record<Resource, Rule> = {
       hasRole(user, 'editor')
     return privileged ? true : { active: { equals: true } }
   },
+
+  barbers: (user, action) => {
+    if (action === 'read') {
+      // The landing shows only public, working barbers; any logged-in role reads all of them.
+      if (!user) return { and: [{ showOnSite: { equals: true } }, { active: { equals: true } }] }
+      return true
+    }
+    const contentRole = hasRole(user, 'admin') || hasRole(user, 'editor')
+    if (action !== 'update') return contentRole
+    // A manager may update barbers of their locations (only `weeklySchedule`, see field rules).
+    const ids = userLocationIds(user)
+    return anyOf(
+      contentRole,
+      hasRole(user, 'manager') && ids.length > 0 ? { locations: { in: ids } } : false,
+    )
+  },
+
+  'barbers.crm': (user, action) => (action === 'read' ? isStaff(user) : isAdmin(user)),
+
+  'barbers.schedule': (user, action, doc) => {
+    if (isAdmin(user)) return true
+    if (action === 'delete') return false
+    if (barberInManagerLocations(user, doc)) return true
+    return action === 'read' && hasRole(user, 'barber') && ownsBarber(user, doc)
+  },
+
+  'barbers.commission': (user, action, doc) =>
+    isAdmin(user) || (action === 'read' && hasRole(user, 'barber') && ownsBarber(user, doc)),
+
+  'barbers.user': (user) => isAdmin(user),
+
+  // Price overrides are public prices (shown in online booking); only admin edits them.
+  'barber-prices': (user, action) => (action === 'read' ? true : isAdmin(user)),
+
+  'schedule-exceptions': (user, action, doc, scope) => {
+    if (isAdmin(user)) return true
+    const managed = hasRole(user, 'manager') ? [...(scope?.managedBarberIds ?? [])] : []
+    const own = hasRole(user, 'barber') ? (scope?.barberId ?? null) : null
+    if (doc !== undefined) {
+      const barber = relId((doc as { barber?: unknown } | null)?.barber)
+      if (barber === undefined) return false
+      if (managed.includes(barber)) return true
+      return action === 'read' && own === barber
+    }
+    return anyOf(
+      managed.length > 0 ? { barber: { in: managed } } : false,
+      action === 'read' && own ? { barber: { equals: own } } : false,
+    )
+  },
 }
 
 /**
@@ -124,17 +218,42 @@ export const can = (
   action: Action,
   resource: Resource,
   doc?: unknown,
-): Decision => rules[resource](user, action, doc)
+  scope?: PolicyScope,
+): Decision => rules[resource](user, action, doc, scope)
 
 /** Strict boolean form, for endpoints and UI decisions about a concrete document (or none). */
-export const allowed = (user: PolicyUser, action: Action, resource: Resource, doc?: unknown) =>
-  can(user, action, resource, doc) === true
+export const allowed = (
+  user: PolicyUser,
+  action: Action,
+  resource: Resource,
+  doc?: unknown,
+  scope?: PolicyScope,
+) => can(user, action, resource, doc, scope) === true
 
 /** Collection/global access function backed by the policy. */
 export const accessFor =
   (action: Action, resource: Resource): Access =>
   ({ req }) =>
     can(req.user, action, resource)
+
+/**
+ * Collection access for scoped resources (`schedule-exceptions`): resolves the staff context first.
+ * `create` checks the incoming `data` as the document; `update` additionally checks a new `barber`.
+ */
+export const scopedAccessFor =
+  (action: Action, resource: Resource): Access =>
+  async ({ req, data }) => {
+    const user = req.user as PolicyUser
+    if (!user) return can(user, action, resource)
+    const { barberId, managedBarberIds } = await getStaffContext(req)
+    const scope: PolicyScope = { barberId, managedBarberIds }
+    if (action === 'create') return can(user, action, resource, data ?? {}, scope)
+    const decision = can(user, action, resource, undefined, scope)
+    // Moving a document to a barber outside the user's scope is not allowed.
+    const target = action === 'update' ? (data as { barber?: unknown } | undefined)?.barber : null
+    if (target && decision !== true && !allowed(user, action, resource, data, scope)) return false
+    return decision
+  }
 
 /** Field access function backed by the policy (field access must be boolean). */
 export const fieldAccessFor =
@@ -158,24 +277,19 @@ export type StaffContext = {
   locationIds: string[]
   /** `barbers` document linked through `barbers.user`; `null` if none or not exactly one. */
   barberId: string | null
+  /** Barbers working in the manager's locations (empty unless the user is a manager). */
+  managedBarberIds: string[]
 }
 
 const CONTEXT_KEY = 'staffContext'
 
 type CachedContext = { userId: string | null; value: StaffContext }
 
-/** Is `barbers.user` defined in the schema? (The field is added in stage 3.) */
-const barbersHaveUserField = (req: PayloadRequest): boolean =>
-  Boolean(
-    req.payload.collections.barbers?.config.flattenedFields.some((field) => field.name === 'user'),
-  )
-
 const findBarberId = async (req: PayloadRequest, userId: string): Promise<string | null> => {
-  if (!barbersHaveUserField(req)) return null
-  // System lookup (no `user` is passed): the rule "barber user ↔ exactly one barbers.user" is enforced on write.
+  // System lookup (no `user` is passed); `barbers.user` is unique (validated on write + partial index).
   const { docs } = await req.payload.find({
     collection: 'barbers',
-    where: { user: { equals: userId } } as Where,
+    where: { user: { equals: userId } },
     depth: 0,
     limit: 2,
     pagination: false,
@@ -183,6 +297,22 @@ const findBarberId = async (req: PayloadRequest, userId: string): Promise<string
     req,
   })
   return docs.length === 1 ? String(docs[0].id) : null
+}
+
+const findManagedBarberIds = async (
+  req: PayloadRequest,
+  locationIds: string[],
+): Promise<string[]> => {
+  if (locationIds.length === 0) return []
+  const { docs } = await req.payload.find({
+    collection: 'barbers',
+    where: { locations: { in: locationIds } },
+    depth: 0,
+    pagination: false,
+    select: {},
+    req,
+  })
+  return docs.map((doc) => String(doc.id))
 }
 
 /**
@@ -199,6 +329,7 @@ export const getStaffContext = async (req: PayloadRequest): Promise<StaffContext
     (ROLES as readonly string[]).includes(r),
   )
   const isBarber = roles.includes('barber')
+  const locationIds = userLocationIds(user)
   const value: StaffContext = {
     userId,
     roles,
@@ -207,8 +338,11 @@ export const getStaffContext = async (req: PayloadRequest): Promise<StaffContext
     isBarber,
     isEditor: roles.includes('editor'),
     isStaff: isStaff(user),
-    locationIds: userLocationIds(user),
+    locationIds,
     barberId: isBarber && userId ? await findBarberId(req, userId) : null,
+    managedBarberIds: roles.includes('manager')
+      ? await findManagedBarberIds(req, locationIds)
+      : [],
   }
   req.context[CONTEXT_KEY] = { userId, value } satisfies CachedContext
   return value

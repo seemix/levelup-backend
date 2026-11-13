@@ -75,12 +75,19 @@ export interface Config {
     'service-categories': ServiceCategory;
     services: Service;
     extras: Extra;
+    'schedule-exceptions': ScheduleException;
+    'barber-prices': BarberPrice;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    barbers: {
+      prices: 'barber-prices';
+      exceptions: 'schedule-exceptions';
+    };
+  };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -90,6 +97,8 @@ export interface Config {
     'service-categories': ServiceCategoriesSelect<false> | ServiceCategoriesSelect<true>;
     services: ServicesSelect<false> | ServicesSelect<true>;
     extras: ExtrasSelect<false> | ExtrasSelect<true>;
+    'schedule-exceptions': ScheduleExceptionsSelect<false> | ScheduleExceptionsSelect<true>;
+    'barber-prices': BarberPricesSelect<false> | BarberPricesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -232,10 +241,14 @@ export interface Media {
 export interface Barber {
   id: string;
   order?: number | null;
+  active: boolean;
+  showOnSite: boolean;
+  onlineBooking: boolean;
   name: string;
-  description: string;
+  position?: string | null;
+  description?: string | null;
   image?: (string | null) | Media;
-  about: {
+  about?: {
     root: {
       type: string;
       children: {
@@ -249,32 +262,39 @@ export interface Barber {
       version: number;
     };
     [k: string]: unknown;
+  } | null;
+  color: string;
+  user?: (string | null) | User;
+  locations: (string | Location)[];
+  services?: (string | Service)[] | null;
+  prices?: {
+    docs?: (string | BarberPrice)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
   };
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "slides".
- */
-export interface Slide {
-  id: string;
-  order?: number | null;
-  title?: string | null;
-  image?: (string | null) | Media;
-  verticalImage: string | Media;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "service-categories".
- */
-export interface ServiceCategory {
-  id: string;
-  order?: number | null;
-  active: boolean;
-  name: string;
+  weeklySchedule?:
+    | {
+        weekday: '1' | '2' | '3' | '4' | '5' | '6' | '7';
+        location: string | Location;
+        start?: string | null;
+        end?: string | null;
+        breaks?:
+          | {
+              start?: string | null;
+              end?: string | null;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  exceptions?: {
+    docs?: (string | ScheduleException)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  commissionServicesPercent?: number | null;
+  commissionExtrasPercent?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -297,6 +317,39 @@ export interface Service {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "service-categories".
+ */
+export interface ServiceCategory {
+  id: string;
+  order?: number | null;
+  active: boolean;
+  name: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "barber-prices".
+ */
+export interface BarberPrice {
+  id: string;
+  barber: string | Barber;
+  item:
+    | {
+        relationTo: 'services';
+        value: string | Service;
+      }
+    | {
+        relationTo: 'extras';
+        value: string | Extra;
+      };
+  price?: number | null;
+  durationMinutes?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "extras".
  */
 export interface Extra {
@@ -309,6 +362,43 @@ export interface Extra {
   appliesTo?: (string | Service)[] | null;
   durationMinutes: number;
   price: number;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "schedule-exceptions".
+ */
+export interface ScheduleException {
+  id: string;
+  barber: string | Barber;
+  kind: 'day_off' | 'vacation' | 'sick' | 'custom_hours';
+  dateFrom: string;
+  dateTo: string;
+  location?: (string | null) | Location;
+  start?: string | null;
+  end?: string | null;
+  breaks?:
+    | {
+        start?: string | null;
+        end?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  comment?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "slides".
+ */
+export interface Slide {
+  id: string;
+  order?: number | null;
+  title?: string | null;
+  image?: (string | null) | Media;
+  verticalImage: string | Media;
   updatedAt: string;
   createdAt: string;
 }
@@ -367,6 +457,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'extras';
         value: string | Extra;
+      } | null)
+    | ({
+        relationTo: 'schedule-exceptions';
+        value: string | ScheduleException;
+      } | null)
+    | ({
+        relationTo: 'barber-prices';
+        value: string | BarberPrice;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -495,10 +593,38 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface BarbersSelect<T extends boolean = true> {
   order?: T;
+  active?: T;
+  showOnSite?: T;
+  onlineBooking?: T;
   name?: T;
+  position?: T;
   description?: T;
   image?: T;
   about?: T;
+  color?: T;
+  user?: T;
+  locations?: T;
+  services?: T;
+  prices?: T;
+  weeklySchedule?:
+    | T
+    | {
+        weekday?: T;
+        location?: T;
+        start?: T;
+        end?: T;
+        breaks?:
+          | T
+          | {
+              start?: T;
+              end?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  exceptions?: T;
+  commissionServicesPercent?: T;
+  commissionExtrasPercent?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -568,6 +694,41 @@ export interface ExtrasSelect<T extends boolean = true> {
   appliesTo?: T;
   durationMinutes?: T;
   price?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "schedule-exceptions_select".
+ */
+export interface ScheduleExceptionsSelect<T extends boolean = true> {
+  barber?: T;
+  kind?: T;
+  dateFrom?: T;
+  dateTo?: T;
+  location?: T;
+  start?: T;
+  end?: T;
+  breaks?:
+    | T
+    | {
+        start?: T;
+        end?: T;
+        id?: T;
+      };
+  comment?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "barber-prices_select".
+ */
+export interface BarberPricesSelect<T extends boolean = true> {
+  barber?: T;
+  item?: T;
+  price?: T;
+  durationMinutes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

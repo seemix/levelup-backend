@@ -40,7 +40,7 @@ describe('access control', () => {
     await expect(
       payload.create({
         collection: 'barbers',
-        data: { name: 'x', description: 'x', about: undefined as never },
+        data: { name: 'x', description: 'x' } as never,
         overrideAccess: false,
       }),
     ).rejects.toThrow()
