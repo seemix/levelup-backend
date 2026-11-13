@@ -24,9 +24,11 @@ const main = async () => {
   payload.logger.info(`[seed] created: ${JSON.stringify(summary)}`)
 }
 
-main()
-  .then(() => process.exit(0))
-  .catch((error) => {
-    console.error(error)
-    process.exit(1)
-  })
+// `payload run` exits as soon as this module has been imported, so the seed must be awaited here.
+try {
+  await main()
+  process.exit(0)
+} catch (error) {
+  console.error(error)
+  process.exit(1)
+}
