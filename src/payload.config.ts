@@ -1,6 +1,9 @@
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { en } from '@payloadcms/translations/languages/en'
+import { ro } from '@payloadcms/translations/languages/ro'
+import { ru } from '@payloadcms/translations/languages/ru'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import path from 'path'
@@ -12,6 +15,7 @@ import { Barbers } from '@/collections/Barbers'
 import { Slides } from '@/collections/Slides'
 import { AboutUs } from '@/globals/AboutUs'
 import { env } from '@/env'
+import { crmTranslations } from '@/i18n'
 import { migrations } from '@/migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -45,6 +49,11 @@ export default buildConfig({
         Icon: '@/app/(payload)/components/Logo',
       },
     },
+  },
+  i18n: {
+    supportedLanguages: { ru, ro, en },
+    fallbackLanguage: 'ru',
+    translations: crmTranslations,
   },
   localization: {
     locales: ['ru', 'ro', 'en'],

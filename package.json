@@ -21,14 +21,18 @@
     "migrate": "cross-env NODE_OPTIONS=--no-deprecation payload migrate"
   },
   "dependencies": {
+    "@date-fns/tz": "^1.5.0",
     "@payloadcms/db-mongodb": "3.92.1",
     "@payloadcms/next": "3.92.1",
     "@payloadcms/richtext-lexical": "3.92.1",
     "@payloadcms/storage-s3": "3.92.1",
+    "@payloadcms/translations": "3.92.1",
     "@payloadcms/ui": "3.92.1",
     "cross-env": "^10.1.0",
+    "date-fns": "^4.4.0",
     "dotenv": "^18.0.9",
     "graphql": "^16.14.2",
+    "libphonenumber-js": "^1.13.16",
     "next": "16.4.3",
     "payload": "3.92.1",
     "plaiceholder": "^3.0.0",

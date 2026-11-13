@@ -1,5 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import { adminOrEditor, anyone } from '@/access'
+import { crmLabel, crmLabels } from '@/i18n'
 
 export const contentAccess: NonNullable<CollectionConfig['access']> = {
   read: anyone,
@@ -8,4 +9,7 @@ export const contentAccess: NonNullable<CollectionConfig['access']> = {
   delete: adminOrEditor,
 }
 
-export const contentGroup = 'Content'
+export const contentGroup = crmLabels('groups.content')
+
+/** Shared description for the `order` sidebar field. */
+export const orderDescription = crmLabel('fields.orderDescription')

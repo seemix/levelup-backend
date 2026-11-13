@@ -1,5 +1,5 @@
 import { CollectionConfig } from 'payload'
-import { contentAccess, contentGroup } from '@/fields'
+import { contentAccess, contentGroup, orderDescription } from '@/fields'
 
 export const Barbers: CollectionConfig = {
   slug: 'barbers',
@@ -16,7 +16,7 @@ export const Barbers: CollectionConfig = {
       type: 'number',
       defaultValue: 0,
       index: true,
-      admin: { position: 'sidebar', description: 'Lower numbers are shown first' },
+      admin: { position: 'sidebar', description: orderDescription },
     },
     {
       name: 'name',
