@@ -1,0 +1,136 @@
+### CRM calendar API (spec §6.2, A29) — staff only
+# Works with the REST Client (VS Code) / JetBrains HTTP Client.
+# 1. `docker compose up mongo`, `pnpm seed`, `pnpm dev`.
+# 2. Run "login" (admin / manager / barber1 of the seed, password = SEED_PASSWORD) and put the `token`
+#    into @token. The admin cookie works too (same origin).
+# 3. Run "calendar", copy ids into the variables below.
+#
+# Auth: `Authorization: Bearer <token>`; no user → 401 UNAUTHORIZED, editor → 403 FORBIDDEN.
+# Errors: `{ "error": { "code": "SLOT_TAKEN", "details": { ... } } }`, the HTTP status matches the type.
+# Codes: UNAUTHORIZED, FORBIDDEN, NOT_FOUND (also for appointments outside the user's scope),
+# VALIDATION_ERROR (details.fields), LOCATION_NOT_FOUND, BARBER_NOT_FOUND, PHONE_INVALID,
+# CONFIRMATION_REQUIRED (409, details.warnings [+ details.total {from, to}]) and the service codes:
+# SLOT_TAKEN, SLOT_UNAVAILABLE, BARBER_LOCATION_INVALID, BLOCK_TIME_INVALID, SERVICE_REQUIRED,
+# SERVICE_NOT_FOUND, EXTRA_NOT_FOUND, EXTRA_NOT_APPLICABLE, APPOINTMENT_FORBIDDEN, APPOINTMENT_PAID_LOCKED,
+# DISCOUNT_FORBIDDEN, DISCOUNT_INVALID, DISCOUNT_TOO_LARGE, DISCOUNT_REASON_REQUIRED, PROMO_*,
+# STATUS_TRANSITION_INVALID, STATUS_TOO_EARLY, STATUS_FORBIDDEN, CANCEL_REASON_REQUIRED.
+# Warnings to confirm (repeat the same request with "confirm": true):
+# OUTSIDE_SCHEDULE, PRICE_CHANGED, HAS_PAYMENTS, REFUND_REQUIRED.
+# Money — integer bani (MDL × 100); instants — ISO UTC; dates — local `YYYY-MM-DD` (Europe/Chisinau).
+
+@api = http://localhost:3000/api
+@token = paste-the-login-token
+@location = 000000000000000000000000
+@barber = 000000000000000000000000
+@barber2 = 000000000000000000000000
+@service = 000000000000000000000000
+@extra = 000000000000000000000000
+@client = 000000000000000000000000
+@appointment = 000000000000000000000000
+@date = 2026-12-14
+
+### Login (standard Payload auth) → `token`
+POST {{api}}/users/login
+Content-Type: application/json
+
+{ "email": "admin@levelup.local", "password": "levelup-dev-123" }
+
+### Calendar, day: columns = barbers of the location (own column first for a barber),
+### working intervals in the location (`off`: no_schedule | day_off | vacation | sick | other_location),
+### appointments — full details, or `{ start, end, busy }` for rows the user may not read.
+### `location` defaults to the first visible one; `cancelled=1` adds cancelled appointments.
+GET {{api}}/crm/calendar?date={{date}}&view=day&location={{location}}&locale=ru
+Authorization: Bearer {{token}}
+
+### Calendar, week (A2): 7 columns (Mon…Sun) of one barber (a barber — their own by default)
+GET {{api}}/crm/calendar?date={{date}}&view=week&location={{location}}&barber={{barber}}
+Authorization: Bearer {{token}}
+
+### Staff slots (§5.3 p.7): every grid step without an overlap; outside the schedule → OUTSIDE_SCHEDULE.
+### `barber` empty/any = every barber of the location (admin, manager); a barber gets only their own.
+### Editing: `exclude` = the appointment (its time is free), `duration` = its snapshot duration.
+GET {{api}}/crm/slots?location={{location}}&barber={{barber}}&service={{service}}&extras[]={{extra}}&date={{date}}
+Authorization: Bearer {{token}}
+
+### Client by phone (admin, manager) → { client: {...} | null }
+GET {{api}}/crm/clients/lookup?phone=069100001
+Authorization: Bearer {{token}}
+
+### Create an appointment (client: null = "without a name"; a barber may omit `barber` — their own)
+POST {{api}}/crm/appointments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "location": "{{location}}",
+  "barber": "{{barber}}",
+  "client": "{{client}}",
+  "service": "{{service}}",
+  "extras": ["{{extra}}"],
+  "start": "2026-12-14T08:00:00.000Z",
+  "promoCode": "LEVELUP10",
+  "manualDiscount": { "type": "percent", "value": 10, "reason": "Regular client" },
+  "clientComment": null,
+  "internalNote": "Prefers scissors",
+  "language": "ro"
+}
+
+### Same time outside the schedule → 409 CONFIRMATION_REQUIRED { warnings: ["OUTSIDE_SCHEDULE"] };
+### repeat with "confirm": true
+POST {{api}}/crm/appointments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "location": "{{location}}",
+  "barber": "{{barber}}",
+  "client": null,
+  "service": "{{service}}",
+  "start": "2026-12-14T18:00:00.000Z",
+  "confirm": true
+}
+
+### Time block (decision 21): no client/service, own duration
+POST {{api}}/crm/appointments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "kind": "block",
+  "location": "{{location}}",
+  "barber": "{{barber}}",
+  "start": "2026-12-14T11:00:00.000Z",
+  "durationMinutes": 60
+}
+
+### Move to another barber/time (drag-n-drop): price recalculated → 409 PRICE_CHANGED
+### { total: { from, to } } (+ HAS_PAYMENTS if paid); repeat with "confirm": true. Queues the "moved" email.
+PATCH {{api}}/crm/appointments/{{appointment}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "barber": "{{barber2}}",
+  "start": "2026-12-14T09:00:00.000Z"
+}
+
+### Change composition, promo code (null removes it), discount (null removes it), notes
+PATCH {{api}}/crm/appointments/{{appointment}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "service": "{{service}}",
+  "extras": [],
+  "promoCode": null,
+  "manualDiscount": { "type": "amount", "value": 5000, "reason": "Waited" },
+  "internalNote": "Late 10 min"
+}
+
+### Status (§5.1): completed | no_show | cancelled_by_client | cancelled_by_salon (reason) | scheduled (restore)
+### Cancelling an appointment with payments → 409 REFUND_REQUIRED; repeat with "confirm": true
+POST {{api}}/crm/appointments/{{appointment}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "status": "cancelled_by_salon", "reason": "Barber is ill" }

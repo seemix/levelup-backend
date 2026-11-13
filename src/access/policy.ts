@@ -55,6 +55,8 @@ export type Resource =
   | 'booking-locks'
   /** Warning list of scheduled appointments on a schedule exception (§4.5): admin and manager. */
   | 'schedule-exceptions.appointments'
+  /** CRM calendar (§3.1): admin — all locations, manager — own, barber — own column + busy time of the location. */
+  | 'calendar'
 
 /** `true`/`false` or a row-level `Where` constraint (only for collection-level `read`/`update`/`delete`). */
 export type Decision = boolean | Where
@@ -277,6 +279,9 @@ const rules: Record<Resource, Rule> = {
 
   'schedule-exceptions.appointments': (user, action) =>
     action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
+
+  // Reading the calendar; which locations and which details are visible is decided per row (§3.1).
+  calendar: (user, action) => action === 'read' && isStaff(user),
 }
 
 /**

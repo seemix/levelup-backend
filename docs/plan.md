@@ -129,9 +129,9 @@
 **Перевірка:** скасування до і після межі; лендинг усіма трьома мовами.
 
 ## Етап 13. CRM API календаря — opus
-- [ ] `GET /crm/calendar` (§6.2): колонки, робочі інтервали, записи з фільтрацією полів за роллю.
-- [ ] `POST/PATCH /crm/appointments`, `/status`, `/crm/slots` (режим персоналу, попередження `OUTSIDE_SCHEDULE`), `/crm/clients/lookup`.
-- [ ] Integration-тести прав: barber не отримує деталей чужих записів, manager — інших локацій.
+- [x] `GET /crm/calendar` (§6.2): колонки, робочі інтервали, записи з фільтрацією полів за роллю.
+- [x] `POST/PATCH /crm/appointments`, `/status`, `/crm/slots` (режим персоналу, попередження `OUTSIDE_SCHEDULE`), `/crm/clients/lookup`.
+- [x] Integration-тести прав: barber не отримує деталей чужих записів, manager — інших локацій.
 
 **Готово:** API покриває всі дії календаря.
 **Перевірка:** тести; `docs/api-crm.http`.
