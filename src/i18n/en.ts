@@ -4,6 +4,7 @@ export const en = {
     settings: 'CRM / Settings',
     catalog: 'CRM / Catalog',
     barbers: 'CRM / Barbers',
+    clients: 'CRM / Clients',
   },
   fields: {
     orderDescription: 'Lower numbers are shown first',
@@ -161,6 +162,22 @@ export const en = {
     durationMinutes: 'Duration, min',
     durationDescription: 'Leave empty to use the base duration',
   },
+  clients: {
+    singular: 'Client',
+    plural: 'Clients',
+    firstName: 'First name',
+    lastName: 'Last name',
+    phone: 'Phone',
+    email: 'Email',
+    language: 'Language',
+    languageDescription: 'Language of emails to this client',
+    blocked: 'Blocked',
+    blockedDescription: 'Blocked clients cannot book online',
+    source: 'Source',
+    sourceDescription: 'online, staff, import or the name of the old CRM',
+    externalId: 'External ID',
+    notes: 'Notes',
+  },
   errors: {
     required: 'This field is required',
     priceInvalid: 'Enter a non-negative amount with up to two decimals',
@@ -186,5 +203,6 @@ export const en = {
     percentInvalid: 'Enter a percentage from 0 to 100',
     barberUserTaken: 'This user is already linked to another barber',
     barberPriceTaken: 'This barber already has a price for this item',
+    phoneTaken: 'A client with this phone number already exists',
   },
 }

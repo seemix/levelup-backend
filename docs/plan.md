@@ -42,19 +42,19 @@
 **Перевірка:** CRUD в адмінці; `GET /api/services?locale=ro`.
 
 ## Етап 3. Барбери: CRM-поля, графік, винятки, ціни барбера — opus
-- [x] Розширення `barbers` (§4.4), field-level read для `commission*`/`user`; умовна обов'язковість `description`/`about` (A12).
-- [x] `weeklySchedule` з валідацією; колекції `schedule-exceptions` (без перетинів) і `barber-prices` (унікальна пара).
-- [x] `getWorkingIntervals(barber, date)` (§5.2) + unit-тести.
-- [x] Міграція: дефолти для наявних барберів (`active`, `showOnSite`, `onlineBooking`, `color`, `locations`).
-- [x] Тести прав (барбер бачить свій %, чужий — ні; анонім не бачить CRM-полів).
+- [ ] Розширення `barbers` (§4.4), field-level read для `commission*`/`user`; умовна обов'язковість `description`/`about` (A12).
+- [ ] `weeklySchedule` з валідацією; колекції `schedule-exceptions` (без перетинів) і `barber-prices` (унікальна пара).
+- [ ] `getWorkingIntervals(barber, date)` (§5.2) + unit-тести.
+- [ ] Міграція: дефолти для наявних барберів (`active`, `showOnSite`, `onlineBooking`, `color`, `locations`).
+- [ ] Тести прав (барбер бачить свій %, чужий — ні; анонім не бачить CRM-полів).
 
 **Готово:** у кожного барбера є графік, винятки, перевизначені ціни; лендинг показує барберів як раніше.
 **Перевірка:** тести; `GET /api/barbers` анонімом не повертає `commission*`, `user`.
 
 ## Етап 4. Клієнти — sonnet
-- [ ] Колекція `clients` (§4.10): нормалізація телефону в `beforeValidate`, унікальний індекс, `externalId`/`source`.
-- [ ] Field-level read для email; міграція-індекс.
-- [ ] Тести: нормалізація різних форматів (`069…`, `+373 69…`, `0037369…`), дубль → помилка `PHONE_TAKEN`, доступ за ролями.
+- [x] Колекція `clients` (§4.10): нормалізація телефону в `beforeValidate`, унікальний індекс, `externalId`/`source`.
+- [x] Field-level read для email; міграція-індекс.
+- [x] Тести: нормалізація різних форматів (`069…`, `+373 69…`, `0037369…`), дубль → помилка `PHONE_TAKEN`, доступ за ролями.
 
 **Готово:** admin/manager ведуть базу клієнтів, дублі телефонів неможливі.
 **Перевірка:** тести; створити клієнта з `069 123 456` → зберігається `+37369123456`.

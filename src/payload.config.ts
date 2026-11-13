@@ -19,6 +19,7 @@ import { Services } from '@/collections/Services'
 import { Extras } from '@/collections/Extras'
 import { ScheduleExceptions } from '@/collections/ScheduleExceptions'
 import { BarberPrices } from '@/collections/BarberPrices'
+import { Clients } from '@/collections/Clients'
 import { AboutUs } from '@/globals/AboutUs'
 import { BookingSettings } from '@/globals/BookingSettings'
 import { env } from '@/env'
@@ -78,6 +79,7 @@ export default buildConfig({
     Extras,
     ScheduleExceptions,
     BarberPrices,
+    Clients,
   ],
   globals: [AboutUs, BookingSettings],
   editor: lexicalEditor(),

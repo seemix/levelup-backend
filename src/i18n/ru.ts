@@ -6,6 +6,7 @@ export const ru: CrmTranslations = {
     settings: 'CRM / Настройки',
     catalog: 'CRM / Каталог',
     barbers: 'CRM / Барберы',
+    clients: 'CRM / Клиенты',
   },
   fields: {
     orderDescription: 'Сначала показываются меньшие числа',
@@ -163,6 +164,22 @@ export const ru: CrmTranslations = {
     durationMinutes: 'Длительность, мин',
     durationDescription: 'Пусто — базовая длительность',
   },
+  clients: {
+    singular: 'Клиент',
+    plural: 'Клиенты',
+    firstName: 'Имя',
+    lastName: 'Фамилия',
+    phone: 'Телефон',
+    email: 'Email',
+    language: 'Язык',
+    languageDescription: 'Язык писем этому клиенту',
+    blocked: 'Заблокирован',
+    blockedDescription: 'Заблокированный клиент не может записаться онлайн',
+    source: 'Источник',
+    sourceDescription: 'online, staff, import или название старой CRM',
+    externalId: 'Внешний ID',
+    notes: 'Заметки',
+  },
   errors: {
     required: 'Обязательное поле',
     priceInvalid: 'Введите неотрицательную сумму не более чем с двумя знаками после запятой',
@@ -188,5 +205,6 @@ export const ru: CrmTranslations = {
     percentInvalid: 'Введите процент от 0 до 100',
     barberUserTaken: 'Этот пользователь уже привязан к другому барберу',
     barberPriceTaken: 'У барбера уже есть цена для этой позиции',
+    phoneTaken: 'Клиент с таким номером телефона уже существует',
   },
 }

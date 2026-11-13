@@ -33,6 +33,10 @@ export type Resource =
   /** `barbers.user`: admin only. */
   | 'barbers.user'
   | 'barber-prices'
+  /** Clients: admin/manager CRU, admin deletes; barber has no direct access (spec §3.1, decision 36). */
+  | 'clients'
+  /** `clients.email`: admin and manager read. */
+  | 'clients.email'
   /** Needs a `PolicyScope` (barber link / managed barbers). */
   | 'schedule-exceptions'
 
@@ -191,6 +195,12 @@ const rules: Record<Resource, Rule> = {
 
   // Price overrides are public prices (shown in online booking); only admin edits them.
   'barber-prices': (user, action) => (action === 'read' ? true : isAdmin(user)),
+
+  clients: (user, action) =>
+    action === 'delete' ? isAdmin(user) : isAdmin(user) || hasRole(user, 'manager'),
+
+  'clients.email': (user, action) =>
+    action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
 
   'schedule-exceptions': (user, action, doc, scope) => {
     if (isAdmin(user)) return true

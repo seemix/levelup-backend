@@ -77,6 +77,7 @@ export interface Config {
     extras: Extra;
     'schedule-exceptions': ScheduleException;
     'barber-prices': BarberPrice;
+    clients: Client;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -99,6 +100,7 @@ export interface Config {
     extras: ExtrasSelect<false> | ExtrasSelect<true>;
     'schedule-exceptions': ScheduleExceptionsSelect<false> | ScheduleExceptionsSelect<true>;
     'barber-prices': BarberPricesSelect<false> | BarberPricesSelect<true>;
+    clients: ClientsSelect<false> | ClientsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -404,6 +406,24 @@ export interface Slide {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "clients".
+ */
+export interface Client {
+  id: string;
+  firstName: string;
+  lastName?: string | null;
+  phone: string;
+  email?: string | null;
+  language: 'ru' | 'ro' | 'en';
+  blocked?: boolean | null;
+  source?: string | null;
+  externalId?: string | null;
+  notes?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -465,6 +485,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'barber-prices';
         value: string | BarberPrice;
+      } | null)
+    | ({
+        relationTo: 'clients';
+        value: string | Client;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -729,6 +753,23 @@ export interface BarberPricesSelect<T extends boolean = true> {
   item?: T;
   price?: T;
   durationMinutes?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "clients_select".
+ */
+export interface ClientsSelect<T extends boolean = true> {
+  firstName?: T;
+  lastName?: T;
+  phone?: T;
+  email?: T;
+  language?: T;
+  blocked?: T;
+  source?: T;
+  externalId?: T;
+  notes?: T;
   updatedAt?: T;
   createdAt?: T;
 }

@@ -6,6 +6,7 @@ export const ro: CrmTranslations = {
     settings: 'CRM / Setări',
     catalog: 'CRM / Catalog',
     barbers: 'CRM / Frizeri',
+    clients: 'CRM / Clienți',
   },
   fields: {
     orderDescription: 'Mai întâi sunt afișate numerele mai mici',
@@ -163,6 +164,22 @@ export const ro: CrmTranslations = {
     durationMinutes: 'Durată, min',
     durationDescription: 'Gol — durata de bază',
   },
+  clients: {
+    singular: 'Client',
+    plural: 'Clienți',
+    firstName: 'Prenume',
+    lastName: 'Nume',
+    phone: 'Telefon',
+    email: 'Email',
+    language: 'Limba',
+    languageDescription: 'Limba e-mailurilor către acest client',
+    blocked: 'Blocat',
+    blockedDescription: 'Clientul blocat nu se poate programa online',
+    source: 'Sursă',
+    sourceDescription: 'online, staff, import sau numele vechiului CRM',
+    externalId: 'ID extern',
+    notes: 'Notițe',
+  },
   errors: {
     required: 'Câmp obligatoriu',
     priceInvalid: 'Introduceți o sumă non-negativă cu cel mult două zecimale',
@@ -188,5 +205,6 @@ export const ro: CrmTranslations = {
     percentInvalid: 'Introduceți un procent de la 0 la 100',
     barberUserTaken: 'Acest utilizator este deja legat de alt frizer',
     barberPriceTaken: 'Frizerul are deja un preț pentru această poziție',
+    phoneTaken: 'Există deja un client cu acest număr de telefon',
   },
 }
