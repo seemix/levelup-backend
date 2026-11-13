@@ -24,11 +24,11 @@
 **Перевірка:** `pnpm test:int`; вручну змінити мову в профілі адмінки.
 
 ## Етап 1. Ролі, локації, політика доступу — opus
-- [ ] `users.roles` + `manager`, `barber`; `users.locations` (saveToJWT); `users.language`.
-- [ ] Колекція `locations`, global `booking-settings`.
-- [ ] `src/access/policy.ts` + `getStaffContext(req)` (кеш у `req.context`); access-функції на основі policy.
-- [ ] Міграція: дефолтна локація «Bălți, Decebal 142»; ролі наявних користувачів без змін.
-- [ ] Тести прав: users, locations, settings для кожної ролі.
+- [x] `users.roles` + `manager`, `barber`; `users.locations` (saveToJWT); `users.language`.
+- [x] Колекція `locations`, global `booking-settings`.
+- [x] `src/access/policy.ts` + `getStaffContext(req)` (кеш у `req.context`); access-функції на основі policy.
+- [x] Міграція: дефолтна локація «Bălți, Decebal 142»; ролі наявних користувачів без змін.
+- [x] Тести прав: users, locations, settings для кожної ролі.
 
 **Готово:** admin створює manager/barber; manager бачить лише свої локації; editor працює як раніше.
 **Перевірка:** `tests/int/access.int.spec.ts` розширено; вручну — вхід під кожною роллю.

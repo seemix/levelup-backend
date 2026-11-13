@@ -4,7 +4,7 @@ import config from '../../src/payload.config'
 export const testUser = {
   email: 'dev@payloadcms.com',
   password: 'test',
-  roles: ['admin'] as ('admin' | 'editor')[],
+  roles: ['admin'] as ('admin' | 'manager' | 'barber' | 'editor')[],
 }
 
 /**

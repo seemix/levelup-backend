@@ -25,6 +25,10 @@ export const crmLabel =
   ({ t }) =>
     (t as unknown as CrmT)(`crm:${key}`)
 
+/** Translate a `crm` key with a request `t` (e.g. in `validate`): `crmT(req.t, 'errors.phoneInvalid')`. */
+export const crmT = (t: unknown, key: CrmKey, options?: Record<string, unknown>): string =>
+  (t as CrmT)(`crm:${key}`, options)
+
 /** Static per-language record for options that do not accept functions (e.g. `admin.group`). */
 export const crmLabels = (key: CrmKey): Record<AdminLocale, string> => {
   const read = (tr: CrmTranslations) =>

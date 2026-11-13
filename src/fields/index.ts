@@ -11,5 +11,7 @@ export const contentAccess: NonNullable<CollectionConfig['access']> = {
 
 export const contentGroup = crmLabels('groups.content')
 
+export const settingsGroup = crmLabels('groups.settings')
+
 /** Shared description for the `order` sidebar field. */
 export const orderDescription = crmLabel('fields.orderDescription')

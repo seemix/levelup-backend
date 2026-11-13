@@ -13,7 +13,9 @@ import { Users } from '@/collections/Users'
 import { Media } from '@/collections/Media'
 import { Barbers } from '@/collections/Barbers'
 import { Slides } from '@/collections/Slides'
+import { Locations } from '@/collections/Locations'
 import { AboutUs } from '@/globals/AboutUs'
+import { BookingSettings } from '@/globals/BookingSettings'
 import { env } from '@/env'
 import { crmTranslations } from '@/i18n'
 import { migrations } from '@/migrations'
@@ -60,8 +62,8 @@ export default buildConfig({
     defaultLocale: 'ru',
   },
   defaultDepth: 1,
-  collections: [Users, Media, Barbers, Slides],
-  globals: [AboutUs],
+  collections: [Users, Media, Barbers, Slides, Locations],
+  globals: [AboutUs, BookingSettings],
   editor: lexicalEditor(),
   secret: env.secret,
   typescript: {

@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     barbers: Barber;
     slides: Slide;
+    locations: Location;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -82,6 +83,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     barbers: BarbersSelect<false> | BarbersSelect<true>;
     slides: SlidesSelect<false> | SlidesSelect<true>;
+    locations: LocationsSelect<false> | LocationsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -93,9 +95,11 @@ export interface Config {
   fallbackLocale: ('false' | 'none' | 'null') | false | null | ('ru' | 'ro' | 'en') | ('ru' | 'ro' | 'en')[];
   globals: {
     'about-us': AboutUs;
+    'booking-settings': BookingSetting;
   };
   globalsSelect: {
     'about-us': AboutUsSelect<false> | AboutUsSelect<true>;
+    'booking-settings': BookingSettingsSelect<false> | BookingSettingsSelect<true>;
   };
   locale: 'ru' | 'ro' | 'en';
   widgets: {
@@ -131,7 +135,9 @@ export interface UserAuthOperations {
  */
 export interface User {
   id: string;
-  roles: ('admin' | 'editor')[];
+  roles: ('admin' | 'manager' | 'barber' | 'editor')[];
+  locations?: (string | Location)[] | null;
+  language?: ('ru' | 'ro' | 'en') | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -151,6 +157,21 @@ export interface User {
     | null;
   password?: string | null;
   collection: 'users';
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locations".
+ */
+export interface Location {
+  id: string;
+  order?: number | null;
+  active: boolean;
+  name: string;
+  address?: string | null;
+  phone?: string | null;
+  mapUrl?: string | null;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -204,9 +225,6 @@ export interface Media {
  */
 export interface Barber {
   id: string;
-  /**
-   * Lower numbers are shown first
-   */
   order?: number | null;
   name: string;
   description: string;
@@ -235,9 +253,6 @@ export interface Barber {
  */
 export interface Slide {
   id: string;
-  /**
-   * Lower numbers are shown first
-   */
   order?: number | null;
   title?: string | null;
   image?: (string | null) | Media;
@@ -284,6 +299,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'slides';
         value: string | Slide;
+      } | null)
+    | ({
+        relationTo: 'locations';
+        value: string | Location;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -333,6 +352,8 @@ export interface PayloadMigration {
  */
 export interface UsersSelect<T extends boolean = true> {
   roles?: T;
+  locations?: T;
+  language?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -431,6 +452,20 @@ export interface SlidesSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "locations_select".
+ */
+export interface LocationsSelect<T extends boolean = true> {
+  order?: T;
+  active?: T;
+  name?: T;
+  address?: T;
+  phone?: T;
+  mapUrl?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -495,10 +530,46 @@ export interface AboutUs {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "booking-settings".
+ */
+export interface BookingSetting {
+  id: string;
+  onlineBookingEnabled: boolean;
+  slotStepMinutes: number;
+  minLeadMinutes: number;
+  horizonDays: number;
+  clientCancelMinHours: number;
+  reminderHoursBefore: number;
+  bufferMinutes: number;
+  senderName?: string | null;
+  replyTo?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "about-us_select".
  */
 export interface AboutUsSelect<T extends boolean = true> {
   content?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "booking-settings_select".
+ */
+export interface BookingSettingsSelect<T extends boolean = true> {
+  onlineBookingEnabled?: T;
+  slotStepMinutes?: T;
+  minLeadMinutes?: T;
+  horizonDays?: T;
+  clientCancelMinHours?: T;
+  reminderHoursBefore?: T;
+  bufferMinutes?: T;
+  senderName?: T;
+  replyTo?: T;
   updatedAt?: T;
   createdAt?: T;
   globalType?: T;
