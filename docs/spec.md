@@ -26,7 +26,7 @@ CRM для барбершопу:
 | 3 | Email: Resend через `@payloadcms/email-resend`; `RESEND_API_KEY` у `.env` (без ключа — лог у консоль). Відправник — верифікований домен (`EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME`). SMS/Viber/Telegram — поза обсягом v1. |
 | 4 | Валюта MDL. Суми зберігаються як **цілі числа в банах** (1 лей = 100 бань). Часовий пояс `Europe/Chisinau`. |
 | 5 | Календар — кастомний view адмінки Payload (`/calendar`). |
-| 6 | Онлайн-запис — сторінка `/[locale]/booking` у `levelup-front`. |
+| 6 | Онлайн-запис — окрема секція лендингу `levelup-front` (`#booking`), прихована, доки не натиснуто «Записатися»; після натискання з'являється з плавним скролом до неї, увесь процес запису — всередині секції. Окремої сторінки `/booking` немає (лише `/[locale]/booking/cancel/[token]` для скасування з листа). |
 | 7 | Послуги на лендингу беруться з колекції `services`, а не з захардкоженого `servicesData.tsx`. |
 | 8 | Ролі `users.roles`: `admin`, `manager`, `barber`, `editor` (лише контент сайту). Барбер-користувач пов'язаний через `barbers.user`. |
 | 9 | Міграція зі старої CRM: зараз лише поля `externalId`/`source`, імпорт — окремим етапом пізніше. |
@@ -141,6 +141,13 @@ CRM для барбершопу:
   - Коди помилок API: `VALIDATION_ERROR` (`details.fields`), `PHONE_INVALID`, `RATE_LIMITED` (429 + `Retry-After`), `BOOKING_REJECTED`, `BOOKING_DISABLED`, `LOCATION_NOT_FOUND`, `BARBER_NOT_FOUND`, `CERTIFICATE_NOT_FOUND`, `ACTIVE_BOOKINGS_LIMIT`, `TOKEN_INVALID` (404), `CANCEL_NOT_ALLOWED` (409, запис уже не `scheduled`), а також коди сервісів (`SLOT_*`, `SERVICE_*`, `EXTRA_*`, `PROMO_*`, `CANCEL_TOO_LATE`). `message` = код, текст перекладає фронт.
   - Сертифікат: до етапу 18 `findCertificate` — заглушка (`CERTIFICATE_NOT_FOUND`); етап 18 підключає `gift-certificates` через `setCertificateLookup` і переносить код із `clientComment` у `plannedCertificate`.
   - CORS — `config.cors` (`FRONTEND_URL`, `BACKEND_URL`): Payload додає заголовки й відповідає на preflight для custom endpoints.
+- A27. Етап 11, секція запису у `levelup-front` (`app/[locale]/components/Booking/`, `app/[locale]/lib/booking/`):
+  - Секція `#booking` рендериться лише після натискання «Записатися» (`BookingProvider` → `BookingSection`); перше натискання показує її, наступні лише скролять (`react-scroll`, як меню). Стан кроків живе в компоненті, не в URL (рішення власника): оновлення сторінки скидає вибір.
+  - `NEXT_PUBLIC_BOOKING_PROVIDER` (за замовчуванням `easyweek`): `native` — кнопки відкривають секцію й віджет EasyWeek не підключається; `easyweek` — секції немає, кнопки мають клас-тригер віджета. Для локальної розробки додано `NEXT_PUBLIC_API_URL` і `NEXT_PUBLIC_BACKEND_URL` (за замовчуванням production).
+  - Кроки: салон (прихований, якщо один) → барбер/«будь-який» (варіант «будь-який» лише якщо в салоні понад один барбер) → послуга → додаткові (пропускається, якщо жодна не підходить) → дата й час (календар за `/booking/days`, час за `/booking/slots`) → телефон → ім'я/прізвище/email → підсумок (`/booking/quote`, промокод і сертифікат) → екран успіху. Зміна раннього вибору скидає залежні (`patchState`). Поле коментаря в формі не виводиться (API його приймає).
+  - Ціна «від X» у списках — лише для «будь-якого барбера», коли ціни барберів у салоні різні; у підсумку — за `quote.priceFrom`.
+  - Екран успіху показує посилання `/{locale}/booking/cancel/{cancelToken}`; сторінка з'являється на етапі 12 (до того посилання веде на 404).
+  - Телефон перевіряється `libphonenumber-js` (регіон `MD`) і відправляється в E.164; помилки API перекладаються ключами `errors.*` (`SLOT_TAKEN`/`SLOT_UNAVAILABLE` ведуть назад на вибір часу, `PHONE_INVALID` — на телефон). Паритет `messages/*.json` — `scripts/check-messages.mjs` (входить у `npm run lint`).
 
 ## 2. Загальні правила
 
