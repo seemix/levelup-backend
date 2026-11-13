@@ -148,6 +148,7 @@ CRM для барбершопу:
   - Ціна «від X» у списках — лише для «будь-якого барбера», коли ціни барберів у салоні різні; у підсумку — за `quote.priceFrom`.
   - Екран успіху показує посилання `/{locale}/booking/cancel/{cancelToken}`; сторінка з'являється на етапі 12 (до того посилання веде на 404).
   - Телефон перевіряється `libphonenumber-js` (регіон `MD`) і відправляється в E.164; помилки API перекладаються ключами `errors.*` (`SLOT_TAKEN`/`SLOT_UNAVAILABLE` ведуть назад на вибір часу, `PHONE_INVALID` — на телефон). Паритет `messages/*.json` — `scripts/check-messages.mjs` (входить у `npm run lint`).
+- A28. Етап 12, `levelup-front`: сторінка `/[locale]/booking/cancel/[token]` (`components/CancelBooking`, клієнтська, `noindex`) бере деталі з `GET /booking/cancel/:token?locale=`, скасовує через `POST`; якщо `canCancel = false` — повідомлення з `clientCancelMinHours` і телефон локації (запасний — `assets.salonPhone`). Формат посилання в листі (`buildCancelUrl`) збігається з маршрутом. Секція «Послуги» — серверний компонент: активні категорії й послуги за `order` (`depth=0`, `select`), група = картка; іконка картки — за позицією категорії (циклічно scissors/razor/brush), бо в `service-categories` немає поля іконки; послуги без категорії — в останній картці; при помилці API секція порожня.
 
 ## 2. Загальні правила
 
