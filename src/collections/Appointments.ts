@@ -295,6 +295,19 @@ export const Appointments: CollectionConfig = {
     computedMoney('certificateAmount', 'appointments.certificateAmount', true),
     computedMoney('tipAmount', 'appointments.tipAmount', true),
     {
+      // Code entered online (§4.11, §5.7): only checked then; charged when the visit is paid.
+      name: 'plannedCertificate',
+      type: 'relationship',
+      relationTo: 'gift-certificates',
+      label: crmLabel('appointments.plannedCertificate'),
+      admin: {
+        position: 'sidebar',
+        readOnly: true,
+        condition: isAppointment,
+        description: crmLabel('appointments.plannedCertificateDescription'),
+      },
+    },
+    {
       name: 'language',
       type: 'select',
       label: crmLabel('appointments.language'),

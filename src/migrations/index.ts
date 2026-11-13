@@ -7,6 +7,7 @@ import * as migration_20261113_000002_clients from './20261113_000002_clients'
 import * as migration_20261113_000003_promo_codes from './20261113_000003_promo_codes'
 import * as migration_20261113_000004_appointments from './20261113_000004_appointments'
 import * as migration_20261113_000005_ledger from './20261113_000005_ledger'
+import * as migration_20261114_000000_gift_certificates from './20261114_000000_gift_certificates'
 
 export const migrations = [
   {
@@ -53,5 +54,10 @@ export const migrations = [
     up: migration_20261113_000005_ledger.up,
     down: migration_20261113_000005_ledger.down,
     name: '20261113_000005_ledger',
+  },
+  {
+    up: migration_20261114_000000_gift_certificates.up,
+    down: migration_20261114_000000_gift_certificates.down,
+    name: '20261114_000000_gift_certificates',
   },
 ]

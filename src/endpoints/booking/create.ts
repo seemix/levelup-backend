@@ -13,7 +13,7 @@
 import type { PayloadRequest } from 'payload'
 
 import { createAppointment, runBookingTransaction } from '@/crm/appointments'
-import { findCertificate, normalizeCertificateCode } from '@/crm/certificates'
+import { findCertificate } from '@/crm/certificates.service'
 import { tryNormalizePhone } from '@/crm/phone'
 import { findPromoByCode } from '@/crm/promo'
 import {
@@ -123,13 +123,12 @@ const same = (a: string | null | undefined, b: string | null | undefined) =>
 
 /**
  * Text for `clientComment`: the visitor's comment, then — for a known phone — the submitted values
- * that differ from the client card, and the planned certificate. Field names are machine keys
+ * that differ from the client card. Field names are machine keys
  * (the comment is shown to staff as is, in any admin language).
  */
 export const composeClientComment = (
   input: Pick<BookingInput, 'comment' | 'firstName' | 'lastName' | 'email'>,
   existing: ClientRow | null,
-  certificateCode: string | null,
 ): string | null => {
   const notes: string[] = []
   if (existing) {
@@ -138,8 +137,6 @@ export const composeClientComment = (
       notes.push(`lastName: ${input.lastName}`)
     if (input.email && !same(existing.email, input.email)) notes.push(`email: ${input.email}`)
   }
-  // TODO(stage 18): store as `plannedCertificate` instead.
-  if (certificateCode) notes.push(`certificate: ${certificateCode}`)
   const parts = [input.comment, notes.length ? `[online] ${notes.join('; ')}` : null].filter(
     Boolean,
   )
@@ -273,11 +270,12 @@ export const createBooking = async (
   if (!settings.onlineBookingEnabled) throw bookingError('BOOKING_DISABLED', 403)
   await validateSelection(req, input)
 
-  let certificateCode: string | null = null
+  // The certificate is only checked here; it is charged when the visit is paid (§5.7).
+  let plannedCertificate: string | null = null
   if (input.certificateCode) {
     const certificate = await findCertificate(req, input.certificateCode)
     if (!certificate) throw bookingError('CERTIFICATE_NOT_FOUND', 404)
-    certificateCode = normalizeCertificateCode(certificate.code)
+    plannedCertificate = certificate.id
   }
 
   const actor = await publicRequest(req)
@@ -310,7 +308,8 @@ export const createBooking = async (
         startAt: input.start,
         promoCode,
         language: input.language,
-        clientComment: composeClientComment(input, existing, certificateCode),
+        clientComment: composeClientComment(input, existing),
+        plannedCertificate,
       },
       { mode: 'online', actorType: 'client', now },
     )

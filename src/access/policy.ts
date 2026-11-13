@@ -71,6 +71,14 @@ export type Resource =
    * expense category only), delete — nobody.
    */
   | 'transactions'
+  /**
+   * Gift certificates (§4.17, §3.1): staff reads (a barber checks a code at payment); admin and
+   * manager create — only through the sale service (§5.7); admin updates (void, expiry, buyer,
+   * comment); nobody deletes (the sale stays in the ledger).
+   */
+  | 'gift-certificates'
+  /** `gift-certificates.buyerName` / `buyerPhone`: admin and manager read. */
+  | 'gift-certificates.buyer'
 
 /** `true`/`false` or a row-level `Where` constraint (only for collection-level `read`/`update`/`delete`). */
 export type Decision = boolean | Where
@@ -156,7 +164,7 @@ export type TransactionPolicyDoc = {
   target?: { type: string; location?: unknown; occurredAt?: Date | string | null } | null
 }
 
-/** Operation types a manager creates (§3.1); payment and certificate sale come in stage 18. */
+/** Operation types a manager creates (§3.1); payments and certificate sales — through their services. */
 const MANAGER_TRANSACTION_TYPES = [
   'expense',
   'transfer',
@@ -344,7 +352,7 @@ const rules: Record<Resource, Rule> = {
 
   'cash-registers': (user, action, doc) => {
     if (action !== 'read') return isAdmin(user)
-    // A barber picks registers when taking a payment (stage 18); the balance is hidden by field access.
+    // A barber picks registers when taking a payment; the balance is hidden by field access.
     if (isAdmin(user) || hasRole(user, 'barber')) return true
     const own = hasRole(user, 'manager') ? userLocationIds(user) : []
     if (doc !== undefined)
@@ -357,6 +365,15 @@ const rules: Record<Resource, Rule> = {
 
   'expense-categories': (user, action) =>
     action === 'read' ? isAdmin(user) || hasRole(user, 'manager') : isAdmin(user),
+
+  'gift-certificates': (user, action) => {
+    if (action === 'read') return isStaff(user)
+    if (action === 'create') return isAdmin(user) || hasRole(user, 'manager')
+    return action === 'update' && isAdmin(user)
+  },
+
+  'gift-certificates.buyer': (user, action) =>
+    action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
 
   transactions: (user, action, doc, scope) => {
     if (action === 'delete') return false
@@ -384,7 +401,7 @@ const rules: Record<Resource, Rule> = {
     if (doc === undefined) return hasRole(user, 'manager') || hasRole(user, 'barber')
     const operation = doc as TransactionPolicyDoc
     if (managerMayCreate(user, operation)) return true
-    // Barber: payments of own appointments (stage 18).
+    // Barber: payments of own appointments.
     return (
       own !== null && operation.type === 'appointment_payment' && relId(operation.barber) === own
     )

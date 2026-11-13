@@ -13,7 +13,9 @@ import {
   createAppointment,
   type AppointmentInput,
 } from '@/crm/appointments'
+import { findCertificateByCode, sellCertificate } from '@/crm/certificates.service'
 import { createTransaction } from '@/crm/ledger.service'
+import { payAppointment } from '@/crm/payments.service'
 import { normalizePhone } from '@/crm/phone'
 import { addLocalDays, isoWeekday, localToInstant, todayLocal } from '@/crm/time'
 
@@ -21,6 +23,7 @@ import {
   SEED_BARBERS,
   SEED_CASH_REGISTERS,
   SEED_CATEGORIES,
+  SEED_CERTIFICATE,
   SEED_CLIENTS,
   SEED_EXPENSE_CATEGORIES,
   SEED_EXTRAS,
@@ -81,9 +84,9 @@ export const resetSeed = async (payload: Payload): Promise<SeedSummary> => {
   const all: Where = { id: { exists: true } }
 
   // The ledger and the registers go together: balances are sums of the operations.
-  // TODO(stage 18): gift-certificates.
   for (const collection of [
     'transactions',
+    'gift-certificates',
     'cash-registers',
     'appointment-logs',
     'appointments',
@@ -410,7 +413,7 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
     clientIds.push(id(doc))
   }
 
-  // 7. Promo code (certificate: TODO(stage 18)).
+  // 7. Promo code.
   let promo = await findOne(payload, 'promo-codes', { code: { equals: SEED_PROMO_CODE } })
   if (!promo) {
     promo = (await payload.create({
@@ -494,6 +497,31 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
     }
   }
 
+  // 7c. A gift certificate sold a week ago (spec §9), paid by card; used for one payment below.
+  let certificate = await findOne(payload, 'gift-certificates', {
+    comment: { equals: SEED_CERTIFICATE.comment },
+  })
+  if (!certificate) {
+    const admin = { id: userIds.admin, roles: ['admin'], collection: 'users' }
+    const req = await createLocalReq({ user: admin as never }, payload)
+    const soldAt = localToInstant(addLocalDays(todayLocal(now), -7), '13:00')
+    certificate = (
+      await sellCertificate(
+        req,
+        {
+          nominal: SEED_CERTIFICATE.nominal,
+          entries: [{ cashRegister: registerIds.card, amount: SEED_CERTIFICATE.nominal }],
+          buyerName: SEED_CERTIFICATE.buyerName,
+          comment: SEED_CERTIFICATE.comment,
+        },
+        { now: soldAt },
+      )
+    ).certificate as Doc
+    count('gift-certificates')
+    count('transactions')
+  }
+  let certificateCode = (certificate.code as string | undefined) ?? null
+
   // 8. Appointments ±7 days through the service (slot, price and status rules apply).
   const known = new Set(
     (
@@ -546,6 +574,37 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
       (extra) => extra.appliesTo.length === 0 || extra.appliesTo.includes(serviceKey),
     )
   let manualDiscountUsed = false
+  // Payments draw from their own sequence, so the appointments stay the same as before.
+  const payRandom = rng(20_261_114)
+  let prepaid = false
+  /** Pays an appointment through the payment service (system), at the end of the visit. */
+  const payFor = async (doc: Doc, amount: number, useCertificate: boolean) => {
+    const total = doc.total as number
+    const tip = payRandom() < 0.3 ? 5_000 : 0
+    const register = payRandom() < 0.5 ? registerIds.cash : registerIds.card
+    let certificatePart = 0
+    if (useCertificate && certificateCode) {
+      const found = await findCertificateByCode(await createLocalReq({}, payload), certificateCode)
+      certificatePart = Math.min(found?.balance ?? 0, Math.floor(total / 2))
+    }
+    const cash = amount - certificatePart + tip
+    const paidAt = new Date(Math.min(new Date(doc.endAt as string).getTime(), now.getTime()))
+    await payAppointment(
+      await createLocalReq({}, payload),
+      id(doc),
+      {
+        entries: cash > 0 ? [{ cashRegister: register, amount: cash }] : [],
+        tipAmount: tip || null,
+        ...(certificatePart > 0
+          ? { certificateCode: certificateCode!, certificateAmount: certificatePart }
+          : {}),
+      },
+      { now: paidAt },
+    )
+    // The certificate pays for one visit only (the rest of its balance stays for the demo).
+    if (useCertificate) certificateCode = null
+    count('transactions')
+  }
 
   for (let offset = -7; offset <= 7; offset++) {
     const date = addLocalDays(today, offset)
@@ -598,13 +657,21 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
             : outcome < 0.14
               ? 'cancelled_by_salon'
               : null
-        // TODO(stage 18): payments (`paid` status) go through the ledger.
         if (status) {
           const req = await createLocalReq({}, payload)
           await changeAppointmentStatus(req, id(doc), status, {
             ...serviceOptions,
             cancelReason: status === 'cancelled_by_salon' ? 'Seed' : undefined,
           })
+        }
+        // Most finished visits are paid (→ `paid`), one with the certificate; one future visit is
+        // half prepaid (stays `scheduled`, payment status `partial`).
+        const total = doc.total as number
+        if (status === 'completed' && total > 0 && payRandom() < 0.8)
+          await payFor(doc, total, Boolean(certificateCode))
+        else if (!status && !past && !prepaid && total > 0) {
+          await payFor(doc, Math.floor(total / 2), false)
+          prepaid = true
         }
       }
     }

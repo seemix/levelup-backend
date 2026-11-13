@@ -28,6 +28,7 @@ import { BookingLocks } from '@/collections/BookingLocks'
 import { CashRegisters } from '@/collections/CashRegisters'
 import { ExpenseCategories } from '@/collections/ExpenseCategories'
 import { Transactions } from '@/collections/Transactions'
+import { GiftCertificates } from '@/collections/GiftCertificates'
 import { AboutUs } from '@/globals/AboutUs'
 import { BookingSettings } from '@/globals/BookingSettings'
 import { consoleEmailAdapter } from '@/emails/adapter'
@@ -107,6 +108,7 @@ export default buildConfig({
     CashRegisters,
     ExpenseCategories,
     Transactions,
+    GiftCertificates,
   ],
   globals: [AboutUs, BookingSettings],
   endpoints: [...bookingEndpoints, ...crmEndpoints],

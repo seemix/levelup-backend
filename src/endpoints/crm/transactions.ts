@@ -4,7 +4,7 @@
  * An operation the user cannot read → 404 (existence is not revealed); the rest of the rules
  * (type, own locations and the current day for a manager, repeated reversal) — the ledger hook.
  * Answer: `{ transaction, original, warnings }` (`NEGATIVE_BALANCE`, A8).
- * The refund of an appointment payment (`/refund`, admin) comes in stage 18.
+ * An appointment payment is undone by `/refund` (admin, `./payments`).
  */
 import { reverseTransaction, runLedgerTransaction } from '@/crm/ledger.service'
 

@@ -44,6 +44,20 @@ export const RULE_ERROR_KEYS = {
   CASH_REGISTER_INVALID: 'errors.cashRegisterInvalid',
   TRANSACTION_FORBIDDEN: 'errors.transactionForbidden',
   TRANSACTION_TYPE_UNSUPPORTED: 'errors.transactionTypeUnsupported',
+  // Gift certificates and payments (§4.17, §5.7, §5.8): `src/crm/certificates*.ts`, `src/crm/payments*.ts`.
+  CERTIFICATE_NOT_FOUND: 'errors.certificateNotFound',
+  CERTIFICATE_EXPIRED: 'errors.certificateExpired',
+  CERTIFICATE_VOID: 'errors.certificateVoid',
+  CERTIFICATE_INSUFFICIENT: 'errors.certificateInsufficient',
+  CERTIFICATE_REQUIRED: 'errors.certificateRequired',
+  CERTIFICATE_SALE_ONLY: 'errors.certificateSaleOnly',
+  CERTIFICATE_EXPIRY_INVALID: 'errors.certificateExpiryInvalid',
+  CERTIFICATE_NOMINAL_INVALID: 'errors.certificateNominalInvalid',
+  APPOINTMENT_NOT_FOUND: 'errors.appointmentNotFound',
+  APPOINTMENT_NOT_PAYABLE: 'errors.appointmentNotPayable',
+  PAYMENT_EXCEEDS_DUE: 'errors.paymentExceedsDue',
+  PAYMENT_EMPTY: 'errors.paymentEmpty',
+  PAYMENT_TIP_INVALID: 'errors.paymentTipInvalid',
 } as const satisfies Record<string, CrmKey>
 
 /** Codes of the CRM API itself (`src/endpoints/crm/http.ts`) and of client rules. */

@@ -40,7 +40,7 @@ import { relationId, type RelationValue } from './schedule'
 export type LedgerOptions = {
   /** Clock override (tests). */
   now?: Date
-  /** Set by the payment / certificate services (stage 18) for `appointment_payment`, `certificate_sale`, `refund`. */
+  /** Set by the payment / certificate services for `appointment_payment`, `certificate_sale`, `refund`. */
   allowServiceTypes?: boolean
   /** `certificate_sale`: nominal of the certificate being sold. */
   nominal?: number
@@ -71,6 +71,7 @@ export const IMMUTABLE_TRANSACTION_FIELDS = [
   'barber',
   'certificateAmount',
   'tipAmount',
+  'certificate',
   'reverses',
   'reversed',
 ] as const
@@ -122,6 +123,9 @@ type Original = ReversalTarget & {
   occurredAt: string | null
   appointment: string | null
   barber: string | null
+  certificate: string | null
+  certificateAmount: number | null
+  tipAmount: number | null
 }
 
 const loadOriginal = async (req: PayloadRequest, originalId: string): Promise<Original | null> => {
@@ -139,6 +143,9 @@ const loadOriginal = async (req: PayloadRequest, originalId: string): Promise<Or
       occurredAt: true,
       appointment: true,
       barber: true,
+      certificate: true,
+      certificateAmount: true,
+      tipAmount: true,
       reversed: true,
     },
   })
@@ -153,6 +160,9 @@ const loadOriginal = async (req: PayloadRequest, originalId: string): Promise<Or
     occurredAt: (doc.occurredAt as string | null) ?? null,
     appointment: id(doc.appointment),
     barber: id(doc.barber),
+    certificate: id(doc.certificate),
+    certificateAmount: numberOrNull(doc.certificateAmount),
+    tipAmount: numberOrNull(doc.tipAmount),
   }
 }
 
@@ -250,6 +260,10 @@ export const prepareTransaction: CollectionBeforeChangeHook = async ({
     data.expenseCategory = null
     data.appointment = type === 'refund' ? original.appointment : null
     data.barber = type === 'refund' ? original.barber : null
+    // A refund carries the certificate and tip parts it returns (salary and certificate reports).
+    data.certificate = type === 'refund' ? original.certificate : null
+    data.certificateAmount = type === 'refund' ? original.certificateAmount : null
+    data.tipAmount = type === 'refund' ? original.tipAmount : null
   } else {
     data.occurredAt ??= now.toISOString()
   }
@@ -270,6 +284,7 @@ export const prepareTransaction: CollectionBeforeChangeHook = async ({
       certificateAmount: numberOrNull(data.certificateAmount),
       tipAmount: numberOrNull(data.tipAmount),
       reverses: id(data.reverses),
+      certificate: id(data.certificate),
       nominal: options.nominal ?? null,
     },
     target,
@@ -375,6 +390,7 @@ export type TransactionData = {
   barber?: string | null
   certificateAmount?: number | null
   tipAmount?: number | null
+  certificate?: string | null
   reverses?: string | null
 }
 

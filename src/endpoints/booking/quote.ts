@@ -8,7 +8,7 @@
 import type { PayloadRequest } from 'payload'
 
 import { loadPriceItems } from '@/crm/appointments'
-import { findCertificate } from '@/crm/certificates'
+import { findCertificate } from '@/crm/certificates.service'
 import {
   certificateCoverage,
   calculatePrice,

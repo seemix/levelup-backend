@@ -33,6 +33,7 @@ describe('seed', { timeout: 300_000 }, () => {
           'cash-registers',
           'expense-categories',
           'transactions',
+          'gift-certificates',
         ].map(async (collection) => [collection, await total(collection)] as const),
       ),
     )
@@ -62,8 +63,39 @@ describe('seed', { timeout: 300_000 }, () => {
     expect(created.appointments).toBeGreaterThan(20)
     expect(created['cash-registers']).toBe(2)
     expect(created['expense-categories']).toBe(4)
-    // Opening balance + 3 expenses + 1 transfer.
-    expect(created.transactions).toBe(5)
+    expect(created['gift-certificates']).toBe(1)
+    // Opening balance + 3 expenses + 1 transfer + certificate sale + payments of the visits.
+    const byType = async (type: string) =>
+      (
+        await payload.find({
+          collection: 'transactions',
+          where: { type: { equals: type } },
+          pagination: false,
+          depth: 0,
+          overrideAccess: true,
+        })
+      ).docs as unknown as {
+        entries: { cashRegister: string; amount: number }[]
+        certificateAmount?: number | null
+        appointment?: string | null
+      }[]
+    const payments = await byType('appointment_payment')
+    expect(payments.length).toBeGreaterThan(3)
+    expect(created.transactions).toBe(6 + payments.length)
+    // Exactly one payment uses the certificate; the certificate balance follows it.
+    const withCertificate = payments.filter((doc) => (doc.certificateAmount ?? 0) > 0)
+    expect(withCertificate).toHaveLength(1)
+    const certificates = await payload.find({
+      collection: 'gift-certificates',
+      pagination: false,
+      depth: 0,
+      overrideAccess: true,
+    })
+    expect(certificates.docs[0]).toMatchObject({
+      nominal: 100_000,
+      balance: 100_000 - (withCertificate[0].certificateAmount ?? 0),
+    })
+
     const registers = await payload.find({
       collection: 'cash-registers',
       locale: 'en',
@@ -71,9 +103,15 @@ describe('seed', { timeout: 300_000 }, () => {
       overrideAccess: true,
       select: { name: true, balance: true },
     })
+    const ids = Object.fromEntries(registers.docs.map((doc) => [doc.name, String(doc.id)]))
+    const paidInto = (register: string) =>
+      payments
+        .flatMap((doc) => doc.entries)
+        .filter((entry) => String(entry.cashRegister) === register)
+        .reduce((sum, entry) => sum + entry.amount, 0)
     expect(Object.fromEntries(registers.docs.map((doc) => [doc.name, doc.balance]))).toEqual({
-      Cash: 300_000 - 45_000 - 150_000 - 8_000,
-      'Card terminal': 150_000 - 120_000,
+      Cash: 300_000 - 45_000 - 150_000 - 8_000 + paidInto(ids.Cash),
+      'Card terminal': 150_000 - 120_000 + 100_000 + paidInto(ids['Card terminal']),
     })
     expect((await recalculateBalances(payload, { apply: false })).diffs).toEqual([])
 
@@ -87,6 +125,7 @@ describe('seed', { timeout: 300_000 }, () => {
     const statuses = new Set(docs.map((doc) => doc.status))
     expect(statuses.has('scheduled')).toBe(true)
     expect(statuses.has('completed')).toBe(true)
+    expect(statuses.has('paid')).toBe(true)
     expect([...statuses].length).toBeGreaterThanOrEqual(3)
 
     const services = await payload.find({
@@ -124,6 +163,7 @@ describe('seed', { timeout: 300_000 }, () => {
     expect(await total('clients')).toBe(0)
     expect(await total('transactions')).toBe(0)
     expect(await total('cash-registers')).toBe(0)
+    expect(await total('gift-certificates')).toBe(0)
     // Locations and users that the seed did not create are kept.
     expect(await total('locations')).toBe(before.locations)
     const editor = await payload.find({

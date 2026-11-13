@@ -1,8 +1,8 @@
 import { createLocalReq, getPayload, handleEndpoints, type Payload } from 'payload'
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import { createAppointment, hashCancelToken } from '@/crm/appointments'
-import { setCertificateLookup } from '@/crm/certificates'
+import { sellCertificate } from '@/crm/certificates.service'
 import { getRateLimitStore } from '@/crm/rate-limit'
 import { addLocalDays, addMinutes, localToInstant, todayLocal } from '@/crm/time'
 import { clientIp } from '@/endpoints/booking/http'
@@ -53,6 +53,8 @@ const call = async (
 describe('public booking API', () => {
   let payload: Payload
   const ids: Record<string, string> = {}
+  let certCode = ''
+  let voidCode = ''
 
   const create = async (collection: string, data: Record<string, unknown>) =>
     (await payload.create({ collection, data, overrideAccess: true } as never)) as unknown as Doc
@@ -204,12 +206,31 @@ describe('public booking API', () => {
       onlineAllowed: false,
     })
 
-    setCertificateLookup(async (_req, code) =>
-      code === 'LU-AAAA-BBBB' ? { code, balance: 10_000 } : null,
-    )
+    // A real certificate sold for 100 MDL (system sale); a void one is "not found" online.
+    const register = await create('cash-registers', {
+      name: 'Cash',
+      type: 'cash',
+      location: ids.loc,
+    })
+    const sell = async () =>
+      (
+        await sellCertificate(await createLocalReq({}, payload), {
+          nominal: 10_000,
+          entries: [{ cashRegister: register.id, amount: 10_000 }],
+        })
+      ).certificate
+    const certificate = await sell()
+    ids.certificate = String(certificate.id)
+    certCode = certificate.code as string
+    const voided = await sell()
+    voidCode = voided.code as string
+    await payload.update({
+      collection: 'gift-certificates',
+      id: voided.id,
+      data: { voided: true },
+      overrideAccess: true,
+    })
   })
-
-  afterAll(() => setCertificateLookup())
 
   beforeEach(async () => {
     await getRateLimitStore().reset()
@@ -350,12 +371,15 @@ describe('public booking API', () => {
       const ip = nextIp()
       const { status, json } = await call('POST', '/booking/quote', {
         ip,
-        body: selection({ promoCode: ' sale10 ', certificateCode: 'lu-aaaa-bbbb' }),
+        body: selection({
+          promoCode: ' sale10 ',
+          certificateCode: certCode.toLowerCase().replace(/-/g, ' '),
+        }),
       })
       expect(status).toBe(200)
       expect(json).toMatchObject({
         promoCode: 'SALE10',
-        certificateCode: 'LU-AAAA-BBBB',
+        certificateCode: certCode,
         subtotal: 30_000,
         promoDiscount: 3_000,
         total: 27_000,
@@ -373,6 +397,7 @@ describe('public booking API', () => {
         404,
         'CERTIFICATE_NOT_FOUND',
       ])
+      expect(await code({ certificateCode: voidCode })).toEqual([404, 'CERTIFICATE_NOT_FOUND'])
     })
   })
 
@@ -538,7 +563,7 @@ describe('public booking API', () => {
       expect([third.status, third.json.error.code]).toEqual([409, 'SLOT_TAKEN'])
     })
 
-    it('promo code + certificate: discount in the snapshot, code counted, certificate noted', async () => {
+    it('promo code + certificate: discount in the snapshot, code counted, certificate planned', async () => {
       const ip = nextIp()
       const { status, json } = await call('POST', '/booking', {
         ip,
@@ -546,7 +571,7 @@ describe('public booking API', () => {
           start: iso('09:00', DAY2),
           phone: '069200020',
           promoCode: 'sale10',
-          certificateCode: 'LU-AAAA-BBBB',
+          certificateCode: certCode,
           comment: 'Hi',
         }),
       })
@@ -558,7 +583,10 @@ describe('public booking API', () => {
         promoDiscount: 3_000,
         subtotal: 30_000,
       })
-      expect(appointment.clientComment).toBe('Hi\n[online] certificate: LU-AAAA-BBBB')
+      // The certificate is planned, not charged (§5.7): the balance stays.
+      expect(appointment.clientComment).toBe('Hi')
+      expect(appointment.plannedCertificate).toBe(ids.certificate)
+      expect((await find('gift-certificates', ids.certificate)).balance).toBe(10_000)
       expect((await find('promo-codes', ids.sale)).usedCount).toBe(1)
 
       const staffCode = await call('POST', '/booking', {

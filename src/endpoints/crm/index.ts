@@ -8,6 +8,11 @@ import {
 import { appointmentDetailEndpoint, previewAppointmentEndpoint } from './appointment-detail'
 import { calendarEndpoint } from './calendar'
 import { clientLookupEndpoint } from './clients'
+import {
+  appointmentPaymentEndpoint,
+  refundTransactionEndpoint,
+  sellCertificateEndpoint,
+} from './payments'
 import { staffSlotsEndpoint } from './slots'
 import { reverseTransactionEndpoint } from './transactions'
 
@@ -22,4 +27,7 @@ export const crmEndpoints: Endpoint[] = [
   appointmentDetailEndpoint,
   previewAppointmentEndpoint,
   reverseTransactionEndpoint,
+  appointmentPaymentEndpoint,
+  refundTransactionEndpoint,
+  sellCertificateEndpoint,
 ]

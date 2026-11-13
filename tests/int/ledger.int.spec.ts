@@ -133,8 +133,29 @@ describe('ledger invariants (§4.15)', () => {
     })
 
     it('may be paid by a certificate only', () => {
-      expect(codeOf(payment({ entries: [], certificateAmount: 15_000 }))).toBeNull()
+      expect(
+        codeOf(payment({ entries: [], certificateAmount: 15_000, certificate: 'gc' })),
+      ).toBeNull()
       expect(codeOf(payment({ entries: [] }))).toBe('LEDGER_ENTRIES_INVALID')
+    })
+
+    it('certificate amount and certificate go together; tips only from money', () => {
+      expect(codeOf(payment({ certificateAmount: 5_000 }))).toBe('CERTIFICATE_REQUIRED')
+      expect(codeOf(payment({ certificate: 'gc' }))).toBe('CERTIFICATE_REQUIRED')
+      expect(
+        codeOf(
+          payment({ entries: [], certificateAmount: 15_000, certificate: 'gc', tipAmount: 1 }),
+        ),
+      ).toBe('PAYMENT_TIP_INVALID')
+      // A certificate link is not allowed on other types.
+      expect(
+        codeOf({
+          type: 'adjustment',
+          entries: [entry(A, 1)],
+          comment: 'x',
+          certificate: 'gc',
+        }),
+      ).toBe('LEDGER_AMOUNT_INVALID')
     })
   })
 
@@ -144,11 +165,15 @@ describe('ledger invariants (§4.15)', () => {
         type: 'certificate_sale',
         entries,
         nominal,
+        certificate: 'gc',
       })
       expect(codeOf(sale([entry(A, 30_000), entry(B, 20_000)]))).toBeNull()
       expect(codeOf(sale([entry(A, 30_000)]))).toBe('LEDGER_SUM_INVALID')
       expect(codeOf(sale([entry(A, 50_000)], null))).toBe('LEDGER_SUM_INVALID')
       expect(codeOf(sale([entry(A, 60_000), entry(B, -10_000)]))).toBe('LEDGER_ENTRIES_INVALID')
+      expect(
+        codeOf({ type: 'certificate_sale', entries: [entry(A, 50_000)], nominal: 50_000 }),
+      ).toBe('CERTIFICATE_REQUIRED')
     })
   })
 

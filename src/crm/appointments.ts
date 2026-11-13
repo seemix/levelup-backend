@@ -63,7 +63,7 @@ export type AppointmentOptions = {
   actorType?: ActorType
   /** Clock override (tests, endpoints that already read the time). */
   now?: Date
-  /** Log action override for the payment/refund flow (stage 18). */
+  /** Log action override for the payment / refund flow (`./payments.service`). */
   logAction?: LogAction
   /** Do not queue emails (seed, import). */
   skipEmail?: boolean
@@ -80,7 +80,7 @@ export type AppointmentResult = {
 export const APPOINTMENT_CONTEXT = {
   options: 'appointmentOptions',
   result: 'appointmentResult',
-  /** Set by the ledger (stage 18): `paidAmount`, `certificateAmount`, `tipAmount`, `paid` status may change. */
+  /** Set by the payment service: `paidAmount`, `certificateAmount`, `tipAmount`, `paid` status may change. */
   ledger: 'appointmentLedger',
   /** Skip the history entry (bulk/system maintenance). */
   skipLog: 'skipAppointmentLog',
@@ -233,6 +233,8 @@ export type AppointmentInput = {
   /** Blocks only; appointments take it from the services. */
   durationMinutes?: number | null
   promoCode?: string | null
+  /** Gift certificate entered online (§4.11): charged only at payment. */
+  plannedCertificate?: string | null
   manualDiscountType?: 'amount' | 'percent' | null
   manualDiscountValue?: number | null
   manualDiscountReason?: string | null
@@ -330,6 +332,7 @@ type Row = {
   lines?: LineRow[] | null
   subtotal?: number | null
   promoCode?: RelationValue
+  plannedCertificate?: RelationValue
   promoDiscount?: number | null
   manualDiscountType?: 'amount' | 'percent' | null
   manualDiscountValue?: number | null
@@ -367,7 +370,7 @@ const SERVER_FIELDS = [
   'paymentStatus',
 ] as const satisfies readonly (keyof Row)[]
 
-/** Changed only by the ledger (stage 18). */
+/** Changed only by the payment service (`APPOINTMENT_CONTEXT.ledger`). */
 const PAYMENT_FIELDS = ['paidAmount', 'certificateAmount', 'tipAmount'] as const
 
 const ids = (values: readonly RelationValue[] | null | undefined): string[] => [
@@ -624,6 +627,7 @@ export const prepareAppointment: CollectionBeforeChangeHook = async ({
     next.service = null
     next.extras = []
     next.promoCode = null
+    next.plannedCertificate = null
     next.manualDiscountType = null
     next.manualDiscountValue = null
     next.manualDiscountReason = null
@@ -854,10 +858,11 @@ export const prepareAppointment: CollectionBeforeChangeHook = async ({
     next.cancelTokenHash = hash
     result.cancelToken = token
   }
+  // A refund that leaves nothing paid marks the appointment `refunded` (§4.11).
   next.paymentStatus = derivePaymentStatus(
     next.paidAmount ?? 0,
     next.total ?? 0,
-    prev?.paymentStatus,
+    ledger && options.logAction === 'refund' ? 'refunded' : prev?.paymentStatus,
   )
   if (!next.language) {
     const clientId = relationId(next.client)

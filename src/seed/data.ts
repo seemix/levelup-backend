@@ -329,6 +329,13 @@ export const SEED_EXPENSE_CATEGORIES: { key: string; name: L10n }[] = [
   { key: 'household', name: { ru: 'Хозяйственные нужды', ro: 'Gospodărie', en: 'Household' } },
 ]
 
+/** Gift certificate sold by the seed (natural key — `comment`), bani. */
+export const SEED_CERTIFICATE = {
+  nominal: 100_000,
+  buyerName: 'Seed',
+  comment: 'seed:certificate',
+} as const
+
 /** Opening balance of the cash register (adjustment), bani. */
 export const SEED_OPENING_CASH = 300_000
 

@@ -193,3 +193,44 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "comment": "Wrong amount" }
+
+### Certificate sale (stage 18): the certificate (code LU-XXXX-XXXX, balance = nominal, valid 12 months
+### by default) + `certificate_sale` in one transaction. Admin; manager — registers of own locations.
+### → { certificate, transaction, warnings }
+POST {{api}}/crm/certificates/sell
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nominal": 50000,
+  "entries": [{ "cashRegister": "{{cashRegister}}", "amount": 50000 }],
+  "buyer": { "name": "Maria", "phone": "069 123 456" },
+  "comment": "Birthday"
+}
+
+### Appointment payment: registers of the appointment's location, optional certificate (by default it
+### covers what the money does not), tip (from the money only). Overpayment → 409 PAYMENT_EXCEEDS_DUE.
+### Barber — own appointments; manager — own locations; out of scope → 404.
+### → { transaction, appointment, certificate: { id, code, balance } | null, warnings }
+POST {{api}}/crm/appointments/{{appointment}}/payments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "entries": [
+    { "cashRegister": "{{cashRegister}}", "amount": 10000 },
+    { "cashRegister": "{{cardRegister}}", "amount": 15000 }
+  ],
+  "tip": 5000,
+  "certificateCode": "LU-ABCD-EFGH",
+  "certificateAmount": 10000
+}
+
+### Refund of a payment (admin): mirror entries, the certificate part goes back to the certificate,
+### `paid → completed`, `paymentStatus = refunded` when nothing is left paid. Second refund → 409.
+### → { transaction, original, appointment, certificate: { id, balance } | null, warnings }
+POST {{api}}/crm/transactions/{{payment}}/refund
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "comment": "Client unhappy" }

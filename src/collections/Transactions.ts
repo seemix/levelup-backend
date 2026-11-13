@@ -209,6 +209,16 @@ export const Transactions: CollectionConfig = {
       ],
     },
     {
+      // The certificate sold, used for payment or returned by a refund (§4.15, §5.7).
+      name: 'certificate',
+      type: 'relationship',
+      relationTo: 'gift-certificates',
+      index: true,
+      label: crmLabel('transactions.certificate'),
+      access: immutable,
+      admin: { condition: typeIs('certificate_sale', 'appointment_payment', 'refund') },
+    },
+    {
       name: 'author',
       type: 'relationship',
       relationTo: 'users',

@@ -85,6 +85,7 @@ export interface Config {
     'cash-registers': CashRegister;
     'expense-categories': ExpenseCategory;
     transactions: Transaction;
+    'gift-certificates': GiftCertificate;
     'payload-kv': PayloadKv;
     'payload-jobs': PayloadJob;
     'payload-locked-documents': PayloadLockedDocument;
@@ -116,6 +117,7 @@ export interface Config {
     'cash-registers': CashRegistersSelect<false> | CashRegistersSelect<true>;
     'expense-categories': ExpenseCategoriesSelect<false> | ExpenseCategoriesSelect<true>;
     transactions: TransactionsSelect<false> | TransactionsSelect<true>;
+    'gift-certificates': GiftCertificatesSelect<false> | GiftCertificatesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-jobs': PayloadJobsSelect<false> | PayloadJobsSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -457,6 +459,7 @@ export interface Appointment {
   paidAmount?: number | null;
   certificateAmount?: number | null;
   tipAmount?: number | null;
+  plannedCertificate?: (string | null) | GiftCertificate;
   language?: ('ru' | 'ro' | 'en') | null;
   source?: ('online' | 'staff' | 'import') | null;
   createdBy?: (string | null) | User;
@@ -506,6 +509,81 @@ export interface PromoCode {
   active?: boolean | null;
   onlineAllowed?: boolean | null;
   usedCount?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "gift-certificates".
+ */
+export interface GiftCertificate {
+  id: string;
+  code?: string | null;
+  nominal: number;
+  balance?: number | null;
+  issuedAt?: string | null;
+  expiresAt: string;
+  status?: ('active' | 'depleted' | 'expired' | 'void') | null;
+  voided?: boolean | null;
+  buyerName?: string | null;
+  buyerPhone?: string | null;
+  saleTransaction?: (string | null) | Transaction;
+  comment?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "transactions".
+ */
+export interface Transaction {
+  id: string;
+  type: 'appointment_payment' | 'certificate_sale' | 'expense' | 'transfer' | 'refund' | 'reversal' | 'adjustment';
+  occurredAt: string;
+  location?: (string | null) | Location;
+  reverses?: (string | null) | Transaction;
+  entries?:
+    | {
+        cashRegister: string | CashRegister;
+        amount: number;
+        id?: string | null;
+      }[]
+    | null;
+  expenseCategory?: (string | null) | ExpenseCategory;
+  comment?: string | null;
+  appointment?: (string | null) | Appointment;
+  barber?: (string | null) | Barber;
+  certificateAmount?: number | null;
+  tipAmount?: number | null;
+  certificate?: (string | null) | GiftCertificate;
+  author?: (string | null) | User;
+  reversed?: boolean | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "cash-registers".
+ */
+export interface CashRegister {
+  id: string;
+  name: string;
+  type: 'cash' | 'account';
+  location: string | Location;
+  active?: boolean | null;
+  balance?: number | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "expense-categories".
+ */
+export interface ExpenseCategory {
+  id: string;
+  name: string;
+  order?: number | null;
+  active?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -571,60 +649,6 @@ export interface BookingLock {
   barber: string;
   date: string;
   version?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "cash-registers".
- */
-export interface CashRegister {
-  id: string;
-  name: string;
-  type: 'cash' | 'account';
-  location: string | Location;
-  active?: boolean | null;
-  balance?: number | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "expense-categories".
- */
-export interface ExpenseCategory {
-  id: string;
-  name: string;
-  order?: number | null;
-  active?: boolean | null;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "transactions".
- */
-export interface Transaction {
-  id: string;
-  type: 'appointment_payment' | 'certificate_sale' | 'expense' | 'transfer' | 'refund' | 'reversal' | 'adjustment';
-  occurredAt: string;
-  location?: (string | null) | Location;
-  reverses?: (string | null) | Transaction;
-  entries?:
-    | {
-        cashRegister: string | CashRegister;
-        amount: number;
-        id?: string | null;
-      }[]
-    | null;
-  expenseCategory?: (string | null) | ExpenseCategory;
-  comment?: string | null;
-  appointment?: (string | null) | Appointment;
-  barber?: (string | null) | Barber;
-  certificateAmount?: number | null;
-  tipAmount?: number | null;
-  author?: (string | null) | User;
-  reversed?: boolean | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -824,6 +848,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'transactions';
         value: string | Transaction;
+      } | null)
+    | ({
+        relationTo: 'gift-certificates';
+        value: string | GiftCertificate;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -1169,6 +1197,7 @@ export interface AppointmentsSelect<T extends boolean = true> {
   paidAmount?: T;
   certificateAmount?: T;
   tipAmount?: T;
+  plannedCertificate?: T;
   language?: T;
   source?: T;
   createdBy?: T;
@@ -1261,8 +1290,28 @@ export interface TransactionsSelect<T extends boolean = true> {
   barber?: T;
   certificateAmount?: T;
   tipAmount?: T;
+  certificate?: T;
   author?: T;
   reversed?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "gift-certificates_select".
+ */
+export interface GiftCertificatesSelect<T extends boolean = true> {
+  code?: T;
+  nominal?: T;
+  balance?: T;
+  issuedAt?: T;
+  expiresAt?: T;
+  status?: T;
+  voided?: T;
+  buyerName?: T;
+  buyerPhone?: T;
+  saleTransaction?: T;
+  comment?: T;
   updatedAt?: T;
   createdAt?: T;
 }

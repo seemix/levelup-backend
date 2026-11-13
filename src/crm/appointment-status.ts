@@ -63,7 +63,7 @@ export type TransitionInput = {
   clientCancelMinHours?: number
   /** `paidAmount ≥ total`: completing a fully paid visit makes it `paid` at once. */
   fullyPaid?: boolean
-  /** The payment/refund flow (stage 18) moves to and from `paid`; nothing else does. */
+  /** The payment / refund flow (`payments.service`) moves to and from `paid`; nothing else does. */
   ledger?: boolean
 }
 

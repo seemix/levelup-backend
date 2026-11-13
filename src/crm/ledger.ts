@@ -19,12 +19,19 @@ export const CASH_REGISTER_TYPES = ['cash', 'account'] as const
 export type CashRegisterType = (typeof CASH_REGISTER_TYPES)[number]
 
 /**
- * Types created only by the payment / certificate services (stage 18), which also update the
+ * Types created only by the payment / certificate services, which also update the
  * appointment or the certificate in the same transaction; a direct create is refused.
  */
 export const SERVICE_ONLY_TYPES: readonly TransactionType[] = [
   'appointment_payment',
   'certificate_sale',
+  'refund',
+]
+
+/** Types that may reference a gift certificate. */
+export const CERTIFICATE_TYPES: readonly TransactionType[] = [
+  'certificate_sale',
+  'appointment_payment',
   'refund',
 ]
 
@@ -44,6 +51,8 @@ export type LedgerErrorCode =
   | 'APPOINTMENT_REQUIRED'
   | 'REVERSAL_TARGET_INVALID'
   | 'ALREADY_REVERSED'
+  | 'CERTIFICATE_REQUIRED'
+  | 'PAYMENT_TIP_INVALID'
 
 /** A rule violation; the adapter turns it into a translated `APIError` (`toRuleError`). */
 export class LedgerError extends Error {
@@ -66,6 +75,8 @@ export type TransactionInput = {
   certificateAmount?: number | null
   tipAmount?: number | null
   reverses?: string | null
+  /** Gift certificate: sold (`certificate_sale`) or used / returned (`appointment_payment`, `refund`). */
+  certificate?: string | null
   /** `certificate_sale`: nominal of the sold certificate. */
   nominal?: number | null
 }
@@ -86,7 +97,7 @@ export const undoTypeFor = (type: TransactionType): TransactionType | null => {
     case 'transfer':
     case 'adjustment':
       return 'reversal'
-    // Certificate sale: undoing it must void the certificate (stage 18). Undo of an undo: never.
+    // Certificate sale: not undone (A34; void the certificate instead). Undo of an undo: never.
     default:
       return null
   }
@@ -131,6 +142,7 @@ export const validateTransaction = (input: TransactionInput, target?: ReversalTa
     (input.appointment || amountOf(input.certificateAmount) > 0 || amountOf(input.tipAmount) > 0)
   )
     fail('LEDGER_AMOUNT_INVALID')
+  if (input.certificate && !CERTIFICATE_TYPES.includes(type)) fail('LEDGER_AMOUNT_INVALID')
 
   const total = sumBani(entries.map((entry) => entry.amount))
   switch (type) {
@@ -140,6 +152,10 @@ export const validateTransaction = (input: TransactionInput, target?: ReversalTa
       const certificate = amountOf(input.certificateAmount)
       // A payment moves money (entries) and/or certificate value.
       if (entries.length === 0 && certificate === 0) fail('LEDGER_ENTRIES_INVALID')
+      // Certificate value and the certificate itself go together.
+      if (certificate > 0 !== Boolean(input.certificate)) fail('CERTIFICATE_REQUIRED')
+      // Tips are money left in the registers: a certificate covers the appointment only (§5.4 p.6).
+      if (amountOf(input.tipAmount) > total) fail('PAYMENT_TIP_INVALID')
       // Σentries + certificate = applied to the appointment + tip, the applied part is > 0.
       if (paymentAppliedAmount(input) <= 0) fail('LEDGER_SUM_INVALID')
       return
@@ -149,6 +165,7 @@ export const validateTransaction = (input: TransactionInput, target?: ReversalTa
         fail('LEDGER_ENTRIES_INVALID')
       if (!isBani(input.nominal) || input.nominal <= 0 || total !== input.nominal)
         fail('LEDGER_SUM_INVALID')
+      if (!input.certificate) fail('CERTIFICATE_REQUIRED')
       return
     case 'expense':
       if (entries.length !== 1 || entries[0].amount >= 0) fail('LEDGER_ENTRIES_INVALID')

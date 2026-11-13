@@ -3,7 +3,7 @@
  * and hours are `HH:mm`, both in salon-local time (Europe/Chisinau, DST-aware).
  */
 import { TZDate } from '@date-fns/tz'
-import { addDays, format } from 'date-fns'
+import { addDays, addMonths, format } from 'date-fns'
 
 export const TIME_ZONE = 'Europe/Chisinau'
 export const SLOT_STEP_MINUTES = 15
@@ -121,6 +121,10 @@ export const formatDateTime = (instant: Date, locale: string = 'ru'): string =>
 /** Instant shifted by whole minutes (elapsed time, so DST does not matter). */
 export const addMinutes = (instant: Date, minutes: number): Date =>
   new Date(instant.getTime() + minutes * 60_000)
+
+/** The same local wall-clock moment `months` calendar months later (clamped to the month end). */
+export const addLocalMonths = (instant: Date, months: number): Date =>
+  new Date(addMonths(new TZDate(instant, TIME_ZONE), months).getTime())
 
 /** Elapsed minutes from `from` to `to` (may be negative). */
 export const minutesBetween = (from: Date, to: Date): number =>
