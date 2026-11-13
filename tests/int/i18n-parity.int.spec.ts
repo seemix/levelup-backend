@@ -35,3 +35,30 @@ describe('typed keys', () => {
     expect(crmLabels('groups.content')).toEqual({ ru: 'Контент', ro: 'Conținut', en: 'Content' })
   })
 })
+
+describe('payload t() resolves crm keys', () => {
+  it.each(supportedLocales)('%s: every key is translated, not echoed back', async (language) => {
+    const { initI18n } = await import('@payloadcms/translations')
+    const languages = {
+      ru: (await import('@payloadcms/translations/languages/ru')).ru,
+      ro: (await import('@payloadcms/translations/languages/ro')).ro,
+      en: (await import('@payloadcms/translations/languages/en')).en,
+    }
+    const i18n = await initI18n({
+      config: {
+        fallbackLanguage: 'ru',
+        supportedLanguages: languages,
+        translations: crmTranslations,
+      },
+      context: 'client',
+      language,
+    })
+    const t = i18n.t as (key: string) => string
+    for (const key of Object.keys(crmTranslations[language].crm)) {
+      expect(t(`crm:${key}`), key).toBe(
+        (crmTranslations[language].crm as Record<string, string>)[key],
+      )
+    }
+    expect(t('crm:users.plural')).not.toBe('crm:users.plural')
+  })
+})

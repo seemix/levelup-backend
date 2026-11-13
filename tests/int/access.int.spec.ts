@@ -160,7 +160,9 @@ describe('roles: users, locations, booking-settings (stage 1)', () => {
           data: { email: `m-${Date.now()}@test.local`, password: 'test', roles: ['manager'] },
           ...as(admin),
         }),
-      ).rejects.toThrow(/locations/i)
+      ).rejects.toMatchObject({
+        data: { errors: [expect.objectContaining({ path: 'locations' })] },
+      })
     })
 
     it('manager cannot grant themselves a role or a location', async () => {
@@ -302,7 +304,7 @@ describe('roles: users, locations, booking-settings (stage 1)', () => {
           data: { name: 'Y', active: true, phone: '123' },
           ...as(admin),
         }),
-      ).rejects.toThrow(/phone/i)
+      ).rejects.toMatchObject({ data: { errors: [expect.objectContaining({ path: 'phone' })] } })
     })
   })
 
