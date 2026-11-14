@@ -1,5 +1,6 @@
 import { getPayload } from 'payload'
 import config from '../../src/payload.config'
+import { assertE2EDatabase } from '../e2e/env'
 
 export const testUser = {
   email: 'dev@payloadcms.com',
@@ -11,6 +12,7 @@ export const testUser = {
  * Seeds a test admin user for e2e admin tests.
  */
 export async function seedTestUser(): Promise<void> {
+  assertE2EDatabase()
   const payload = await getPayload({ config })
 
   await payload.delete({

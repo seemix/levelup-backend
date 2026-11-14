@@ -1,6 +1,8 @@
 import type { Page } from '@playwright/test'
 import { expect } from '@playwright/test'
 
+import { BACKEND_URL } from '../e2e/env'
+
 export interface LoginOptions {
   page: Page
   serverURL?: string
@@ -13,11 +15,7 @@ export interface LoginOptions {
 /**
  * Logs the user into the admin panel via the login page.
  */
-export async function login({
-  page,
-  serverURL = 'http://localhost:3000',
-  user,
-}: LoginOptions): Promise<void> {
+export async function login({ page, serverURL = BACKEND_URL, user }: LoginOptions): Promise<void> {
   await page.goto(`${serverURL}/login`)
 
   await page.fill('#field-email', user.email)

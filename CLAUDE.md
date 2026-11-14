@@ -36,7 +36,7 @@ pnpm dev                 # http://localhost:3000 (адмінка на /)
 pnpm typecheck           # tsc --noEmit
 pnpm lint
 pnpm test:int            # vitest; один файл: pnpm test:int -- slots
-pnpm test:e2e
+pnpm test:e2e            # одноразова MongoDB + backend :3100 + ../levelup-front :3101 (зупинити pnpm dev обох)
 pnpm generate:types      # після будь-якої зміни схеми
 pnpm generate:importmap  # після додавання/зміни компонентів адмінки
 pnpm migrate             # застосувати міграції

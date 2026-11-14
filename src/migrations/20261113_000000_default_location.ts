@@ -12,8 +12,17 @@ export const DEFAULT_LOCATION = {
 } as const
 
 export async function up({ payload, req }: MigrateUpArgs): Promise<void> {
-  const { totalDocs } = await payload.count({ collection: 'locations', req })
-  if (totalDocs === 0) {
+  // Not `count`: without a filter it is `estimatedDocumentCount`, which MongoDB refuses inside the
+  // migration transaction on a replica set (production). A one-document find needs no count.
+  const { docs: existing } = await payload.find({
+    collection: 'locations',
+    limit: 1,
+    pagination: false,
+    depth: 0,
+    select: {},
+    req,
+  })
+  if (existing.length === 0) {
     const { name, address } = DEFAULT_LOCATION
     const location = await payload.create({
       collection: 'locations',

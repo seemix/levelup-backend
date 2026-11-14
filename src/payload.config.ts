@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url'
 import path from 'path'
 import sharp from 'sharp'
 
+import { isAdmin } from '@/access/policy'
 import { Users } from '@/collections/Users'
 import { Media } from '@/collections/Media'
 import { Barbers } from '@/collections/Barbers'
@@ -143,6 +144,10 @@ export default buildConfig({
   },
   db: mongooseAdapter({
     url: env.databaseUrl,
+    // Indexes are built on connect and awaited before the migrations (A39): Mongoose's background
+    // `autoIndex` races with the migration transactions on a replica set (WriteConflict, "catalog changes").
+    ensureIndexes: true,
+    connectOptions: { autoIndex: false },
     prodMigrations: migrations,
   }),
   email: env.email.apiKey
@@ -157,6 +162,13 @@ export default buildConfig({
       }),
   jobs: {
     tasks: jobTasks,
+    // Running / queueing / cancelling jobs over HTTP (`/api/payload-jobs/run`, `handle-schedules`):
+    // admin only (A40). Payload's default lets any logged-in user (editor, barber) trigger them.
+    access: {
+      run: ({ req }) => isAdmin(req.user),
+      queue: ({ req }) => isAdmin(req.user),
+      cancel: ({ req }) => isAdmin(req.user),
+    },
     // Runs inside the server process (not for serverless); emails need a minute at most.
     autoRun: env.jobsAutoRun ? [{ cron: '* * * * *', queue: 'default', limit: 20 }] : undefined,
   },

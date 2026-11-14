@@ -9,5 +9,7 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     include: ['tests/int/**/*.int.spec.ts'],
     hookTimeout: 300_000,
+    // Integration tests share the CPU with up to N in-memory MongoDB servers: 5 s is too tight under load.
+    testTimeout: 30_000,
   },
 })

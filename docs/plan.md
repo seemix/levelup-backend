@@ -208,9 +208,9 @@
 **Перевірка:** тести; звірка сум зі списком операцій.
 
 ## Етап 23. Фінальна перевірка та запуск — opus
-- [ ] e2e (playwright): онлайн-запис → календар → оплата.
-- [ ] Security review (access, публічні endpoints, токени, rate limit); оновити `docs/architecture.md`, `docs/deployment.md` (Resend, jobs, cron).
-- [ ] Чеклист запуску: бекап, `pnpm migrate`, початкові залишки кас (`adjustment`), перемикання `NEXT_PUBLIC_BOOKING_PROVIDER=native`, merge `crm` → `master` в обох репозиторіях.
+- [x] e2e (playwright): онлайн-запис → календар → оплата.
+- [x] Security review (access, публічні endpoints, токени, rate limit); оновити `docs/architecture.md`, `docs/deployment.md` (Resend, jobs, cron).
+- [ ] Чеклист запуску: бекап, `pnpm migrate`, початкові залишки кас (`adjustment`), перемикання `NEXT_PUBLIC_BOOKING_PROVIDER=native`, merge `crm` → `master` в обох репозиторіях. Чекліст підготовлено — [launch-checklist.md](launch-checklist.md); виконується вручну на production.
 
 **Готово:** CRM працює в production, EasyWeek вимкнено.
 **Перевірка:** e2e зелені; smoke-тест на production.

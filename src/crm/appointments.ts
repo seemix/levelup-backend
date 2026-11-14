@@ -108,7 +108,17 @@ export const generateCancelToken = (): { token: string; hash: string } => {
 // Transactions and the barber-day lock (§5.9)
 // ---------------------------------------------------------------------------
 
-const MAX_RETRIES = 3
+/**
+ * Retries after a write conflict (A42). The pause doubles with jitter (40–80, 80–160, 160–320,
+ * 320–640 ms): it must outlast the winning transaction, which under load takes hundreds of ms —
+ * short pauses made every retry collide with it again and a valid booking got `SLOT_TAKEN`.
+ */
+const MAX_RETRIES = 4
+const RETRY_BASE_MS = 40
+export const retryDelay = (attempt: number, random: number = Math.random()): number => {
+  const base = RETRY_BASE_MS * 2 ** attempt
+  return base + Math.floor(random * base)
+}
 
 type MongoLikeError = {
   code?: number
@@ -186,7 +196,7 @@ const incrementPromoUsage = async (req: PayloadRequest, promoId: string, delta: 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
- * Runs `fn` in a MongoDB transaction and retries it up to 3 times on a write conflict,
+ * Runs `fn` in a MongoDB transaction and retries it up to 4 times on a write conflict,
  * then fails with `SLOT_TAKEN` (§5.9) or `exhausted()`. Inside an existing transaction `fn` runs as is.
  */
 export const runBookingTransaction = async <T>(
@@ -211,7 +221,7 @@ export const runBookingTransaction = async <T>(
         delete req.transactionID
       }
       if (!isTransientError(error)) throw error
-      await pause(5 + Math.floor(Math.random() * 20) * (attempt + 1))
+      if (attempt < MAX_RETRIES) await pause(retryDelay(attempt))
     }
   }
   throw exhausted()
