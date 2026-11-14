@@ -47,9 +47,10 @@ $column-min: 168px;
     }
   }
 
+  // Dark grey, not black (elevation-800 is dark in the light theme and light in the dark one).
   &__button--dark {
-    border-color: var(--theme-elevation-1000);
-    background: var(--theme-elevation-1000);
+    border-color: var(--theme-elevation-800);
+    background: var(--theme-elevation-800);
     color: var(--theme-elevation-0);
     font-weight: 600;
   }
@@ -67,13 +68,29 @@ $column-min: 168px;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: calc(var(--base) * 0.75);
+  gap: calc(var(--base) * 0.6);
+
+  // Compact controls above the calendars (modals keep the 40 px touch size).
+  .calendar__button,
+  .calendar__select,
+  .calendar__pill,
+  .calendar__icon-button {
+    min-height: 32px;
+    padding: 0 calc(var(--base) * 0.6);
+    font-size: var(--font-size-small, 13px);
+  }
+
+  .calendar__icon-button {
+    width: 32px;
+    padding: 0;
+    font-size: 18px;
+  }
 
   &__group,
   &__date {
     display: flex;
     align-items: center;
-    gap: calc(var(--base) * 0.5);
+    gap: calc(var(--base) * 0.4);
   }
 
   &__current {
@@ -677,8 +694,8 @@ $column-min: 168px;
     cursor: pointer;
 
     &--active {
-      border-color: var(--theme-elevation-1000);
-      background: var(--theme-elevation-1000);
+      border-color: var(--theme-elevation-800);
+      background: var(--theme-elevation-800);
       color: var(--theme-elevation-0);
       font-weight: 600;
     }
