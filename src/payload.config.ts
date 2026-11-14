@@ -88,6 +88,7 @@ export default buildConfig({
         '@/components/schedule/ScheduleNavLink#ScheduleNavLink',
       ],
       afterNavLinks: [
+        '@/components/notifications/NewAppointmentNotifier#NewAppointmentNotifier',
         '@/components/finance/FinanceNavLink#FinanceNavLink',
         '@/components/reports/ReportsNavLink#ReportsNavLink',
       ],

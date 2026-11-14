@@ -22,7 +22,7 @@ export const SchedulePage = ({ initPageResult, params, searchParams }: AdminView
       user={req.user ?? undefined}
       visibleEntities={visibleEntities}
     >
-      <Gutter className="crm-gutter">
+      <Gutter className="crm-gutter crm-gutter--bare">
         <ScheduleClient />
       </Gutter>
     </DefaultTemplate>

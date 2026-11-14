@@ -382,6 +382,12 @@ export const ro: CrmTranslations = {
     saleTransaction: 'Operațiunea de vânzare',
     comment: 'Comentariu',
   },
+  notifications: {
+    newAppointment: 'Programare nouă',
+    line: '{{client}} · {{barber}} · {{when}}',
+    online: 'Programare online',
+    close: 'Închide',
+  },
   calendar: {
     title: 'Calendar',
     nav: 'Calendar',

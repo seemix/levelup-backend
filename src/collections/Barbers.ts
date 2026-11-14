@@ -40,11 +40,18 @@ const percentField = (name: string, label: CrmKey): NumberField => ({
   max: 100,
   label: crmLabel(label),
   access: fieldAccess('barbers.commission'),
-  admin: { width: '50%' },
+  admin: { width: '33%' },
   validate: (value: number | null | undefined, { req: { t } }) =>
     value === null || value === undefined || (Number.isFinite(value) && value >= 0 && value <= 100)
       ? true
       : crmT(t, 'errors.percentInvalid'),
+})
+
+const fixedSalary = moneyField({
+  name: 'fixedSalary',
+  label: 'barbers.fixedSalary',
+  required: false,
+  description: 'barbers.fixedSalaryDescription',
 })
 
 /** Lexical state without any text or non-text node (e.g. an empty paragraph). */
@@ -201,7 +208,11 @@ export const Barbers: CollectionConfig = {
                 })
                 return nextBarberColor(docs.map((doc) => doc.color))
               },
-              admin: { description: crmLabel('barbers.colorDescription'), placeholder: '#3B82F6' },
+              admin: {
+                description: crmLabel('barbers.colorDescription'),
+                placeholder: '#3B82F6',
+                components: { Field: '@/components/color/ColorField#ColorField' },
+              },
               validate: ((value, { req: { t } }) =>
                 isHexColor(value)
                   ? true
@@ -355,17 +366,13 @@ export const Barbers: CollectionConfig = {
               fields: [
                 percentField('commissionServicesPercent', 'barbers.commissionServicesPercent'),
                 percentField('commissionExtrasPercent', 'barbers.commissionExtrasPercent'),
+                {
+                  // Optional fixed monthly salary (A45): prorated by days in the salary report.
+                  ...fixedSalary,
+                  access: fieldAccess('barbers.commission'),
+                  admin: { ...fixedSalary.admin, width: '33%' },
+                },
               ],
-            },
-            {
-              // Optional fixed monthly salary (A45): prorated by days in the salary report.
-              ...moneyField({
-                name: 'fixedSalary',
-                label: 'barbers.fixedSalary',
-                required: false,
-                description: 'barbers.fixedSalaryDescription',
-              }),
-              access: fieldAccess('barbers.commission'),
             },
           ],
         },

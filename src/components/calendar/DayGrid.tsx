@@ -74,22 +74,40 @@ const DropColumn = ({
   disabled,
   className,
   onClick,
+  hintAt,
   children,
 }: {
   id: string
   disabled: boolean
   className: string
   onClick: (event: React.MouseEvent<HTMLDivElement>) => void
+  /** Time hint for a vertical offset (px) inside the column: snapped line position and label. */
+  hintAt: (y: number) => { top: number; label: string }
   children: ReactNode
 }) => {
   const { setNodeRef, isOver } = useDroppable({ id, disabled })
+  const [hint, setHint] = useState<{ top: number; label: string } | null>(null)
+  const onMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest('.calendar-block')) {
+      setHint(null)
+      return
+    }
+    setHint(hintAt(event.clientY - event.currentTarget.getBoundingClientRect().top))
+  }
   return (
     <div
       ref={setNodeRef}
       className={`${className}${isOver ? ' calendar-grid__column--over' : ''}`}
       onClick={onClick}
+      onMouseMove={onMove}
+      onMouseLeave={() => setHint(null)}
     >
       {children}
+      {hint && (
+        <div className="calendar-grid__hint" style={{ top: hint.top }}>
+          <span>{hint.label}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -263,6 +281,15 @@ export const DayGrid = ({
                 id={columnKey(column)}
                 disabled={!canDropInto(column)}
                 className={`calendar-grid__column${column.barber.own ? ' calendar-grid__column--own' : ''}${canCreate(column) ? ' calendar-grid__column--bookable' : ''}`}
+                hintAt={(y) => {
+                  const start = slotStartAt(column.date, range.from + y / PX_PER_MINUTE, step)
+                  return {
+                    top:
+                      (minutesFromDayStart(column.date, start.toISOString()) - range.from) *
+                      PX_PER_MINUTE,
+                    label: toLocalTime(start),
+                  }
+                }}
                 onClick={(event) => {
                   // A click on a block opens it; a click on an empty slot starts a new appointment.
                   if (

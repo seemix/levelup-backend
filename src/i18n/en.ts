@@ -381,6 +381,12 @@ export const en = {
     saleTransaction: 'Sale operation',
     comment: 'Comment',
   },
+  notifications: {
+    newAppointment: 'New appointment',
+    line: '{{client}} · {{barber}} · {{when}}',
+    online: 'Online booking',
+    close: 'Close',
+  },
   calendar: {
     title: 'Calendar',
     nav: 'Calendar',

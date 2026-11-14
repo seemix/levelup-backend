@@ -127,8 +127,9 @@ $column-min: 168px;
 
 .calendar-grid {
   position: relative;
-  overflow: auto;
-  max-height: calc(100vh - 220px);
+  // Full height: the page scrolls, the grid scrolls only horizontally.
+  overflow-x: auto;
+  overflow-y: hidden;
   min-height: 320px;
   border: 1px solid var(--calendar-line-strong);
   border-radius: var(--style-radius-m);
@@ -477,8 +478,6 @@ $column-min: 168px;
     }
 
     &-grid {
-      max-height: calc(100vh - 260px);
-
       &__head,
       &__body {
         grid-template-columns: 52px repeat(var(--calendar-columns), minmax(150px, 1fr));
@@ -903,6 +902,37 @@ $column-min: 168px;
   cursor: grabbing;
   opacity: 0.92;
   box-shadow: 0 6px 18px rgb(0 0 0 / 25%);
+}
+
+// Hover hint: a thin line at the snapped slot start with a small time label.
+.calendar-grid__hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 3;
+  height: 0;
+  border-top: 1px dashed var(--theme-elevation-500);
+  pointer-events: none;
+
+  span {
+    position: absolute;
+    top: 0;
+    left: 4px;
+    padding: 1px 6px;
+    border-radius: var(--style-radius-s, 3px);
+    background: var(--theme-elevation-800);
+    color: var(--theme-bg);
+    font-size: var(--font-size-xs, 11px);
+    font-weight: 600;
+    line-height: 1.3;
+    transform: translateY(-50%);
+  }
+}
+
+@media (hover: none) {
+  .calendar-grid__hint {
+    display: none;
+  }
 }
 
 .calendar-grid__column--over {

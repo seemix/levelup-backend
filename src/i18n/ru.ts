@@ -382,6 +382,12 @@ export const ru: CrmTranslations = {
     saleTransaction: 'Операция продажи',
     comment: 'Комментарий',
   },
+  notifications: {
+    newAppointment: 'Новая запись',
+    line: '{{client}} · {{barber}} · {{when}}',
+    online: 'Онлайн-запись',
+    close: 'Закрыть',
+  },
   calendar: {
     title: 'Календарь',
     nav: 'Календарь',

@@ -7,6 +7,7 @@ import { moveBody, moveInColumns } from '@/crm/calendar-move'
 import type { CrmWarning } from '@/endpoints/crm/http'
 import { addLocalDays, todayLocal } from '@/crm/time'
 
+import { APPOINTMENTS_CREATED_EVENT } from '../notifications/NewAppointmentNotifier'
 import './calendar.scss'
 import { AppointmentModal, type ModalTarget } from './AppointmentModal'
 import { CrmApiError, useCrmApi, useErrorText } from './api'
@@ -90,6 +91,15 @@ export const CalendarClient = () => {
       })
     return () => controller.abort()
   }, [key, date, location, view, barber, cancelled, i18n.language, config.routes.api])
+
+  // A new appointment arrived (notifier): reload the grid, unless a drag is in flight.
+  useEffect(() => {
+    const reload = () => {
+      if (!moveRef.current) setAttempt((value) => value + 1)
+    }
+    window.addEventListener(APPOINTMENTS_CREATED_EVENT, reload)
+    return () => window.removeEventListener(APPOINTMENTS_CREATED_EVENT, reload)
+  }, [])
 
   const api = useCrmApi()
   const errorText = useErrorText()

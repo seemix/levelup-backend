@@ -8,6 +8,7 @@ import {
 import { appointmentDetailEndpoint, previewAppointmentEndpoint } from './appointment-detail'
 import { calendarEndpoint } from './calendar'
 import { clientLookupEndpoint } from './clients'
+import { newAppointmentsEndpoint } from './notifications'
 import {
   appointmentPaymentEndpoint,
   refundTransactionEndpoint,
@@ -23,6 +24,7 @@ import { reverseTransactionEndpoint } from './transactions'
 /** Staff API of the calendar `/api/crm/*` (spec §6.2); examples — `docs/api-crm.http`. */
 export const crmEndpoints: Endpoint[] = [
   calendarEndpoint,
+  newAppointmentsEndpoint,
   staffSlotsEndpoint,
   createAppointmentEndpoint,
   patchAppointmentEndpoint,

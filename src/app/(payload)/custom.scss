@@ -57,6 +57,17 @@ button:active {
 .nav__link:has(.nav__link-indicator) {
   font-weight: 500;
 }
+// Left menu categories: grey bar, tight spacing between groups.
+.nav-group {
+  margin-bottom: calc(var(--base) * 0.2);
+}
+.nav-group__toggle {
+  margin-bottom: calc(var(--base) * 0.1);
+  width: 100%;
+  padding: calc(var(--base) * 0.4) calc(var(--base) * 0.5);
+  border-radius: var(--style-radius-s, 3px);
+  background: var(--theme-elevation-100);
+}
 .card__title {
   font-weight: 500;
 }
@@ -65,4 +76,55 @@ button:active {
 // Payload's gutter is `--gutter-h` (60 px on desktop); phones keep Payload's own 16 px.
 .crm-gutter {
   --gutter-h: min(var(--base) * 0.75, 16px);
+}
+
+// Calendar and schedule: hide Payload's top header (logo, locale, account) on desktop so there is
+// no gap above the grid. On narrow screens it stays: it holds the mobile nav toggler.
+@media (min-width: 1025px) {
+  .template-default__wrap:has(.crm-gutter--bare) .app-header {
+    display: none;
+  }
+}
+
+// Notifications about new appointments (NewAppointmentNotifier): toasts in the bottom-right corner.
+.crm-notifications {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(380px, calc(100vw - 32px));
+
+  &__toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--theme-elevation-200);
+    border-left: 4px solid var(--theme-success-500, #10b981);
+    border-radius: var(--style-radius-m);
+    background: var(--theme-elevation-0, var(--theme-bg));
+    color: var(--theme-text);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  }
+
+  &__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+    font-size: var(--font-size-sm);
+  }
+
+  &__close {
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--theme-elevation-500);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+  }
 }
