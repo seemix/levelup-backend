@@ -39,7 +39,7 @@ export class CrmApiError extends Error {
 
 type RequestInitLite = { method?: string; body?: unknown; signal?: AbortSignal }
 
-/** Calls `/api/crm/*` with the session cookie; failures become `CrmApiError`. */
+/** Calls `/api/crm/*` (or a standard collection route) with the session cookie; failures become `CrmApiError`. */
 export const crmRequest = async <T>(
   apiRoute: string,
   path: string,
@@ -60,10 +60,14 @@ export const crmRequest = async <T>(
   }
   const payload = (await response.json().catch(() => null)) as {
     error?: { code?: string; details?: Record<string, unknown> }
+    // Standard Payload REST (collections): business rules carry the machine code in `data.code`.
+    errors?: { data?: { code?: string } }[]
   } | null
   if (!response.ok)
     throw new CrmApiError(
-      payload?.error?.code ?? (response.status >= 500 ? 'INTERNAL_ERROR' : 'UNKNOWN'),
+      payload?.error?.code ??
+        payload?.errors?.[0]?.data?.code ??
+        (response.status >= 500 ? 'INTERNAL_ERROR' : 'UNKNOWN'),
       response.status,
       payload?.error?.details,
     )

@@ -1,4 +1,5 @@
 'use client'
+import { useAuth } from '@payloadcms/ui'
 import { useEffect, useMemo, useState } from 'react'
 
 import { emptyForm, type FormState } from '@/crm/appointment-form'
@@ -9,6 +10,7 @@ import { useCrmApi, useErrorText, useLanguage, type AppointmentDetail } from './
 import { AppointmentDetails } from './AppointmentDetails'
 import { AppointmentForm } from './AppointmentForm'
 import { Modal } from './Modal'
+import { PaymentTab } from './PaymentTab'
 import type { CalendarData } from './types'
 import { useCatalog } from './useCatalog'
 import { useCrmT } from './useCrmT'
@@ -62,7 +64,12 @@ export const AppointmentModal = ({ target, data, isManager, onClose, onChanged }
   const language = useLanguage()
   const errorText = useErrorText()
   const { catalog, failed } = useCatalog(language)
+  const { user } = useAuth()
+  // Convenience only: the refund endpoint checks the role itself.
+  const isAdmin = ((user as { roles?: string[] } | null)?.roles ?? []).includes('admin')
   const [editing, setEditing] = useState(false)
+  const [tab, setTab] = useState<'details' | 'payment'>('details')
+  const [notice, setNotice] = useState<string | null>(null)
   const [reload, setReload] = useState(0)
   const [loaded, setLoaded] = useState<{
     key: string
@@ -186,12 +193,49 @@ export const AppointmentModal = ({ target, data, isManager, onClose, onChanged }
           </p>
         )
       ) : (
-        <AppointmentDetails
-          detail={detail}
-          barberName={barbers.find((barber) => barber.id === detail.appointment.barber)?.name ?? ''}
-          onEdit={() => setEditing(true)}
-          onChanged={reloadAll}
-        />
+        <>
+          {detail.appointment.kind === 'appointment' && (
+            <div className="calendar-modal__tabs" role="tablist">
+              {(['details', 'payment'] as const).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  className={`calendar-modal__tab${tab === id ? ' calendar-modal__tab--active' : ''}`}
+                  onClick={() => {
+                    setTab(id)
+                    setNotice(null)
+                  }}
+                >
+                  {t(id === 'details' ? 'calendar.modal.tabDetails' : 'calendar.modal.tabPayment')}
+                </button>
+              ))}
+            </div>
+          )}
+          {notice && (
+            <p className="calendar-modal__notice" role="status">
+              {notice}
+            </p>
+          )}
+          {tab === 'payment' && detail.appointment.kind === 'appointment' ? (
+            <PaymentTab
+              detail={detail}
+              isAdmin={isAdmin}
+              onChanged={reloadAll}
+              onNotice={setNotice}
+            />
+          ) : (
+            <AppointmentDetails
+              detail={detail}
+              barberName={
+                barbers.find((barber) => barber.id === detail.appointment.barber)?.name ?? ''
+              }
+              onEdit={() => setEditing(true)}
+              onChanged={reloadAll}
+            />
+          )}
+        </>
       )}
     </Modal>
   )

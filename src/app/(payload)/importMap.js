@@ -27,7 +27,9 @@ import { PromoValueCell as PromoValueCell_24576fc485adcef6bf677d39d99f1213 } fro
 import { PromoValueField as PromoValueField_eeccb02b960a9432234c20d2875ff5d2 } from '@/components/promo/PromoValueField'
 import { default as default_ed3cbed3b52ba9e0c712bb19e7066c56 } from '@/app/(payload)/components/Logo'
 import { CalendarNavLink as CalendarNavLink_fa7df0f16fcd1e2602e7855233a45c4d } from '@/components/calendar/CalendarNavLink'
+import { FinanceNavLink as FinanceNavLink_b9ffd84a6ac6372a49b70ded4ded8bdb } from '@/components/finance/FinanceNavLink'
 import { CalendarPage as CalendarPage_cea1f112ed6921b40f70b68a5b63e5f5 } from '@/components/calendar/CalendarPage'
+import { FinancePage as FinancePage_81f2c27e38b3ce5c2aac4f0c4d0b5eb1 } from '@/components/finance/FinancePage'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
 /** @type import('payload').ImportMap */
@@ -61,6 +63,8 @@ export const importMap = {
   "@/components/promo/PromoValueField#PromoValueField": PromoValueField_eeccb02b960a9432234c20d2875ff5d2,
   "@/app/(payload)/components/Logo#default": default_ed3cbed3b52ba9e0c712bb19e7066c56,
   "@/components/calendar/CalendarNavLink#CalendarNavLink": CalendarNavLink_fa7df0f16fcd1e2602e7855233a45c4d,
+  "@/components/finance/FinanceNavLink#FinanceNavLink": FinanceNavLink_b9ffd84a6ac6372a49b70ded4ded8bdb,
   "@/components/calendar/CalendarPage#CalendarPage": CalendarPage_cea1f112ed6921b40f70b68a5b63e5f5,
+  "@/components/finance/FinancePage#FinancePage": FinancePage_81f2c27e38b3ce5c2aac4f0c4d0b5eb1,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

@@ -24,6 +24,14 @@ describe('policy.can (pure)', () => {
     }
   })
 
+  it('finance view: admin and manager read, barber/editor/anonymous do not (A35)', () => {
+    expect(can(u(['admin']), 'read', 'finance')).toBe(true)
+    expect(can(u(['manager']), 'read', 'finance')).toBe(true)
+    for (const role of ['barber', 'editor']) expect(can(u([role]), 'read', 'finance')).toBe(false)
+    expect(can(null, 'read', 'finance')).toBe(false)
+    expect(can(u(['admin']), 'update', 'finance')).toBe(false)
+  })
+
   it('users: admin all, others only self (read/update), nobody else creates/deletes', () => {
     expect(can(u(['admin']), 'delete', 'users')).toBe(true)
     for (const role of ['manager', 'barber', 'editor']) {

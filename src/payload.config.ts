@@ -69,11 +69,19 @@ export default buildConfig({
         Logo: '@/app/(payload)/components/Logo',
         Icon: '@/app/(payload)/components/Logo',
       },
-      afterNavLinks: ['@/components/calendar/CalendarNavLink#CalendarNavLink'],
+      afterNavLinks: [
+        '@/components/calendar/CalendarNavLink#CalendarNavLink',
+        '@/components/finance/FinanceNavLink#FinanceNavLink',
+      ],
       views: {
         calendar: {
           Component: '@/components/calendar/CalendarPage#CalendarPage',
           path: '/calendar',
+          exact: true,
+        },
+        cash: {
+          Component: '@/components/finance/FinancePage#FinancePage',
+          path: '/cash',
           exact: true,
         },
       },

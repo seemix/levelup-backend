@@ -59,6 +59,8 @@ export type Resource =
   | 'schedule-exceptions.appointments'
   /** CRM calendar (§3.1): admin — all locations, manager — own, barber — own column + busy time of the location. */
   | 'calendar'
+  /** Finance admin view «Cash registers» (§3.1): admin and manager; a barber pays from the appointment only. */
+  | 'finance'
   /** Cash registers (§4.13): admin CRUD; manager reads own locations; barber reads all (no balance). */
   | 'cash-registers'
   /** `cash-registers.balance`: admin and manager read; nobody writes it (ledger hook, `$inc`). */
@@ -349,6 +351,9 @@ const rules: Record<Resource, Rule> = {
 
   // Reading the calendar; which locations and which details are visible is decided per row (§3.1).
   calendar: (user, action) => action === 'read' && isStaff(user),
+
+  // The finance view; the data are cut by the row rules of the collections (§3.1).
+  finance: (user, action) => action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
 
   'cash-registers': (user, action, doc) => {
     if (action !== 'read') return isAdmin(user)

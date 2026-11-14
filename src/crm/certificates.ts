@@ -8,15 +8,14 @@ import { randomBytes } from 'node:crypto'
 import { isBani } from './money'
 import { addLocalMonths } from './time'
 
-/**
- * Code alphabet without look-alike characters (A6: no 0/O, 1/I). 32 symbols, so one random byte
- * gives one symbol without bias (`byte & 31`).
- */
-export const CERTIFICATE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+import { CERTIFICATE_ALPHABET } from './certificate-code'
 
-export const CERTIFICATE_CODE_RE = new RegExp(
-  `^LU-[${CERTIFICATE_ALPHABET}]{4}-[${CERTIFICATE_ALPHABET}]{4}$`,
-)
+export {
+  CERTIFICATE_ALPHABET,
+  CERTIFICATE_CODE_RE,
+  isCertificateCode,
+  normalizeCertificateCode,
+} from './certificate-code'
 
 /** Default validity of a sold certificate (§5.7). */
 export const CERTIFICATE_VALIDITY_MONTHS = 12
@@ -36,16 +35,6 @@ export const generateCertificateCode = (
   const chars = Array.from(bytes.slice(0, 8), (byte) => CERTIFICATE_ALPHABET[byte & 31])
   return `LU-${chars.slice(0, 4).join('')}-${chars.slice(4).join('')}`
 }
-
-/** `lu-abcd efgh` in any case and spacing → `LU-ABCD-EFGH` (dashes are restored when missing). */
-export const normalizeCertificateCode = (raw: string): string => {
-  const compact = raw.replace(/[\s-]+/g, '').toUpperCase()
-  return /^LU[A-Z0-9]{8}$/.test(compact)
-    ? `LU-${compact.slice(2, 6)}-${compact.slice(6)}`
-    : raw.replace(/\s+/g, '').toUpperCase()
-}
-
-export const isCertificateCode = (value: string): boolean => CERTIFICATE_CODE_RE.test(value)
 
 /** Default expiry: the same local moment 12 months after the sale. */
 export const defaultExpiry = (issuedAt: Date): Date =>
