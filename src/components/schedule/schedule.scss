@@ -103,16 +103,27 @@ $barber-width: 180px;
     }
   }
 
-  &__dot {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    margin-right: 6px;
+  // Floats left of the name and the «weekly pattern» link (a table cell cannot be a flex box).
+  &__avatar {
+    float: left;
+    margin: 2px 8px 0 0;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
-    background: var(--theme-elevation-400);
+    object-fit: cover;
+
+    &--empty {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--theme-elevation-150);
+      font-size: var(--font-size-xs);
+      font-weight: 600;
+    }
   }
 
   &__name {
+    display: block;
     font-weight: 600;
 
     small {

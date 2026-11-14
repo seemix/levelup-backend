@@ -60,3 +60,9 @@ button:active {
 .card__title {
   font-weight: 500;
 }
+
+// Calendar screens (appointments, schedule): narrow side padding so the grid gets the width.
+// Payload's gutter is `--gutter-h` (60 px on desktop); phones keep Payload's own 16 px.
+.crm-gutter {
+  --gutter-h: min(var(--base) * 0.75, 16px);
+}

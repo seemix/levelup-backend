@@ -4,17 +4,10 @@ import { useEffect, useRef, useState } from 'react'
 
 import { isCancelledStatus } from '@/crm/appointment-status'
 
+import { BarberAvatar } from './BarberAvatar'
 import type { ExceptionKind } from './ScheduleExceptionModal'
 import type { CalendarColumn } from './types'
 import { useCrmT } from './useCrmT'
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
 
 /** Weekday and day of a `YYYY-MM-DD` in the admin language (UTC noon: no zone shift). */
 const formatColumnDay = (date: string, language: string) => {
@@ -73,15 +66,7 @@ export const ColumnHeader = ({ column, mode, today, canSchedule, onSchedule }: P
       className={`calendar-head${barber.own ? ' calendar-head--own' : ''}${today ? ' calendar-head--today' : ''}`}
       title={barber.own ? t('calendar.own') : undefined}
     >
-      {mode === 'day' &&
-        (barber.image ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="calendar-head__avatar" src={barber.image} alt="" />
-        ) : (
-          <span className="calendar-head__avatar calendar-head__avatar--empty" aria-hidden="true">
-            {initials(barber.name)}
-          </span>
-        ))}
+      {mode === 'day' && <BarberAvatar name={barber.name} image={barber.image} />}
       <span className="calendar-head__text">
         {mode === 'day' ? (
           <>

@@ -15,6 +15,7 @@ import { barberColorAt } from '@/crm/colors'
 import { subtractBreaks } from '@/crm/schedule'
 import { localToInstant, minutesToTime, timeToMinutes, toLocalDate, toLocalTime } from '@/crm/time'
 
+import { BarberAvatar } from '../calendar/BarberAvatar'
 import { useCrmT } from '../calendar/useCrmT'
 import type { RosterBarber, RosterDay } from './shared'
 
@@ -36,14 +37,6 @@ const workIntervals = ({ date, status, start, end, breaks }: RosterDay): IsoInte
     end: localToInstant(date, minutesToTime(item.end)).toISOString(),
   }))
 }
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
 
 type Props = {
   columns: GridColumn[]
@@ -127,18 +120,7 @@ export const ScheduleGrid = ({ columns, mode, locationId, busy, onEdit, onPatter
               key={`${barber.id}|${day.date}`}
               className={`calendar-head${barber.own ? ' calendar-head--own' : ''}${day.date === today ? ' calendar-head--today' : ''}`}
             >
-              {mode === 'day' &&
-                (barber.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img className="calendar-head__avatar" src={barber.image} alt="" />
-                ) : (
-                  <span
-                    className="calendar-head__avatar calendar-head__avatar--empty"
-                    aria-hidden="true"
-                  >
-                    {initials(barber.name)}
-                  </span>
-                ))}
+              {mode === 'day' && <BarberAvatar name={barber.name} image={barber.image} />}
               <span className="calendar-head__text">
                 {mode === 'day' ? (
                   <>

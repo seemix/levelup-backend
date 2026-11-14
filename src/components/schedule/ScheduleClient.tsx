@@ -8,6 +8,7 @@ import { addLocalDays, eachLocalDate, isoWeekday, todayLocal } from '@/crm/time'
 import '../calendar/calendar.scss'
 import './schedule.scss'
 import { useCrmApi } from '../calendar/api'
+import { BarberAvatar } from '../calendar/BarberAvatar'
 import { useCrmT } from '../calendar/useCrmT'
 import { DayModal } from './DayModal'
 import { FillModal } from './FillModal'
@@ -379,10 +380,10 @@ export const ScheduleClient = () => {
               {data.barbers.map((barber) => (
                 <tr key={barber.id}>
                   <th scope="row" className="schedule-roster__barber">
-                    <span
-                      className="schedule-roster__dot"
-                      style={{ background: barber.color ?? undefined }}
-                      aria-hidden
+                    <BarberAvatar
+                      name={barber.name}
+                      image={barber.image}
+                      className="schedule-roster__avatar"
                     />
                     <span className="schedule-roster__name">
                       {barber.name}

@@ -14,7 +14,7 @@ export const Dashboard = (props: DashboardViewServerProps) => {
   const user = props.initPageResult.req.user
   if (!allowed(user, 'read', 'calendar')) return <DefaultDashboard {...props} />
   return (
-    <Gutter>
+    <Gutter className="crm-gutter">
       <CalendarClient />
     </Gutter>
   )

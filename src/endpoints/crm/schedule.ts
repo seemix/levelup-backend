@@ -170,7 +170,12 @@ export const loadRoster = async (
             ...SYSTEM_READ,
             req,
             where: { id: { in: imageIds } },
-            select: { url: true, sizes: { thumbnail: { url: true } } },
+            // Payload builds `url` from `filename`: without it both URLs come back as null.
+            select: {
+              filename: true,
+              url: true,
+              sizes: { thumbnail: { filename: true, url: true } },
+            },
           })
         ).docs as unknown as MediaRow[])
   const imageUrl = (id: string | null) => {

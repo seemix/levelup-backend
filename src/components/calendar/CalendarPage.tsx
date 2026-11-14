@@ -22,7 +22,7 @@ export const CalendarPage = ({ initPageResult, params, searchParams }: AdminView
       user={req.user ?? undefined}
       visibleEntities={visibleEntities}
     >
-      <Gutter>
+      <Gutter className="crm-gutter">
         <CalendarClient />
       </Gutter>
     </DefaultTemplate>

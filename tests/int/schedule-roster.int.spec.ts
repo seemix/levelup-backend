@@ -218,6 +218,43 @@ describe('Schedule roster API (A44)', () => {
         expect(bad.json.error.details.fields).toEqual(['from'])
       }
     })
+
+    it('barber photo: the thumbnail URL in the roster and in the calendar (null without a photo)', async () => {
+      // A media document without a file on disk: only the URLs are checked.
+      const { insertedId } = await payload.db.collections.media.collection.insertOne({
+        alt: { ru: 'Two' },
+        filename: 'roster-two.webp',
+        mimeType: 'image/webp',
+        sizes: { thumbnail: { filename: 'roster-two-400x400.webp', width: 400, height: 400 } },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      await payload.db.collections.barbers.updateOne(
+        { _id: ids.b2 },
+        { $set: { image: insertedId } },
+      )
+      try {
+        const { json } = await roster('admin', `&location=${ids.locA}`)
+        expect(rowOf(json, ids.b2).image).toBe('/api/media/file/roster-two-400x400.webp')
+        expect(rowOf(json, ids.b1).image).toBeNull()
+        const calendar = await call(
+          'admin',
+          'GET',
+          `/crm/calendar?date=2027-03-01&location=${ids.locA}`,
+        )
+        const images = Object.fromEntries(
+          (calendar.json.columns as Json[]).map((column) => [
+            column.barber.id,
+            column.barber.image,
+          ]),
+        )
+        expect(images[ids.b2]).toBe('/api/media/file/roster-two-400x400.webp')
+        expect(images[ids.b1]).toBeNull()
+      } finally {
+        await payload.db.collections.barbers.updateOne({ _id: ids.b2 }, { $unset: { image: 1 } })
+        await payload.db.collections.media.collection.deleteOne({ _id: insertedId })
+      }
+    })
   })
 
   describe('POST /crm/schedule/days', () => {
