@@ -16,6 +16,7 @@ import {
 import { financeReportEndpoint, salaryReportEndpoint } from './finance-reports'
 import { clientCardReportEndpoint, clientsReportEndpoint } from './reports'
 import { scheduleExceptionPreviewEndpoint } from './schedule-exceptions'
+import { scheduleDaysEndpoint, scheduleFillEndpoint, scheduleRosterEndpoint } from './schedule'
 import { staffSlotsEndpoint } from './slots'
 import { reverseTransactionEndpoint } from './transactions'
 
@@ -34,6 +35,9 @@ export const crmEndpoints: Endpoint[] = [
   refundTransactionEndpoint,
   sellCertificateEndpoint,
   scheduleExceptionPreviewEndpoint,
+  scheduleRosterEndpoint,
+  scheduleDaysEndpoint,
+  scheduleFillEndpoint,
   clientsReportEndpoint,
   clientCardReportEndpoint,
   financeReportEndpoint,

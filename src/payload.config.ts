@@ -83,7 +83,10 @@ export default buildConfig({
         Icon: '@/app/(payload)/components/Logo',
       },
       // The calendar is the main screen: its link goes first, above the collection groups.
-      beforeNavLinks: ['@/components/calendar/CalendarNavLink#CalendarNavLink'],
+      beforeNavLinks: [
+        '@/components/calendar/CalendarNavLink#CalendarNavLink',
+        '@/components/schedule/ScheduleNavLink#ScheduleNavLink',
+      ],
       afterNavLinks: [
         '@/components/finance/FinanceNavLink#FinanceNavLink',
         '@/components/reports/ReportsNavLink#ReportsNavLink',
@@ -96,6 +99,11 @@ export default buildConfig({
         calendar: {
           Component: '@/components/calendar/CalendarPage#CalendarPage',
           path: '/calendar',
+          exact: true,
+        },
+        schedule: {
+          Component: '@/components/schedule/SchedulePage#SchedulePage',
+          path: '/schedule',
           exact: true,
         },
         reportsClients: {

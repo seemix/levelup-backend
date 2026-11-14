@@ -6,6 +6,7 @@ import type {
 } from 'payload'
 import { fieldAccessFor, scopedAccessFor } from '@/access/policy'
 import { scheduledAppointmentIds } from '@/crm/appointments'
+import { SCHEDULE_EDIT_CONTEXT } from '@/crm/schedule-edit'
 import { EXCEPTION_KINDS, relationId, validateDateRange, type RelationValue } from '@/crm/schedule'
 import { breaksField, dateField, scheduleErrorKey, timeField } from '@/fields/schedule'
 import { outsideTransaction } from '@/crm/read-req'
@@ -115,6 +116,8 @@ export const ScheduleExceptions: CollectionConfig = {
             const barberId = relationId(barber)
             // An invalid range is reported on `dateTo`.
             if (!barberId || validateDateRange(dateFrom, dateTo)) return true
+            // Roster edits keep exceptions disjoint themselves (A44, `src/crm/schedule-edit.ts`).
+            if (req.context?.[SCHEDULE_EDIT_CONTEXT]) return true
             const { docs } = await req.payload.find({
               collection: 'schedule-exceptions',
               where: {
@@ -197,7 +200,7 @@ export const ScheduleExceptions: CollectionConfig = {
       hooks: {
         afterRead: [
           async ({ siblingData, findMany, req }) => {
-            if (findMany) return undefined
+            if (findMany || req.context?.[SCHEDULE_EDIT_CONTEXT]) return undefined
             const { barber, dateFrom, dateTo } = siblingData as ExceptionData
             const barberId = relationId(barber)
             if (!barberId || validateDateRange(dateFrom, dateTo)) return []

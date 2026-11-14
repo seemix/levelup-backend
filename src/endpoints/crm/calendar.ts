@@ -88,7 +88,7 @@ export const parseCalendarQuery = (params: URLSearchParams): CalendarQuery => {
 }
 
 /** Locations whose calendar the user may open: admin — all, manager — own, barber — the barber's. */
-const visibleLocations = async (
+export const visibleLocations = async (
   req: PayloadRequest,
   staff: StaffContext,
   locale: Locale,

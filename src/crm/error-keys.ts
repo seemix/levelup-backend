@@ -58,6 +58,14 @@ export const RULE_ERROR_KEYS = {
   PAYMENT_EXCEEDS_DUE: 'errors.paymentExceedsDue',
   PAYMENT_EMPTY: 'errors.paymentEmpty',
   PAYMENT_TIP_INVALID: 'errors.paymentTipInvalid',
+  // Schedule roster (A44): `src/crm/schedule.ts`, `src/crm/schedule-edit.service.ts`.
+  TIME_INVALID: 'errors.timeInvalid',
+  END_BEFORE_START: 'errors.endBeforeStart',
+  BREAK_INVALID: 'errors.breakInvalid',
+  BREAK_OUTSIDE: 'errors.breakOutside',
+  BREAKS_OVERLAP: 'errors.breaksOverlap',
+  LOCATION_NOT_ALLOWED: 'errors.locationNotAllowed',
+  SCHEDULE_CONFLICT: 'errors.scheduleConflict',
 } as const satisfies Record<string, CrmKey>
 
 /** Codes of the CRM API itself (`src/endpoints/crm/http.ts`) and of client rules. */

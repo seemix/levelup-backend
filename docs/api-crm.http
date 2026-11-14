@@ -273,3 +273,36 @@ Content-Type: application/json
 ### → { count, appointments: [{ id, start }] }; admin and the manager of the barber, otherwise 403
 GET {{api}}/crm/schedule-exceptions/preview?barber={{barber}}&dateFrom=2026-12-14&dateTo=2026-12-20
 Authorization: Bearer {{token}}
+
+### Schedule roster (A44): barbers of the location × days of the month (pattern + exceptions).
+### → { month, from, to, today, location, locations[], barbers: [{ id, name, canEdit, canEditPattern,
+###      locations[], pattern[], days: [{ date, status, override, location, start, end, breaks, comment, appointments }] }] }
+GET {{api}}/crm/schedule?month=2026-12&location={{location}}
+Authorization: Bearer {{token}}
+
+### The same for a date range (day / week views, ≤ 62 days): month = null in the response
+GET {{api}}/crm/schedule?from=2026-12-14&to=2026-12-20&location={{location}}
+Authorization: Bearer {{token}}
+
+### Set days of a barber (A44): kind = pattern | custom_hours | day_off | vacation | sick (≤ 62 dates).
+### → { removed, updated, created } (changes of schedule exceptions)
+POST {{api}}/crm/schedule/days
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "barber": "{{barber}}",
+  "dates": ["2026-12-14", "2026-12-15"],
+  "kind": "custom_hours",
+  "start": "12:00",
+  "end": "20:00",
+  "breaks": [{ "start": "15:00", "end": "15:30" }]
+}
+
+### Fill by pattern (A44): removes manual changes of the period (≤ 62 days); vacations and sick
+### leaves are kept unless keepAbsences = false. → { removed, updated, created }
+POST {{api}}/crm/schedule/fill
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "barbers": ["{{barber}}"], "dateFrom": "2026-12-01", "dateTo": "2026-12-31", "keepAbsences": true }

@@ -30,8 +30,10 @@ import { default as default_ed3cbed3b52ba9e0c712bb19e7066c56 } from '@/app/(payl
 import { FinanceNavLink as FinanceNavLink_b9ffd84a6ac6372a49b70ded4ded8bdb } from '@/components/finance/FinanceNavLink'
 import { ReportsNavLink as ReportsNavLink_5b79dae4bfc36f4984cf0511e115caea } from '@/components/reports/ReportsNavLink'
 import { CalendarNavLink as CalendarNavLink_fa7df0f16fcd1e2602e7855233a45c4d } from '@/components/calendar/CalendarNavLink'
+import { ScheduleNavLink as ScheduleNavLink_4be96f778e96d4d98e554f3c2c6013d0 } from '@/components/schedule/ScheduleNavLink'
 import { Dashboard as Dashboard_36619916dca240e7e246411f6d4228a9 } from '@/components/dashboard/Dashboard'
 import { CalendarPage as CalendarPage_cea1f112ed6921b40f70b68a5b63e5f5 } from '@/components/calendar/CalendarPage'
+import { SchedulePage as SchedulePage_fc61f277adf5cc44b4933192e45c097f } from '@/components/schedule/SchedulePage'
 import { ClientsReportPage as ClientsReportPage_b94b8e50cae4107f9dabc268d7b27bef } from '@/components/reports/ClientsReportPage'
 import { FinanceReportPage as FinanceReportPage_941a0805cd32f2ea837bae2b14f28099 } from '@/components/reports/FinanceReportPage'
 import { SalaryReportPage as SalaryReportPage_de09db7acbd029f63b5d8ef125ab2505 } from '@/components/reports/SalaryReportPage'
@@ -72,8 +74,10 @@ export const importMap = {
   "@/components/finance/FinanceNavLink#FinanceNavLink": FinanceNavLink_b9ffd84a6ac6372a49b70ded4ded8bdb,
   "@/components/reports/ReportsNavLink#ReportsNavLink": ReportsNavLink_5b79dae4bfc36f4984cf0511e115caea,
   "@/components/calendar/CalendarNavLink#CalendarNavLink": CalendarNavLink_fa7df0f16fcd1e2602e7855233a45c4d,
+  "@/components/schedule/ScheduleNavLink#ScheduleNavLink": ScheduleNavLink_4be96f778e96d4d98e554f3c2c6013d0,
   "@/components/dashboard/Dashboard#Dashboard": Dashboard_36619916dca240e7e246411f6d4228a9,
   "@/components/calendar/CalendarPage#CalendarPage": CalendarPage_cea1f112ed6921b40f70b68a5b63e5f5,
+  "@/components/schedule/SchedulePage#SchedulePage": SchedulePage_fc61f277adf5cc44b4933192e45c097f,
   "@/components/reports/ClientsReportPage#ClientsReportPage": ClientsReportPage_b94b8e50cae4107f9dabc268d7b27bef,
   "@/components/reports/FinanceReportPage#FinanceReportPage": FinanceReportPage_941a0805cd32f2ea837bae2b14f28099,
   "@/components/reports/SalaryReportPage#SalaryReportPage": SalaryReportPage_de09db7acbd029f63b5d8ef125ab2505,
