@@ -61,7 +61,7 @@ const summaryErrorKey = (error: PaymentSummary['error']): CrmKey | null => {
 
 /**
  * "Payment" tab of the appointment modal (spec §5.8, §5.7, A35): split between the registers of the
- * appointment's location, a certificate by code, a tip, the summary "to pay / change", the history of
+ * appointment's location, a certificate by code, the summary "to pay / change", the history of
  * payments and the admin refund. The server re-checks everything.
  */
 export const PaymentTab = ({ detail, isAdmin, onChanged, onNotice }: Props) => {
@@ -90,7 +90,6 @@ export const PaymentTab = ({ detail, isAdmin, onChanged, onNotice }: Props) => {
       total: a.total,
       paidAmount: a.paidAmount,
       certificateAmount: a.certificateAmount,
-      tipAmount: a.tipAmount,
     }),
     [a],
   )
@@ -104,7 +103,6 @@ export const PaymentTab = ({ detail, isAdmin, onChanged, onNotice }: Props) => {
   // Rows start as "the first cash register, the whole amount due"; the user's edits replace them.
   const [edited, setEdited] = useState<CashRow[] | null>(null)
   const rows = edited ?? suggestedRows(activeRegisters, due)
-  const [tip, setTip] = useState('')
   const [comment, setComment] = useState('')
   const [codeText, setCodeText] = useState('')
   const [certificate, setCertificate] = useState<CertificateDoc | null>(null)
@@ -118,7 +116,6 @@ export const PaymentTab = ({ detail, isAdmin, onChanged, onNotice }: Props) => {
 
   const summary = summarizePayment(money, {
     rows,
-    tip,
     certificateBalance: certificate ? certificate.balance : null,
     certificateAmount,
   })
@@ -165,7 +162,6 @@ export const PaymentTab = ({ detail, isAdmin, onChanged, onNotice }: Props) => {
         body: paymentBody(summary, certificate?.code ?? null, comment),
       })
       setEdited(null)
-      setTip('')
       setComment('')
       clearCertificate()
       setReload((value) => value + 1)
@@ -219,12 +215,6 @@ export const PaymentTab = ({ detail, isAdmin, onChanged, onNotice }: Props) => {
               <td>{format(a.certificateAmount)}</td>
             </tr>
           )}
-          {a.tipAmount > 0 && (
-            <tr>
-              <td>{t('payment.tips')}</td>
-              <td>{format(a.tipAmount)}</td>
-            </tr>
-          )}
           <tr className="calendar-modal__total">
             <td>{t('payment.due')}</td>
             <td>{format(due)}</td>
@@ -251,13 +241,6 @@ export const PaymentTab = ({ detail, isAdmin, onChanged, onNotice }: Props) => {
             registers={activeRegisters}
             disabled={busy}
             onChange={setEdited}
-          />
-          <AmountInput
-            label={t('payment.tip')}
-            hint={t('payment.tipHint')}
-            value={tip}
-            disabled={busy}
-            onChange={setTip}
           />
 
           <fieldset className="calendar-modal__field finance__rows">
@@ -423,9 +406,6 @@ export const PaymentTab = ({ detail, isAdmin, onChanged, onNotice }: Props) => {
                           amount: format(operation.certificateAmount),
                         })}
                       </li>
-                    )}
-                    {!!operation.tipAmount && (
-                      <li>{t('payment.inTip', { amount: format(operation.tipAmount) })}</li>
                     )}
                     {operation.comment && (
                       <li className="calendar-modal__muted">{operation.comment}</li>

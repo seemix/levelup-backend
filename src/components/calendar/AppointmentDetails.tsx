@@ -295,10 +295,14 @@ export const AppointmentDetails = ({ detail, barberName, onEdit, onChanged }: Pr
         </div>
       )}
 
-      <section className="calendar-modal__section">
-        <h3>{t('calendar.modal.history')}</h3>
+      {/* Collapsed by default: opened only when needed. */}
+      <details className="calendar-accordion">
+        <summary className="calendar-accordion__summary">
+          <h3>{t('calendar.modal.history')}</h3>
+          <span className="calendar-modal__muted">{detail.history.length}</span>
+        </summary>
         <HistoryList history={detail.history} />
-      </section>
+      </details>
     </div>
   )
 }

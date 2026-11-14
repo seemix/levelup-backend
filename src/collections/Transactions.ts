@@ -202,10 +202,6 @@ export const Transactions: CollectionConfig = {
           }),
           access: immutable,
         },
-        {
-          ...moneyField({ name: 'tipAmount', label: 'transactions.tipAmount', required: false }),
-          access: immutable,
-        },
       ],
     },
     {

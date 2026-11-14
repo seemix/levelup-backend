@@ -52,20 +52,17 @@ export const financeToCsv = (
   const c = (key: string) => t(`reports.finance.columns.${key}` as CrmKey)
   const unknown = t('reports.finance.unknown')
   const total = t('reports.finance.totalRow')
-  // Tips of a split payment are not attributed to a register: no tips column there.
-  const incomeHeader = (first: string, tips = true) => [
+  const incomeHeader = (first: string) => [
     first,
     c('payments'),
     c('refunds'),
     c('certificateSales'),
-    ...(tips ? [c('tips')] : []),
     c('net'),
   ]
-  const incomeCells = (row: FinanceReport['income']['totals'], tips = true): Cell[] => [
+  const incomeCells = (row: FinanceReport['income']['totals']): Cell[] => [
     money(row.payments),
     money(row.refunds),
     money(row.certificateSales),
-    ...(tips ? [money(row.tips)] : []),
     money(row.net),
   ]
   const { income, revenue, expenses, registers, promo, certificates } = report
@@ -84,30 +81,21 @@ export const financeToCsv = (
     },
     {
       title: t('reports.finance.sections.byRegister'),
-      header: incomeHeader(c('register'), false),
+      header: incomeHeader(c('register')),
       rows: income.byRegister.map((row) => [
         text(nameOf(names.registers, row.id, unknown)),
-        ...incomeCells(row, false),
+        ...incomeCells(row),
       ]),
     },
     {
       title: t('reports.finance.sections.byBarber'),
-      header: [
-        c('barber'),
-        c('payments'),
-        c('refunds'),
-        c('net'),
-        c('certificate'),
-        c('tips'),
-        c('revenue'),
-      ],
+      header: [c('barber'), c('payments'), c('refunds'), c('net'), c('certificate'), c('revenue')],
       rows: income.byBarber.map((row) => [
         text(nameOf(names.barbers, row.barber, unknown)),
         money(row.payments),
         money(row.refunds),
         money(row.net),
         money(row.certificate),
-        money(row.tips),
         money(row.revenue),
       ]),
     },
@@ -253,7 +241,7 @@ export const salaryToCsv = (
         c('extrasBase'),
         c('extrasPercent'),
         c('extrasCommission'),
-        c('tips'),
+        c('fixedSalary'),
         c('total'),
       ],
       rows: [
@@ -267,7 +255,7 @@ export const salaryToCsv = (
           money(row.extrasBase),
           percent(row.extrasPercent),
           money(row.extrasCommission),
-          money(row.tips),
+          money(row.fixedSalary),
           money(row.total),
         ]),
         [
@@ -280,7 +268,7 @@ export const salaryToCsv = (
           money(salary.totals.extrasBase),
           text(''),
           money(salary.totals.extrasCommission),
-          money(salary.totals.tips),
+          money(salary.totals.fixedSalary),
           money(salary.totals.total),
         ],
       ],
@@ -289,13 +277,12 @@ export const salaryToCsv = (
   if (withItems)
     sections.push({
       title: t('reports.salary.details'),
-      header: [c('date'), c('type'), c('servicesBase'), c('extrasBase'), c('tips')],
+      header: [c('date'), c('type'), c('servicesBase'), c('extrasBase')],
       rows: salary.items.map((item) => [
         text(toLocalDate(item.occurredAt)),
         text(t(`transactions.types.${item.type}` as CrmKey)),
         money(item.servicesBase),
         money(item.extrasBase),
-        money(item.tips),
       ]),
     })
   return write(sections)

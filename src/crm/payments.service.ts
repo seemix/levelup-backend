@@ -5,7 +5,7 @@
  * `payAppointment`: the appointment (system read) → certificate check → `planPayment` (overpayment
  * refused) → `appointment_payment` with the user's rights (ledger hook: registers of the
  * appointment's location, policy — barber only own appointments, manager own locations) → atomic
- * conditional certificate charge → `paidAmount` / `certificateAmount` / `tipAmount` / status of
+ * conditional certificate charge → `paidAmount` / `certificateAmount` / status of
  * the appointment through the appointments service (row access, log `payment`).
  *
  * `refundPayment` (admin): `refund` with mirror entries (ledger hook; a second refund is refused)
@@ -70,7 +70,6 @@ const loadAppointment = async (req: PayloadRequest, id: string): Promise<Appoint
       total: true,
       paidAmount: true,
       certificateAmount: true,
-      tipAmount: true,
       location: true,
       barber: true,
     },
@@ -85,7 +84,6 @@ const loadAppointment = async (req: PayloadRequest, id: string): Promise<Appoint
     total: num(doc.total),
     paidAmount: num(doc.paidAmount),
     certificateAmount: num(doc.certificateAmount),
-    tipAmount: num(doc.tipAmount),
     location: relationId(doc.location as RelationValue) ?? '',
     barber: relationId(doc.barber as RelationValue) ?? '',
   }
@@ -102,7 +100,6 @@ const applyToAppointment = async (
   const data: AppointmentInput & Data = {
     paidAmount: state.paidAmount,
     certificateAmount: state.certificateAmount,
-    tipAmount: state.tipAmount,
   }
   if (state.status !== appointment.status) data.status = state.status
   req.context[APPOINTMENT_CONTEXT.ledger] = true
@@ -132,7 +129,6 @@ export type PaymentInput = {
   certificateCode?: string | null
   /** Explicit certificate amount; by default the certificate covers what the money does not. */
   certificateAmount?: number | null
-  tipAmount?: number | null
   comment?: string | null
 }
 
@@ -166,7 +162,6 @@ export const payAppointment = (
     try {
       plan = planPayment(appointment, {
         entries: input.entries,
-        tipAmount: input.tipAmount,
         certificateAmount: input.certificateAmount,
         certificateBalance: certificate ? certificate.balance : null,
       })
@@ -185,7 +180,6 @@ export const payAppointment = (
         entries: input.entries,
         certificate: usesCertificate ? certificate.id : null,
         certificateAmount: usesCertificate ? plan.certificateAmount : null,
-        tipAmount: plan.tipAmount > 0 ? plan.tipAmount : null,
         comment: input.comment ?? null,
         occurredAt: now,
       },
@@ -240,12 +234,8 @@ export const refundPayment = (
     const cash = (doc.entries as { amount: number }[] | undefined) ?? []
     const change: MoneyChange = {
       certificateAmount: num(doc.certificateAmount),
-      tipAmount: num(doc.tipAmount),
       // Mirror entries are negative: the money part returned is −Σentries.
-      applied:
-        -sumBani(cash.map((entry) => entry.amount)) +
-        num(doc.certificateAmount) -
-        num(doc.tipAmount),
+      applied: -sumBani(cash.map((entry) => entry.amount)) + num(doc.certificateAmount),
     }
     const certificateId = relationId(doc.certificate as RelationValue)
     const balance =

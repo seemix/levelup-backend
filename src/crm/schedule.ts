@@ -2,7 +2,14 @@
  * Barber working time (spec §4.4, §4.5, §5.2). Pure functions, no database access.
  * Dates are local `YYYY-MM-DD`, hours are local `HH:mm` (Europe/Chisinau); instants come out as UTC `Date`.
  */
-import { isLocalDate, isLocalTime, isoWeekday, localToInstant, minutesToTime, timeToMinutes } from './time'
+import {
+  isLocalDate,
+  isLocalTime,
+  isoWeekday,
+  localToInstant,
+  minutesToTime,
+  timeToMinutes,
+} from './time'
 
 export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const
 export type Weekday = (typeof WEEKDAYS)[number]

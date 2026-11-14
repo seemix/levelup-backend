@@ -80,7 +80,7 @@ export type AppointmentResult = {
 export const APPOINTMENT_CONTEXT = {
   options: 'appointmentOptions',
   result: 'appointmentResult',
-  /** Set by the payment service: `paidAmount`, `certificateAmount`, `tipAmount`, `paid` status may change. */
+  /** Set by the payment service: `paidAmount`, `certificateAmount`, `paid` status may change. */
   ledger: 'appointmentLedger',
   /** Skip the history entry (bulk/system maintenance). */
   skipLog: 'skipAppointmentLog',
@@ -351,7 +351,6 @@ type Row = {
   total?: number | null
   paidAmount?: number | null
   certificateAmount?: number | null
-  tipAmount?: number | null
   paymentStatus?: PaymentStatus | null
   status?: AppointmentStatus | null
   statusChangedAt?: string | Date | null
@@ -381,7 +380,7 @@ const SERVER_FIELDS = [
 ] as const satisfies readonly (keyof Row)[]
 
 /** Changed only by the payment service (`APPOINTMENT_CONTEXT.ledger`). */
-const PAYMENT_FIELDS = ['paidAmount', 'certificateAmount', 'tipAmount'] as const
+const PAYMENT_FIELDS = ['paidAmount', 'certificateAmount'] as const
 
 const ids = (values: readonly RelationValue[] | null | undefined): string[] => [
   ...new Set((values ?? []).map(relationId).filter((id): id is string => id !== null)),
@@ -907,7 +906,6 @@ export const LOGGED_FIELDS = [
   'total',
   'paidAmount',
   'certificateAmount',
-  'tipAmount',
   'paymentStatus',
   'status',
   'cancelReason',

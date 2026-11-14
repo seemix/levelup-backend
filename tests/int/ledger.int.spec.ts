@@ -51,7 +51,9 @@ describe('ledger invariants (§4.15)', () => {
       const base = { entries: [entry(A, -100)], expenseCategory: 'c' }
       expect(codeOf({ type: 'expense', ...base, reverses: 't' })).toBe('REVERSAL_TARGET_INVALID')
       expect(codeOf({ type: 'expense', ...base, appointment: 'a' })).toBe('LEDGER_AMOUNT_INVALID')
-      expect(codeOf({ type: 'expense', ...base, tipAmount: 100 })).toBe('LEDGER_AMOUNT_INVALID')
+      expect(codeOf({ type: 'expense', ...base, certificateAmount: 100 })).toBe(
+        'LEDGER_AMOUNT_INVALID',
+      )
       expect(
         codeOf({ type: 'transfer', entries: [entry(A, -1), entry(B, 1)], expenseCategory: 'c' }),
       ).toBe('EXPENSE_CATEGORY_NOT_ALLOWED')
@@ -120,16 +122,14 @@ describe('ledger invariants (§4.15)', () => {
       ...patch,
     })
 
-    it('positive entries; Σentries + certificate = applied + tip', () => {
+    it('positive entries; Σentries + certificate = applied (no tips, A45)', () => {
       expect(codeOf(payment())).toBeNull()
-      expect(paymentAppliedAmount(payment({ certificateAmount: 5_000, tipAmount: 3_000 }))).toBe(
-        32_000,
-      )
+      expect(paymentAppliedAmount(payment({ certificateAmount: 5_000 }))).toBe(35_000)
       expect(codeOf(payment({ entries: [entry(A, -100)] }))).toBe('LEDGER_ENTRIES_INVALID')
       expect(codeOf(payment({ appointment: null }))).toBe('APPOINTMENT_REQUIRED')
-      expect(codeOf(payment({ tipAmount: -1 }))).toBe('LEDGER_AMOUNT_INVALID')
-      // The whole amount as a tip leaves nothing for the appointment.
-      expect(codeOf(payment({ tipAmount: 30_000 }))).toBe('LEDGER_SUM_INVALID')
+      expect(codeOf(payment({ certificateAmount: -1, certificate: 'gc' }))).toBe(
+        'LEDGER_AMOUNT_INVALID',
+      )
     })
 
     it('may be paid by a certificate only', () => {
@@ -139,14 +139,9 @@ describe('ledger invariants (§4.15)', () => {
       expect(codeOf(payment({ entries: [] }))).toBe('LEDGER_ENTRIES_INVALID')
     })
 
-    it('certificate amount and certificate go together; tips only from money', () => {
+    it('certificate amount and certificate go together', () => {
       expect(codeOf(payment({ certificateAmount: 5_000 }))).toBe('CERTIFICATE_REQUIRED')
       expect(codeOf(payment({ certificate: 'gc' }))).toBe('CERTIFICATE_REQUIRED')
-      expect(
-        codeOf(
-          payment({ entries: [], certificateAmount: 15_000, certificate: 'gc', tipAmount: 1 }),
-        ),
-      ).toBe('PAYMENT_TIP_INVALID')
       // A certificate link is not allowed on other types.
       expect(
         codeOf({

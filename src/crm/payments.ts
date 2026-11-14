@@ -11,7 +11,6 @@ export type PaymentErrorCode =
   | 'APPOINTMENT_NOT_PAYABLE'
   | 'PAYMENT_EXCEEDS_DUE'
   | 'PAYMENT_EMPTY'
-  | 'PAYMENT_TIP_INVALID'
   | 'CERTIFICATE_INSUFFICIENT'
   | 'LEDGER_ENTRIES_INVALID'
 
@@ -37,12 +36,10 @@ export type AppointmentMoney = {
   total: number
   paidAmount: number
   certificateAmount: number
-  tipAmount: number
 }
 
 export type PaymentRequest = {
   entries: readonly LedgerEntry[]
-  tipAmount?: number | null
   /** Explicit certificate amount; without it the certificate covers what the money does not. */
   certificateAmount?: number | null
   /** Balance of the certificate given with the payment (`null` — no certificate). */
@@ -52,8 +49,7 @@ export type PaymentRequest = {
 export type PaymentPlan = {
   /** Charged from the certificate. */
   certificateAmount: number
-  tipAmount: number
-  /** Goes to the appointment: Σentries + certificate − tip (§5.8). */
+  /** Goes to the appointment: Σentries + certificate (§5.8; no tips, A45). */
   applied: number
 }
 
@@ -63,7 +59,7 @@ export const amountDue = (money: Pick<AppointmentMoney, 'total' | 'paidAmount'>)
 
 /**
  * Validates a payment against the appointment (§5.8): payable status, positive whole entries,
- * tips only from money, the certificate within its balance, the applied part ≤ amount due
+ * the certificate within its balance, the applied part ≤ amount due
  * (an overpayment is refused). Throws `PaymentError`.
  */
 export const planPayment = (money: AppointmentMoney, request: PaymentRequest): PaymentPlan => {
@@ -72,11 +68,9 @@ export const planPayment = (money: AppointmentMoney, request: PaymentRequest): P
   if (request.entries.some((entry) => !isBani(entry.amount) || entry.amount <= 0))
     fail('LEDGER_ENTRIES_INVALID')
   const cash = sumBani(request.entries.map((entry) => entry.amount))
-  const tipAmount = request.tipAmount ?? 0
-  if (!isBani(tipAmount) || tipAmount < 0 || tipAmount > cash) fail('PAYMENT_TIP_INVALID')
 
   const due = amountDue(money)
-  const fromMoney = cash - tipAmount
+  const fromMoney = cash
   let certificateAmount = 0
   if (request.certificateBalance !== null && request.certificateBalance !== undefined) {
     const balance = request.certificateBalance
@@ -96,15 +90,14 @@ export const planPayment = (money: AppointmentMoney, request: PaymentRequest): P
   const applied = fromMoney + certificateAmount
   if (applied <= 0) fail('PAYMENT_EMPTY')
   if (applied > due) fail('PAYMENT_EXCEEDS_DUE')
-  return { certificateAmount, tipAmount, applied }
+  return { certificateAmount, applied }
 }
 
-export type MoneyChange = { applied: number; certificateAmount: number; tipAmount: number }
+export type MoneyChange = { applied: number; certificateAmount: number }
 
 export type AppointmentPaymentState = {
   paidAmount: number
   certificateAmount: number
-  tipAmount: number
   status: AppointmentStatus
 }
 
@@ -134,7 +127,6 @@ export const afterPayment = (
   return {
     paidAmount,
     certificateAmount: money.certificateAmount + change.certificateAmount,
-    tipAmount: money.tipAmount + change.tipAmount,
     status: statusAfterPayment(money, paidAmount, now),
   }
 }
@@ -148,7 +140,6 @@ export const afterRefund = (
   return {
     paidAmount,
     certificateAmount: Math.max(0, money.certificateAmount - change.certificateAmount),
-    tipAmount: Math.max(0, money.tipAmount - change.tipAmount),
     status: money.status === 'paid' && paidAmount < money.total ? 'completed' : money.status,
   }
 }

@@ -57,7 +57,6 @@ export const RULE_ERROR_KEYS = {
   APPOINTMENT_NOT_PAYABLE: 'errors.appointmentNotPayable',
   PAYMENT_EXCEEDS_DUE: 'errors.paymentExceedsDue',
   PAYMENT_EMPTY: 'errors.paymentEmpty',
-  PAYMENT_TIP_INVALID: 'errors.paymentTipInvalid',
   // Schedule roster (A44): `src/crm/schedule.ts`, `src/crm/schedule-edit.service.ts`.
   TIME_INVALID: 'errors.timeInvalid',
   END_BEFORE_START: 'errors.endBeforeStart',

@@ -364,7 +364,7 @@ describe('appointment payments, gift certificates, refunds (stage 18)', () => {
   })
 
   describe('payment', () => {
-    it('partial payment, then the rest split between registers with a tip → paid', async () => {
+    it('partial payment, then the rest split between registers → paid', async () => {
       const appointment = await book()
       const before = await balances()
       const first = await pay('barber1', appointment.id, {
@@ -387,23 +387,24 @@ describe('appointment payments, gift certificates, refunds (stage 18)', () => {
       const second = await pay('manager', appointment.id, {
         entries: [
           { cashRegister: ids.cashA, amount: 5_000 },
-          { cashRegister: ids.cardA, amount: 20_000 },
+          { cashRegister: ids.cardA, amount: 15_000 },
         ],
-        tip: 5_000,
       })
       expect(second.status).toBe(200)
       expect(second.json.appointment).toMatchObject({
         paidAmount: 30_000,
-        tipAmount: 5_000,
         certificateAmount: 0,
         paymentStatus: 'paid',
         // The visit has taken place: paying it in full completes it (A34).
         status: 'paid',
       })
+      // Tips are not recorded (A45).
+      expect(second.json.appointment).not.toHaveProperty('tipAmount')
+      expect(second.json.transaction).not.toHaveProperty('tipAmount')
       expect(await balances()).toEqual({
         ...before,
         cashA: before.cashA + 15_000,
-        cardA: before.cardA + 20_000,
+        cardA: before.cardA + 15_000,
       })
       expect(await logActions(appointment.id)).toEqual(['create', 'payment', 'payment'])
 
@@ -425,11 +426,6 @@ describe('appointment payments, gift certificates, refunds (stage 18)', () => {
         entries: [{ cashRegister: ids.cashB, amount: 10_000 }],
       })
       expect(foreign.json.error.code).toBe('CASH_REGISTER_INVALID')
-      const tip = await pay('admin', appointment.id, {
-        entries: [{ cashRegister: ids.cashA, amount: 1_000 }],
-        tip: 2_000,
-      })
-      expect(tip.json.error.code).toBe('PAYMENT_TIP_INVALID')
       const empty = await pay('admin', appointment.id, { entries: [] })
       expect(empty.json.error).toEqual({
         code: 'VALIDATION_ERROR',
@@ -499,22 +495,19 @@ describe('appointment payments, gift certificates, refunds (stage 18)', () => {
       const cert = await sell(20_000)
       const appointment = await book()
       const { status, json } = await pay('barber1', appointment.id, {
-        entries: [{ cashRegister: ids.cashA, amount: 25_000 }],
-        tip: 5_000,
+        entries: [{ cashRegister: ids.cashA, amount: 20_000 }],
         certificateCode: (cert.code as string).toLowerCase(),
       })
       expect(status).toBe(200)
-      // 25 000 − 5 000 tip = 20 000 money → the certificate covers 10 000 of its 20 000.
+      // 20 000 money → the certificate covers 10 000 of its 20 000.
       expect(json.transaction).toMatchObject({
         certificate: cert.id,
         certificateAmount: 10_000,
-        tipAmount: 5_000,
       })
       expect(json.certificate).toMatchObject({ id: cert.id, balance: 10_000 })
       expect(json.appointment).toMatchObject({
         paidAmount: 30_000,
         certificateAmount: 10_000,
-        tipAmount: 5_000,
         status: 'paid',
       })
       expect(await find('gift-certificates', cert.id)).toMatchObject({
@@ -603,22 +596,20 @@ describe('appointment payments, gift certificates, refunds (stage 18)', () => {
   })
 
   describe('refund', () => {
-    it('two registers + certificate + tip → refund restores registers, certificate and status', async () => {
+    it('two registers + certificate → refund restores registers, certificate and status', async () => {
       const cert = await sell(10_000)
       const appointment = await book()
       const before = await balances()
       const paid = await pay('barber1', appointment.id, {
         entries: [
           { cashRegister: ids.cashA, amount: 12_000 },
-          { cashRegister: ids.cardA, amount: 11_000 },
+          { cashRegister: ids.cardA, amount: 8_000 },
         ],
-        tip: 3_000,
         certificateCode: cert.code,
       })
       expect(paid.json.appointment).toMatchObject({
         paidAmount: 30_000,
         certificateAmount: 10_000,
-        tipAmount: 3_000,
         status: 'paid',
         paymentStatus: 'paid',
       })
@@ -646,18 +637,16 @@ describe('appointment payments, gift certificates, refunds (stage 18)', () => {
         barber: ids.b1,
         certificate: cert.id,
         certificateAmount: 10_000,
-        tipAmount: 3_000,
         comment: 'Client unhappy',
       })
       expect(json.transaction.entries).toMatchObject([
         { cashRegister: ids.cashA, amount: -12_000 },
-        { cashRegister: ids.cardA, amount: -11_000 },
+        { cashRegister: ids.cardA, amount: -8_000 },
       ])
       expect(json.certificate).toEqual({ id: cert.id, balance: 10_000 })
       expect(json.appointment).toMatchObject({
         paidAmount: 0,
         certificateAmount: 0,
-        tipAmount: 0,
         status: 'completed',
         paymentStatus: 'refunded',
       })

@@ -60,7 +60,10 @@ describe('clients collection', () => {
     const req = await createLocalReq({}, payload)
     await clientsUp({ payload, req } as Parameters<typeof clientsUp>[0])
 
-    const location = await payload.create({ collection: 'locations', data: { name: 'Clients test' } as never })
+    const location = await payload.create({
+      collection: 'locations',
+      data: { name: 'Clients test' } as never,
+    })
 
     for (const [key, roles] of [
       ['admin', ['admin']],
@@ -181,24 +184,27 @@ describe('clients collection', () => {
     it('admin and manager create and read; barber is denied everything', async () => {
       const own = await newClient('069 900 001', { email: 'a@b.md' }, 'admin')
       await newClient('069 900 002', {}, 'manager')
-      expect((await payload.findByID({ collection: 'clients', id: own.id, ...as('manager') })).id).toBe(own.id)
+      expect(
+        (await payload.findByID({ collection: 'clients', id: own.id, ...as('manager') })).id,
+      ).toBe(own.id)
 
       await expect(newClient('069 900 003', {}, 'barber')).rejects.toThrow()
-      await expect(
-        payload.find({ collection: 'clients', ...as('barber') }),
-      ).rejects.toThrow()
+      await expect(payload.find({ collection: 'clients', ...as('barber') })).rejects.toThrow()
       await expect(
         payload.findByID({ collection: 'clients', id: own.id, ...as('barber') }),
       ).rejects.toThrow()
       await expect(
-        payload.update({ collection: 'clients', id: own.id, data: { notes: 'x' }, ...as('barber') }),
+        payload.update({
+          collection: 'clients',
+          id: own.id,
+          data: { notes: 'x' },
+          ...as('barber'),
+        }),
       ).rejects.toThrow()
     })
 
     it('anonymous is denied', async () => {
-      await expect(
-        payload.find({ collection: 'clients', overrideAccess: false }),
-      ).rejects.toThrow()
+      await expect(payload.find({ collection: 'clients', overrideAccess: false })).rejects.toThrow()
     })
 
     it('only admin deletes', async () => {

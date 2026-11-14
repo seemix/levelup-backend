@@ -324,6 +324,7 @@ export interface Barber {
   };
   commissionServicesPercent?: number | null;
   commissionExtrasPercent?: number | null;
+  fixedSalary?: number | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -458,7 +459,6 @@ export interface Appointment {
   paymentStatus?: ('unpaid' | 'partial' | 'paid' | 'refunded') | null;
   paidAmount?: number | null;
   certificateAmount?: number | null;
-  tipAmount?: number | null;
   plannedCertificate?: (string | null) | GiftCertificate;
   language?: ('ru' | 'ro' | 'en') | null;
   source?: ('online' | 'staff' | 'import') | null;
@@ -554,7 +554,6 @@ export interface Transaction {
   appointment?: (string | null) | Appointment;
   barber?: (string | null) | Barber;
   certificateAmount?: number | null;
-  tipAmount?: number | null;
   certificate?: (string | null) | GiftCertificate;
   author?: (string | null) | User;
   reversed?: boolean | null;
@@ -1012,6 +1011,7 @@ export interface BarbersSelect<T extends boolean = true> {
   exceptions?: T;
   commissionServicesPercent?: T;
   commissionExtrasPercent?: T;
+  fixedSalary?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -1196,7 +1196,6 @@ export interface AppointmentsSelect<T extends boolean = true> {
   paymentStatus?: T;
   paidAmount?: T;
   certificateAmount?: T;
-  tipAmount?: T;
   plannedCertificate?: T;
   language?: T;
   source?: T;
@@ -1289,7 +1288,6 @@ export interface TransactionsSelect<T extends boolean = true> {
   appointment?: T;
   barber?: T;
   certificateAmount?: T;
-  tipAmount?: T;
   certificate?: T;
   author?: T;
   reversed?: T;

@@ -146,7 +146,7 @@ export const SalaryReportClient = () => {
               { label: c('extrasBase'), numeric: true },
               { label: c('extrasPercent'), numeric: true },
               { label: c('extrasCommission'), numeric: true },
-              { label: c('tips'), numeric: true },
+              { label: c('fixedSalary'), numeric: true },
               { label: c('total'), numeric: true },
             ]}
             rows={data.rows.map((row) => [
@@ -159,7 +159,7 @@ export const SalaryReportClient = () => {
               money(row.extrasBase),
               `${row.extrasPercent}%`,
               money(row.extrasCommission),
-              money(row.tips),
+              money(row.fixedSalary),
               <strong key="total">{money(row.total)}</strong>,
             ])}
             footer={
@@ -174,7 +174,7 @@ export const SalaryReportClient = () => {
                     money(data.totals.extrasBase),
                     '',
                     money(data.totals.extrasCommission),
-                    money(data.totals.tips),
+                    money(data.totals.fixedSalary),
                     money(data.totals.total),
                   ]
                 : undefined
@@ -189,14 +189,12 @@ export const SalaryReportClient = () => {
                   { label: c('type') },
                   { label: c('servicesBase'), numeric: true },
                   { label: c('extrasBase'), numeric: true },
-                  { label: c('tips'), numeric: true },
                 ]}
                 rows={data.items.map((item) => [
                   formatDateTime(new Date(item.occurredAt), language),
                   t(`transactions.types.${item.type}`),
                   money(item.servicesBase),
                   money(item.extrasBase),
-                  money(item.tips),
                 ])}
               />
             </Section>

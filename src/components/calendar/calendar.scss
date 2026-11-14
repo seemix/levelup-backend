@@ -773,6 +773,71 @@ $column-min: 168px;
   }
 }
 
+// Collapsible section of a modal (history of changes): native <details>, collapsed by default.
+.calendar-accordion {
+  border: 1px solid var(--theme-elevation-100);
+  border-radius: var(--style-radius-m);
+
+  &__summary {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--base) * 0.5);
+    padding: calc(var(--base) * 0.4) calc(var(--base) * 0.6);
+    list-style: none;
+    cursor: pointer;
+    user-select: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    // Chevron: points right when closed, down when open.
+    &::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(-45deg);
+      transition: transform 0.15s;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: var(--font-size-base);
+    }
+
+    &:hover {
+      background: var(--theme-elevation-50);
+    }
+  }
+
+  &[open] > &__summary::before {
+    transform: rotate(45deg);
+  }
+
+  &[open] > .calendar-history,
+  &[open] > p {
+    padding: 0 calc(var(--base) * 0.6) calc(var(--base) * 0.6);
+  }
+}
+
+// Modal buttons: as compact as the calendar toolbar (32 px).
+.calendar-modal {
+  .calendar__button,
+  .calendar-modal__tab {
+    min-height: 32px;
+    padding: 0 calc(var(--base) * 0.6);
+    font-size: var(--font-size-small, 13px);
+  }
+
+  .calendar__icon-button {
+    width: 32px;
+    min-height: 32px;
+    font-size: 18px;
+  }
+}
+
 .calendar-history {
   display: flex;
   flex-direction: column;

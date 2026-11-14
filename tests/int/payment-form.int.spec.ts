@@ -24,13 +24,11 @@ const money = (patch: Partial<AppointmentMoney> = {}): AppointmentMoney => ({
   total: 10000,
   paidAmount: 0,
   certificateAmount: 0,
-  tipAmount: 0,
   ...patch,
 })
 
 const draft = (patch: Partial<PaymentDraft> = {}): PaymentDraft => ({
   rows: [{ cashRegister: 'cash', amount: '' }],
-  tip: '',
   certificateBalance: null,
   certificateAmount: '',
   ...patch,
@@ -89,12 +87,18 @@ describe('summarizePayment', () => {
     })
   })
 
-  it('a tip is not counted toward the appointment', () => {
+  it('all the money goes to the appointment (no tips, A45): the excess is an overpayment', () => {
     const summary = summarizePayment(
       money(),
-      draft({ rows: [{ cashRegister: 'cash', amount: '110' }], tip: '10' }),
+      draft({ rows: [{ cashRegister: 'cash', amount: '110' }] }),
     )
-    expect(summary).toMatchObject({ ready: true, applied: 10000, tip: 1000, remaining: 0 })
+    expect(summary).toMatchObject({
+      ready: false,
+      applied: 11000,
+      change: 1000,
+      error: 'PAYMENT_EXCEEDS_DUE',
+    })
+    expect(summary).not.toHaveProperty('tip')
   })
 
   it('a certificate covers what the money does not', () => {
@@ -136,15 +140,13 @@ describe('summarizePayment', () => {
       money(),
       draft({
         rows: [{ cashRegister: 'cash', amount: '35' }],
-        tip: '5',
         certificateBalance: 50000,
       }),
     )
     expect(paymentBody(summary, 'LU-ABCD-EFGH', ' thanks ')).toEqual({
       entries: [{ cashRegister: 'cash', amount: 3500 }],
-      tip: 500,
       certificateCode: 'LU-ABCD-EFGH',
-      certificateAmount: 7000,
+      certificateAmount: 6500,
       comment: 'thanks',
     })
   })

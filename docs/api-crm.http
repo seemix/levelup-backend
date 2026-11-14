@@ -242,7 +242,7 @@ Content-Type: application/json
 }
 
 ### Appointment payment: registers of the appointment's location, optional certificate (by default it
-### covers what the money does not), tip (from the money only). Overpayment → 409 PAYMENT_EXCEEDS_DUE.
+### covers what the money does not); no tips (A45). Overpayment → 409 PAYMENT_EXCEEDS_DUE.
 ### Barber — own appointments; manager — own locations; out of scope → 404.
 ### → { transaction, appointment, certificate: { id, code, balance } | null, warnings }
 POST {{api}}/crm/appointments/{{appointment}}/payments
@@ -254,7 +254,6 @@ Content-Type: application/json
     { "cashRegister": "{{cashRegister}}", "amount": 10000 },
     { "cashRegister": "{{cardRegister}}", "amount": 15000 }
   ],
-  "tip": 5000,
   "certificateCode": "LU-ABCD-EFGH",
   "certificateAmount": 10000
 }

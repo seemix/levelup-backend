@@ -35,7 +35,6 @@ export type AppointmentRow = {
   total?: number | null
   paidAmount?: number | null
   certificateAmount?: number | null
-  tipAmount?: number | null
   source?: string | null
   language?: string | null
   clientComment?: string | null
@@ -66,7 +65,6 @@ export const APPOINTMENT_SELECT = {
   total: true,
   paidAmount: true,
   certificateAmount: true,
-  tipAmount: true,
   source: true,
   language: true,
   clientComment: true,
@@ -190,7 +188,6 @@ export const detailView = (row: AppointmentRow, names: Names) => {
     total: row.total ?? 0,
     paidAmount: row.paidAmount ?? 0,
     certificateAmount: row.certificateAmount ?? 0,
-    tipAmount: row.tipAmount ?? 0,
     source: row.source ?? null,
     language: row.language ?? null,
     clientComment: row.clientComment ?? null,

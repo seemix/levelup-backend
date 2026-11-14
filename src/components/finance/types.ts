@@ -26,7 +26,6 @@ export type Operation = {
   appointment?: string | null
   certificate?: string | null
   certificateAmount?: number | null
-  tipAmount?: number | null
   reverses?: string | null
   reversed?: boolean | null
 }

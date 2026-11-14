@@ -13,7 +13,6 @@ const MONEY_FIELDS = new Set([
   'total',
   'paidAmount',
   'certificateAmount',
-  'tipAmount',
 ])
 const DATE_FIELDS = new Set(['startAt', 'endAt', 'confirmationSentAt', 'reminderSentAt'])
 const KNOWN_FIELDS = new Set([
@@ -34,7 +33,6 @@ const KNOWN_FIELDS = new Set([
   'total',
   'paidAmount',
   'certificateAmount',
-  'tipAmount',
   'paymentStatus',
   'status',
   'cancelReason',

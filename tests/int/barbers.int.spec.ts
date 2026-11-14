@@ -29,7 +29,9 @@ const richText = (text: string) =>
           direction: 'ltr',
           textFormat: 0,
           textStyle: '',
-          children: [{ type: 'text', text, format: 0, style: '', mode: 'normal', detail: 0, version: 1 }],
+          children: [
+            { type: 'text', text, format: 0, style: '', mode: 'normal', detail: 0, version: 1 },
+          ],
         },
       ],
     },
@@ -64,7 +66,9 @@ describe('policy: barbers (pure)', () => {
     expect(can(u(['barber']), 'read', 'barbers.commission', own)).toBe(true)
     expect(can(u(['barber']), 'read', 'barbers.commission', other)).toBe(false)
     expect(can(u(['barber']), 'update', 'barbers.commission', own)).toBe(false)
-    expect(can(u(['manager'], { locations: ['l1'] }), 'read', 'barbers.commission', own)).toBe(false)
+    expect(can(u(['manager'], { locations: ['l1'] }), 'read', 'barbers.commission', own)).toBe(
+      false,
+    )
     expect(can(u(['editor']), 'read', 'barbers.commission', own)).toBe(false)
     expect(can(null, 'read', 'barbers.commission', own)).toBe(false)
   })
@@ -97,7 +101,9 @@ describe('policy: barbers (pure)', () => {
       barber: { equals: 'b1' },
     })
     expect(can(u(['barber']), 'create', 'schedule-exceptions', { barber: 'b1' }, scope)).toBe(false)
-    expect(can(u(['manager']), 'create', 'schedule-exceptions', { barber: 'b3' }, scope)).toBe(false)
+    expect(can(u(['manager']), 'create', 'schedule-exceptions', { barber: 'b3' }, scope)).toBe(
+      false,
+    )
     expect(can(u(['manager']), 'create', 'schedule-exceptions', { barber: 'b2' }, scope)).toBe(true)
     expect(can(u(['editor']), 'read', 'schedule-exceptions', undefined, scope)).toBe(false)
     expect(can(null, 'read', 'schedule-exceptions')).toBe(false)
@@ -155,8 +161,18 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
     await makeUser('barber2', ['barber'])
     await makeUser('editor', ['editor'])
 
-    service = (await create({ collection: 'services', data: { name: 'Cut', durationMinutes: 30, price: 30000 } })).id
-    extra = (await create({ collection: 'extras', data: { name: 'Wash', durationMinutes: 0, price: 5000 } })).id
+    service = (
+      await create({
+        collection: 'services',
+        data: { name: 'Cut', durationMinutes: 30, price: 30000 },
+      })
+    ).id
+    extra = (
+      await create({
+        collection: 'extras',
+        data: { name: 'Wash', durationMinutes: 0, price: 5000 },
+      })
+    ).id
 
     const base = { description: 'Barber', about: richText('About') }
     b1 = (
@@ -241,16 +257,20 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
     })
 
     it('a barber hidden from the site is not readable anonymously', async () => {
-      await expect(payload.findByID({ collection: 'barbers', id: hidden, ...anon })).rejects.toThrow()
+      await expect(
+        payload.findByID({ collection: 'barbers', id: hidden, ...anon }),
+      ).rejects.toThrow()
     })
   })
 
   describe('field-level read', () => {
     const read = async (id: string, who: string) =>
-      (await payload.findByID({ collection: 'barbers', id, depth: 0, ...as(who) })) as unknown as Record<
-        string,
-        unknown
-      >
+      (await payload.findByID({
+        collection: 'barbers',
+        id,
+        depth: 0,
+        ...as(who),
+      })) as unknown as Record<string, unknown>
 
     it('admin sees everything, including the user link and commission', async () => {
       const doc = await read(b1, 'admin')
@@ -294,7 +314,13 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
     it('an editor sees the profile but no CRM fields', async () => {
       const doc = await read(b1, 'editor')
       expect(doc).toHaveProperty('name', 'One')
-      for (const field of ['user', 'commissionServicesPercent', 'weeklySchedule', 'locations', 'color']) {
+      for (const field of [
+        'user',
+        'commissionServicesPercent',
+        'weeklySchedule',
+        'locations',
+        'color',
+      ]) {
         expect(hiddenValue(doc, field)).toBe(true)
       }
     })
@@ -306,7 +332,10 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
         collection: 'barbers',
         id: b1,
         data: {
-          weeklySchedule: [...schedule(locA), { weekday: '2', location: locA, start: '10:00', end: '16:00' }],
+          weeklySchedule: [
+            ...schedule(locA),
+            { weekday: '2', location: locA, start: '10:00', end: '16:00' },
+          ],
           name: 'Hacked',
           commissionServicesPercent: 99,
           active: false,
@@ -329,23 +358,41 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
 
     it('barber and editor cannot change the schedule, commission or user link', async () => {
       await expect(
-        payload.update({ collection: 'barbers', id: b1, data: { weeklySchedule: [] }, ...as('barber') }),
+        payload.update({
+          collection: 'barbers',
+          id: b1,
+          data: { weeklySchedule: [] },
+          ...as('barber'),
+        }),
       ).rejects.toThrow()
 
       await payload.update({
         collection: 'barbers',
         id: b1,
-        data: { description: 'Edited', weeklySchedule: [], commissionServicesPercent: 1, user: null } as never,
+        data: {
+          description: 'Edited',
+          weeklySchedule: [],
+          commissionServicesPercent: 1,
+          user: null,
+        } as never,
         ...as('editor'),
       })
       const stored = await payload.findByID({ collection: 'barbers', id: b1, depth: 0 })
-      expect(stored).toMatchObject({ description: 'Edited', commissionServicesPercent: 40, user: users.barber.id })
+      expect(stored).toMatchObject({
+        description: 'Edited',
+        commissionServicesPercent: 40,
+        user: users.barber.id,
+      })
       expect(stored.weeklySchedule).toHaveLength(2)
     })
 
     it('description/about are required only when shown on the site (A12)', async () => {
       await expect(
-        create({ collection: 'barbers', data: { name: 'No profile', locations: [locA] }, ...as('admin') }),
+        create({
+          collection: 'barbers',
+          data: { name: 'No profile', locations: [locA] },
+          ...as('admin'),
+        }),
       ).rejects.toMatchObject({
         data: {
           errors: expect.arrayContaining([
@@ -365,17 +412,34 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
 
     it('validates the weekly schedule', async () => {
       const update = (weeklySchedule: unknown[]) =>
-        payload.update({ collection: 'barbers', id: b1, data: { weeklySchedule } as never, ...as('admin') })
+        payload.update({
+          collection: 'barbers',
+          id: b1,
+          data: { weeklySchedule } as never,
+          ...as('admin'),
+        })
       const row = { weekday: '3', location: locA, start: '09:00', end: '18:00' }
       await expect(update([row, { ...row }])).rejects.toThrow()
       await expect(update([{ ...row, end: '08:00' }])).rejects.toThrow()
       await expect(update([{ ...row, start: '9:00' }])).rejects.toThrow()
-      await expect(update([{ ...row, breaks: [{ start: '17:00', end: '19:00' }] }])).rejects.toThrow()
       await expect(
-        update([{ ...row, breaks: [{ start: '12:00', end: '13:00' }, { start: '12:30', end: '14:00' }] }]),
+        update([{ ...row, breaks: [{ start: '17:00', end: '19:00' }] }]),
+      ).rejects.toThrow()
+      await expect(
+        update([
+          {
+            ...row,
+            breaks: [
+              { start: '12:00', end: '13:00' },
+              { start: '12:30', end: '14:00' },
+            ],
+          },
+        ]),
       ).rejects.toThrow()
       await expect(update([{ ...row, location: locB }])).rejects.toThrow()
-      await expect(update([row, ...Array.from({ length: 7 }, (_, i) => ({ ...row, weekday: String(i + 1) }))])).rejects.toThrow()
+      await expect(
+        update([row, ...Array.from({ length: 7 }, (_, i) => ({ ...row, weekday: String(i + 1) }))]),
+      ).rejects.toThrow()
     })
 
     it('validates color and commission range', async () => {
@@ -383,16 +447,31 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
         payload.update({ collection: 'barbers', id: b1, data: { color: 'red' }, ...as('admin') }),
       ).rejects.toThrow()
       await expect(
-        payload.update({ collection: 'barbers', id: b1, data: { commissionExtrasPercent: 101 }, ...as('admin') }),
+        payload.update({
+          collection: 'barbers',
+          id: b1,
+          data: { commissionExtrasPercent: 101 },
+          ...as('admin'),
+        }),
       ).rejects.toThrow()
     })
 
     it('barbers.user is unique and must be a barber-role user', async () => {
       await expect(
-        payload.update({ collection: 'barbers', id: b2, data: { user: users.barber.id } as never, ...as('admin') }),
+        payload.update({
+          collection: 'barbers',
+          id: b2,
+          data: { user: users.barber.id } as never,
+          ...as('admin'),
+        }),
       ).rejects.toMatchObject({ data: { errors: [expect.objectContaining({ path: 'user' })] } })
       await expect(
-        payload.update({ collection: 'barbers', id: hidden, data: { user: users.editor.id } as never, ...as('admin') }),
+        payload.update({
+          collection: 'barbers',
+          id: hidden,
+          data: { user: users.editor.id } as never,
+          ...as('admin'),
+        }),
       ).rejects.toMatchObject({ data: { errors: [expect.objectContaining({ path: 'user' })] } })
       // The partial unique index also guards the database.
       await expect(
@@ -412,7 +491,12 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
           ...as('editor'),
         })
         const stored = await payload.findByID({ collection: 'barbers', id: doc.id, depth: 0 })
-        expect(stored).toMatchObject({ locations: [locA], active: true, showOnSite: true, onlineBooking: true })
+        expect(stored).toMatchObject({
+          locations: [locA],
+          active: true,
+          showOnSite: true,
+          onlineBooking: true,
+        })
         expect(stored.color).toMatch(/^#[0-9A-F]{6}$/i)
         expect(stored.user ?? null).toBeNull()
         await payload.delete({ collection: 'barbers', id: doc.id })
@@ -445,13 +529,23 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
     }
 
     it('admin creates exceptions; one barber’s exceptions cannot overlap', async () => {
-      await add('admin', { barber: b1, kind: 'vacation', dateFrom: '2026-12-01', dateTo: '2026-12-07' })
+      await add('admin', {
+        barber: b1,
+        kind: 'vacation',
+        dateFrom: '2026-12-01',
+        dateTo: '2026-12-07',
+      })
       await expect(
         add('admin', { barber: b1, kind: 'day_off', dateFrom: '2026-12-07', dateTo: '2026-12-07' }),
       ).rejects.toMatchObject({ data: { errors: [expect.objectContaining({ path: 'dateFrom' })] } })
       // Another barber on the same dates is fine; adjacent dates are fine.
       await add('admin', { barber: b2, kind: 'sick', dateFrom: '2026-12-01', dateTo: '2026-12-03' })
-      await add('admin', { barber: b1, kind: 'day_off', dateFrom: '2026-12-08', dateTo: '2026-12-08' })
+      await add('admin', {
+        barber: b1,
+        kind: 'day_off',
+        dateFrom: '2026-12-08',
+        dateTo: '2026-12-08',
+      })
     })
 
     it('validates dates and custom hours', async () => {
@@ -462,7 +556,12 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
         add('admin', { barber: b1, kind: 'day_off', dateFrom: '05.01.2027', dateTo: '2027-01-05' }),
       ).rejects.toThrow()
       await expect(
-        add('admin', { barber: b1, kind: 'custom_hours', dateFrom: '2027-01-05', dateTo: '2027-01-05' }),
+        add('admin', {
+          barber: b1,
+          kind: 'custom_hours',
+          dateFrom: '2027-01-05',
+          dateTo: '2027-01-05',
+        }),
       ).rejects.toThrow()
       await expect(
         add('admin', {
@@ -534,12 +633,27 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
     })
 
     it('a manager manages exceptions of own-location barbers only', async () => {
-      const own = await add('manager', { barber: b1, kind: 'day_off', dateFrom: '2027-02-01', dateTo: '2027-02-01' })
+      const own = await add('manager', {
+        barber: b1,
+        kind: 'day_off',
+        dateFrom: '2027-02-01',
+        dateTo: '2027-02-01',
+      })
       await expect(
-        add('manager', { barber: b2, kind: 'day_off', dateFrom: '2027-02-01', dateTo: '2027-02-01' }),
+        add('manager', {
+          barber: b2,
+          kind: 'day_off',
+          dateFrom: '2027-02-01',
+          dateTo: '2027-02-01',
+        }),
       ).rejects.toThrow()
       await expect(
-        payload.update({ collection: 'schedule-exceptions', id: own.id, data: { barber: b2 }, ...as('manager') }),
+        payload.update({
+          collection: 'schedule-exceptions',
+          id: own.id,
+          data: { barber: b2 },
+          ...as('manager'),
+        }),
       ).rejects.toThrow()
       await payload.update({
         collection: 'schedule-exceptions',
@@ -548,12 +662,23 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
         ...as('manager'),
       })
 
-      const { docs } = await payload.find({ collection: 'schedule-exceptions', depth: 0, ...as('manager') })
+      const { docs } = await payload.find({
+        collection: 'schedule-exceptions',
+        depth: 0,
+        ...as('manager'),
+      })
       expect(new Set(docs.map((d) => d.barber))).toEqual(new Set([b1]))
 
-      const foreign = exceptionIds.length > 0
-        ? (await payload.find({ collection: 'schedule-exceptions', where: { barber: { equals: b2 } }, depth: 0 })).docs[0]
-        : undefined
+      const foreign =
+        exceptionIds.length > 0
+          ? (
+              await payload.find({
+                collection: 'schedule-exceptions',
+                where: { barber: { equals: b2 } },
+                depth: 0,
+              })
+            ).docs[0]
+          : undefined
       await expect(
         payload.delete({ collection: 'schedule-exceptions', id: foreign!.id, ...as('manager') }),
       ).rejects.toThrow()
@@ -561,14 +686,25 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
     })
 
     it('a barber reads only own exceptions and cannot write; editor and anonymous see nothing', async () => {
-      const { docs } = await payload.find({ collection: 'schedule-exceptions', depth: 0, ...as('barber') })
+      const { docs } = await payload.find({
+        collection: 'schedule-exceptions',
+        depth: 0,
+        ...as('barber'),
+      })
       expect(docs.length).toBeGreaterThan(0)
       expect(new Set(docs.map((d) => d.barber))).toEqual(new Set([b1]))
       await expect(
-        add('barber', { barber: b1, kind: 'day_off', dateFrom: '2027-03-01', dateTo: '2027-03-01' }),
+        add('barber', {
+          barber: b1,
+          kind: 'day_off',
+          dateFrom: '2027-03-01',
+          dateTo: '2027-03-01',
+        }),
       ).rejects.toThrow()
 
-      await expect(payload.find({ collection: 'schedule-exceptions', ...as('editor') })).rejects.toThrow()
+      await expect(
+        payload.find({ collection: 'schedule-exceptions', ...as('editor') }),
+      ).rejects.toThrow()
       await expect(payload.find({ collection: 'schedule-exceptions', ...anon })).rejects.toThrow()
     })
   })
@@ -585,7 +721,11 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
       await expect(
         create({
           collection: 'barber-prices',
-          data: { barber: b1, item: { relationTo: 'services', value: service }, durationMinutes: 45 },
+          data: {
+            barber: b1,
+            item: { relationTo: 'services', value: service },
+            durationMinutes: 45,
+          },
           ...as('admin'),
         }),
       ).rejects.toMatchObject({ data: { errors: [expect.objectContaining({ path: 'item' })] } })
@@ -615,7 +755,11 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
       await expect(
         create({
           collection: 'barber-prices',
-          data: { barber: hidden, item: { relationTo: 'services', value: service }, durationMinutes: 7 },
+          data: {
+            barber: hidden,
+            item: { relationTo: 'services', value: service },
+            durationMinutes: 7,
+          },
           ...as('admin'),
         }),
       ).rejects.toThrow()
@@ -643,7 +787,12 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
     })
 
     it('admin sees the overrides on the barber (join), anonymous does not', async () => {
-      const doc = (await payload.findByID({ collection: 'barbers', id: b1, depth: 0, ...as('admin') })) as {
+      const doc = (await payload.findByID({
+        collection: 'barbers',
+        id: b1,
+        depth: 0,
+        ...as('admin'),
+      })) as {
         prices?: { docs?: unknown[] }
       }
       expect(doc.prices?.docs).toHaveLength(2)
@@ -655,7 +804,13 @@ describe('barbers, schedule-exceptions, barber-prices', () => {
       const model = payload.db.collections.barbers
       const legacy = await model.collection.insertMany([
         { name: 'Legacy 1', order: 10, description: { ru: 'x' } },
-        { name: 'Legacy 2', order: 11, description: { ru: 'y' }, color: '#123456', showOnSite: false },
+        {
+          name: 'Legacy 2',
+          order: 11,
+          description: { ru: 'y' },
+          color: '#123456',
+          showOnSite: false,
+        },
       ])
       const req = await createLocalReq({}, payload)
       await barbersCrmUp({ payload, req } as Parameters<typeof barbersCrmUp>[0])

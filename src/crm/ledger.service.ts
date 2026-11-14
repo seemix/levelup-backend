@@ -70,7 +70,6 @@ export const IMMUTABLE_TRANSACTION_FIELDS = [
   'appointment',
   'barber',
   'certificateAmount',
-  'tipAmount',
   'certificate',
   'reverses',
   'reversed',
@@ -125,7 +124,6 @@ type Original = ReversalTarget & {
   barber: string | null
   certificate: string | null
   certificateAmount: number | null
-  tipAmount: number | null
 }
 
 const loadOriginal = async (req: PayloadRequest, originalId: string): Promise<Original | null> => {
@@ -145,7 +143,6 @@ const loadOriginal = async (req: PayloadRequest, originalId: string): Promise<Or
       barber: true,
       certificate: true,
       certificateAmount: true,
-      tipAmount: true,
       reversed: true,
     },
   })
@@ -162,7 +159,6 @@ const loadOriginal = async (req: PayloadRequest, originalId: string): Promise<Or
     barber: id(doc.barber),
     certificate: id(doc.certificate),
     certificateAmount: numberOrNull(doc.certificateAmount),
-    tipAmount: numberOrNull(doc.tipAmount),
   }
 }
 
@@ -260,10 +256,9 @@ export const prepareTransaction: CollectionBeforeChangeHook = async ({
     data.expenseCategory = null
     data.appointment = type === 'refund' ? original.appointment : null
     data.barber = type === 'refund' ? original.barber : null
-    // A refund carries the certificate and tip parts it returns (salary and certificate reports).
+    // A refund carries the certificate part it returns (salary and certificate reports).
     data.certificate = type === 'refund' ? original.certificate : null
     data.certificateAmount = type === 'refund' ? original.certificateAmount : null
-    data.tipAmount = type === 'refund' ? original.tipAmount : null
   } else {
     data.occurredAt ??= now.toISOString()
   }
@@ -282,7 +277,6 @@ export const prepareTransaction: CollectionBeforeChangeHook = async ({
       expenseCategory: id(data.expenseCategory),
       appointment: id(data.appointment),
       certificateAmount: numberOrNull(data.certificateAmount),
-      tipAmount: numberOrNull(data.tipAmount),
       reverses: id(data.reverses),
       certificate: id(data.certificate),
       nominal: options.nominal ?? null,
@@ -389,7 +383,6 @@ export type TransactionData = {
   appointment?: string | null
   barber?: string | null
   certificateAmount?: number | null
-  tipAmount?: number | null
   certificate?: string | null
   reverses?: string | null
 }

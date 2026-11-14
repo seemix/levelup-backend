@@ -149,7 +149,6 @@ export const FinanceReportClient = () => {
                 label={c('certificateSales')}
                 value={money(data.income.totals.certificateSales)}
               />
-              <Stat label={c('tips')} value={money(data.income.totals.tips)} />
               <Stat label={c('net')} value={money(data.income.totals.net)} />
             </dl>
           </Section>
@@ -189,7 +188,6 @@ export const FinanceReportClient = () => {
           <Section title={t('reports.finance.sections.byRegister')}>
             <IncomeTable
               first={c('register')}
-              showTips={false}
               rows={data.income.byRegister.map((row) => ({
                 ...row,
                 label: name(data.names.registers, row.id),
@@ -211,7 +209,6 @@ export const FinanceReportClient = () => {
                   { label: c('refunds'), numeric: true },
                   { label: c('net'), numeric: true },
                   { label: c('certificate'), numeric: true },
-                  { label: c('tips'), numeric: true },
                   { label: c('revenue'), numeric: true },
                 ]}
                 rows={data.income.byBarber.map((row) => [
@@ -220,7 +217,6 @@ export const FinanceReportClient = () => {
                   money(row.refunds),
                   money(row.net),
                   money(row.certificate),
-                  money(row.tips),
                   money(row.revenue),
                 ])}
               />
@@ -402,7 +398,6 @@ const IncomeTable = ({
   money,
   empty,
   total,
-  showTips = true,
 }: {
   first: string
   rows: (IncomeValues & { id: string; label: string })[]
@@ -411,14 +406,12 @@ const IncomeTable = ({
   money: (bani: number) => string
   empty: string
   total?: string
-  showTips?: boolean
 }) => {
   if (rows.length === 0) return <p className="reports__hint">{empty}</p>
   const cells = (row: IncomeValues) => [
     money(row.payments),
     money(row.refunds),
     money(row.certificateSales),
-    ...(showTips ? [money(row.tips)] : []),
     money(row.net),
   ]
   return (
@@ -428,7 +421,6 @@ const IncomeTable = ({
         { label: c('payments'), numeric: true },
         { label: c('refunds'), numeric: true },
         { label: c('certificateSales'), numeric: true },
-        ...(showTips ? [{ label: c('tips'), numeric: true }] : []),
         { label: c('net'), numeric: true },
       ]}
       rows={rows.map((row) => [row.label, ...cells(row)])}

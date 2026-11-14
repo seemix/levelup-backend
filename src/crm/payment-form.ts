@@ -50,8 +50,6 @@ export const parseRows = (
 
 export type PaymentDraft = {
   rows: readonly CashRow[]
-  /** Lei text; empty = no tip. */
-  tip: string
   /** Balance of the found certificate (`null` — no certificate). */
   certificateBalance: number | null
   /** Lei text; empty = the certificate covers what the money does not (§5.4 p.6). */
@@ -60,11 +58,10 @@ export type PaymentDraft = {
 
 export type PaymentSummary = {
   entries: LedgerEntry[]
-  /** Money put into the registers (tip included). */
+  /** Money put into the registers. */
   cash: number
-  tip: number
   certificate: number
-  /** Goes to the appointment: money − tip + certificate. */
+  /** Goes to the appointment: money + certificate. */
   applied: number
   due: number
   /** Still due after this payment. */
@@ -83,12 +80,9 @@ export type PaymentSummary = {
 export const summarizePayment = (money: AppointmentMoney, draft: PaymentDraft): PaymentSummary => {
   const parsed = parseRows(draft.rows)
   const due = amountDue(money)
-  const tipText = draft.tip.trim()
-  const tipParsed = tipText === '' ? 0 : parseLeiInput(tipText)
   const certificateText = draft.certificateAmount.trim()
   const certificateParsed = certificateText === '' ? null : parseLeiInput(certificateText)
-  const tip = tipParsed ?? 0
-  const fromMoney = parsed.total - tip
+  const fromMoney = parsed.total
   const balance = draft.certificateBalance
   const certificate =
     balance === null
@@ -99,13 +93,11 @@ export const summarizePayment = (money: AppointmentMoney, draft: PaymentDraft): 
   const applied = fromMoney + certificate
 
   let error: PaymentSummary['error'] = parsed.error
-  if (!error && (tipParsed === null || (certificateText !== '' && certificateParsed === null)))
-    error = 'AMOUNT_INVALID'
+  if (!error && certificateText !== '' && certificateParsed === null) error = 'AMOUNT_INVALID'
   if (!error) {
     try {
       planPayment(money, {
         entries: parsed.entries,
-        tipAmount: tip,
         certificateAmount: certificateParsed,
         certificateBalance: balance,
       })
@@ -117,7 +109,6 @@ export const summarizePayment = (money: AppointmentMoney, draft: PaymentDraft): 
   return {
     entries: parsed.entries,
     cash: parsed.total,
-    tip,
     certificate,
     applied,
     due,
@@ -130,12 +121,11 @@ export const summarizePayment = (money: AppointmentMoney, draft: PaymentDraft): 
 
 /** Body of `POST /crm/appointments/:id/payments` for a summary that is `ready`. */
 export const paymentBody = (
-  summary: Pick<PaymentSummary, 'entries' | 'tip' | 'certificate'>,
+  summary: Pick<PaymentSummary, 'entries' | 'certificate'>,
   certificateCode: string | null,
   comment: string,
 ) => ({
   entries: summary.entries,
-  ...(summary.tip > 0 ? { tip: summary.tip } : {}),
   ...(certificateCode && summary.certificate > 0
     ? { certificateCode, certificateAmount: summary.certificate }
     : {}),

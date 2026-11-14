@@ -580,21 +580,20 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
   /** Pays an appointment through the payment service (system), at the end of the visit. */
   const payFor = async (doc: Doc, amount: number, useCertificate: boolean) => {
     const total = doc.total as number
-    const tip = payRandom() < 0.3 ? 5_000 : 0
+    payRandom() // the former tip roll: keeps the seeded sequence of the other choices
     const register = payRandom() < 0.5 ? registerIds.cash : registerIds.card
     let certificatePart = 0
     if (useCertificate && certificateCode) {
       const found = await findCertificateByCode(await createLocalReq({}, payload), certificateCode)
       certificatePart = Math.min(found?.balance ?? 0, Math.floor(total / 2))
     }
-    const cash = amount - certificatePart + tip
+    const cash = amount - certificatePart
     const paidAt = new Date(Math.min(new Date(doc.endAt as string).getTime(), now.getTime()))
     await payAppointment(
       await createLocalReq({}, payload),
       id(doc),
       {
         entries: cash > 0 ? [{ cashRegister: register, amount: cash }] : [],
-        tipAmount: tip || null,
         ...(certificatePart > 0
           ? { certificateCode: certificateCode!, certificateAmount: certificatePart }
           : {}),

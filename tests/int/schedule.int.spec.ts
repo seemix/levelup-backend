@@ -19,7 +19,13 @@ const SUN = '2026-11-22'
 const barber: BarberSchedule = {
   locations: ['locA', 'locB'],
   weeklySchedule: [
-    { weekday: 1, location: 'locA', start: '09:00', end: '18:00', breaks: [{ start: '13:00', end: '14:00' }] },
+    {
+      weekday: 1,
+      location: 'locA',
+      start: '09:00',
+      end: '18:00',
+      breaks: [{ start: '13:00', end: '14:00' }],
+    },
     { weekday: 2, location: { id: 'locB' }, start: '10:00', end: '16:00' },
     { weekday: 7, location: 'locA', start: '09:00', end: '18:00' },
   ],
@@ -88,16 +94,19 @@ describe('getWorkingIntervals: exceptions', () => {
     ...extra,
   })
 
-  it.each(['day_off', 'vacation', 'sick'] as const)('%s makes every covered day non-working', (kind) => {
-    for (const date of [MON, TUE]) {
-      expect(simple(getWorkingIntervals(barber, date, [range(kind)]))).toEqual({
-        off: kind,
-        source: 'exception',
-      })
-    }
-    // Outside the range the template applies again.
-    expect(getWorkingIntervals(barber, SUN, [range(kind)]).working).toBe(true)
-  })
+  it.each(['day_off', 'vacation', 'sick'] as const)(
+    '%s makes every covered day non-working',
+    (kind) => {
+      for (const date of [MON, TUE]) {
+        expect(simple(getWorkingIntervals(barber, date, [range(kind)]))).toEqual({
+          off: kind,
+          source: 'exception',
+        })
+      }
+      // Outside the range the template applies again.
+      expect(getWorkingIntervals(barber, SUN, [range(kind)]).working).toBe(true)
+    },
+  )
 
   it('custom_hours replaces the template with its own hours, breaks and location', () => {
     const exception = range('custom_hours', {
@@ -119,7 +128,14 @@ describe('getWorkingIntervals: exceptions', () => {
 
   it('custom_hours works on a day without a template row', () => {
     const wed = '2026-11-18'
-    const exception = { dateFrom: wed, dateTo: wed, kind: 'custom_hours' as const, location: 'locA', start: '10:00', end: '12:00' }
+    const exception = {
+      dateFrom: wed,
+      dateTo: wed,
+      kind: 'custom_hours' as const,
+      location: 'locA',
+      start: '10:00',
+      end: '12:00',
+    }
     expect(simple(getWorkingIntervals(barber, wed, [exception]))).toMatchObject({
       location: 'locA',
       local: ['10:00-12:00'],

@@ -293,7 +293,6 @@ export const Appointments: CollectionConfig = {
     },
     computedMoney('paidAmount', 'appointments.paidAmount', true),
     computedMoney('certificateAmount', 'appointments.certificateAmount', true),
-    computedMoney('tipAmount', 'appointments.tipAmount', true),
     {
       // Code entered online (§4.11, §5.7): only checked then; charged when the visit is paid.
       name: 'plannedCertificate',

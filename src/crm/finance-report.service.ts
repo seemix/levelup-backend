@@ -19,6 +19,7 @@ import {
 import type { TransactionType } from './ledger'
 import {
   calculateSalary,
+  fixedSalaryForPeriod,
   type Commission,
   type ItemType,
   type SalaryAppointment,
@@ -26,6 +27,7 @@ import {
   type SalaryReport,
 } from './salary'
 import { relationId, type RelationValue } from './schedule'
+import { toLocalDate } from './time'
 
 const SYSTEM = { overrideAccess: true, depth: 0, pagination: false } as const
 
@@ -68,7 +70,6 @@ const toOperation = (doc: Raw): ReportOperation => ({
   appointment: id(doc.appointment),
   certificate: id(doc.certificate),
   certificateAmount: num(doc.certificateAmount),
-  tipAmount: num(doc.tipAmount),
   expenseCategory: id(doc.expenseCategory),
   reverses: id(doc.reverses),
 })
@@ -82,7 +83,6 @@ const OPERATION_SELECT = {
   appointment: true,
   certificate: true,
   certificateAmount: true,
-  tipAmount: true,
   expenseCategory: true,
   reverses: true,
 } as const
@@ -146,35 +146,59 @@ const paymentOps = (operations: readonly ReportOperation[]): SalaryOperation[] =
       appointment: op.appointment,
       cash: op.entries.reduce((sum, entry) => sum + entry.amount, 0),
       certificateAmount: op.certificateAmount,
-      tipAmount: op.tipAmount,
     }))
 
-type BarberInfo = { name: string; order: number | null } & Partial<Commission>
+type BarberInfo = { name: string; order: number | null; fixedSalary: number } & Partial<Commission>
 
+/**
+ * Barbers of the operations plus the active barbers with a fixed salary (A45) in the scope: of the
+ * requested barber, or working in one of the allowed locations.
+ */
 const loadBarbers = async (
   req: PayloadRequest,
   ids: string[],
+  scope: ReportScope,
   locale: string,
 ): Promise<Map<string, BarberInfo>> => {
   const map = new Map<string, BarberInfo>()
-  if (ids.length === 0) return map
+  if (scope.locations && scope.locations.length === 0 && ids.length === 0) return map
+  const salaried: Where = {
+    and: [
+      { fixedSalary: { greater_than: 0 } },
+      { active: { equals: true } },
+      ...(scope.barber ? [{ id: { equals: scope.barber } }] : []),
+      ...locationWhere(scope, 'locations'),
+    ],
+  }
   const { docs } = await req.payload.find({
     collection: 'barbers',
     ...SYSTEM,
     req,
     locale: locale as never,
-    where: { id: { in: ids } },
+    where: ids.length > 0 ? { or: [{ id: { in: ids } }, salaried] } : salaried,
     select: {
       name: true,
       order: true,
+      active: true,
+      locations: true,
+      fixedSalary: true,
       commissionServicesPercent: true,
       commissionExtrasPercent: true,
     },
   })
+  const inScope = (doc: Raw) =>
+    doc.active !== false &&
+    (!scope.barber || String(doc.id) === scope.barber) &&
+    (!scope.locations ||
+      ((doc.locations as RelationValue[] | undefined) ?? []).some((loc) =>
+        scope.locations!.includes(relationId(loc) ?? ''),
+      ))
   for (const doc of docs as unknown as Raw[])
     map.set(String(doc.id), {
       name: typeof doc.name === 'string' ? doc.name : '',
       order: typeof doc.order === 'number' ? doc.order : null,
+      // A fixed salary counts only for active barbers of the scope (a former barber keeps commissions).
+      fixedSalary: inScope(doc) ? num(doc.fixedSalary) : 0,
       servicesPercent: num(doc.commissionServicesPercent),
       extrasPercent: num(doc.commissionExtrasPercent),
     })
@@ -193,19 +217,32 @@ const barberOrder = (barbers: Map<string, BarberInfo>): string[] =>
 
 const salaryFrom = async (
   req: PayloadRequest,
+  scope: ReportScope,
   operations: readonly ReportOperation[],
   appointments: Map<string, SalaryAppointment>,
   locale: string,
 ): Promise<{ salary: SalaryReport; barbers: Map<string, BarberInfo> }> => {
   const ops = paymentOps(operations)
-  const barbers = await loadBarbers(req, unique(ops.map((op) => op.barber)), locale)
+  const barbers = await loadBarbers(req, unique(ops.map((op) => op.barber)), scope, locale)
+  // Local days of the half-open period `[from, to)`.
+  const firstDay = toLocalDate(scope.from)
+  const lastDay = toLocalDate(new Date(scope.to.getTime() - 1))
+  const fixed = new Map(
+    [...barbers.entries()].map(([key, info]) => [
+      key,
+      fixedSalaryForPeriod(info.fixedSalary, firstDay, lastDay),
+    ]),
+  )
   const commissions = new Map<string, Partial<Commission>>(
     [...barbers.entries()].map(([key, info]) => [
       key,
       { servicesPercent: info.servicesPercent, extrasPercent: info.extrasPercent },
     ]),
   )
-  return { salary: calculateSalary(ops, appointments, commissions, barberOrder(barbers)), barbers }
+  return {
+    salary: calculateSalary(ops, appointments, commissions, barberOrder(barbers), fixed),
+    barbers,
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -225,7 +262,7 @@ export const runSalaryReport = async (
     (op) => !scope.barber || op.barber === scope.barber,
   )
   const appointments = await loadAppointments(req, unique(operations.map((op) => op.appointment)))
-  const { salary, barbers } = await salaryFrom(req, operations, appointments, locale)
+  const { salary, barbers } = await salaryFrom(req, scope, operations, appointments, locale)
   return {
     ...salary,
     names: {
@@ -439,7 +476,13 @@ export const runFinanceReport = async (
     certificates,
     promoUses,
   })
-  const { salary, barbers } = await salaryFrom(req, paymentOperations, appointments, locale)
+  const { salary, barbers } = await salaryFrom(
+    req,
+    scope,
+    empty ? [] : paymentOperations,
+    appointments,
+    locale,
+  )
 
   // Names for the UI and the CSV.
   const lineIds = (type: ItemType) =>

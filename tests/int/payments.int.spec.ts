@@ -83,7 +83,6 @@ describe('payment rules (§5.8, A34)', () => {
     total: 30_000,
     paidAmount: 0,
     certificateAmount: 0,
-    tipAmount: 0,
     ...patch,
   })
   const entries = (...amounts: number[]) =>
@@ -97,17 +96,16 @@ describe('payment rules (§5.8, A34)', () => {
     }
   }
 
-  it('split payment, tip, partial payment', () => {
-    expect(planPayment(money(), { entries: entries(20_000, 15_000), tipAmount: 5_000 })).toEqual({
+  it('split payment, partial payment', () => {
+    expect(planPayment(money(), { entries: entries(20_000, 10_000) })).toEqual({
       applied: 30_000,
       certificateAmount: 0,
-      tipAmount: 5_000,
     })
     expect(planPayment(money(), { entries: entries(10_000) }).applied).toBe(10_000)
     expect(amountDue(money({ paidAmount: 10_000 }))).toBe(20_000)
   })
 
-  it('refuses an overpayment, empty or invalid input, tips beyond the money', () => {
+  it('refuses an overpayment, empty or invalid input', () => {
     expect(codeOf(money(), { entries: entries(30_001) })).toBe('PAYMENT_EXCEEDS_DUE')
     expect(codeOf(money({ paidAmount: 30_000, status: 'paid' }), { entries: entries(1) })).toBe(
       'PAYMENT_EXCEEDS_DUE',
@@ -115,10 +113,10 @@ describe('payment rules (§5.8, A34)', () => {
     expect(codeOf(money(), { entries: [] })).toBe('PAYMENT_EMPTY')
     expect(codeOf(money(), { entries: entries(-5) })).toBe('LEDGER_ENTRIES_INVALID')
     expect(codeOf(money(), { entries: entries(10.5) })).toBe('LEDGER_ENTRIES_INVALID')
-    expect(codeOf(money(), { entries: entries(10_000), tipAmount: 10_001 })).toBe(
-      'PAYMENT_TIP_INVALID',
-    )
-    expect(codeOf(money(), { entries: entries(10_000), tipAmount: 10_000 })).toBe('PAYMENT_EMPTY')
+    // A former tip field is ignored (A45): money above the due amount is an overpayment.
+    expect(
+      codeOf(money(), { entries: entries(30_000, 5_000), tipAmount: 5_000 } as PaymentRequest),
+    ).toBe('PAYMENT_EXCEEDS_DUE')
   })
 
   it('only scheduled / completed / paid appointments take payments', () => {
@@ -176,27 +174,23 @@ describe('payment rules (§5.8, A34)', () => {
   })
 
   it('accumulates payments and undoes them by refund', () => {
-    const paid = afterPayment(
-      money(),
-      { applied: 30_000, certificateAmount: 10_000, tipAmount: 2_000 },
-      NOW,
-    )
+    const paid = afterPayment(money(), { applied: 30_000, certificateAmount: 10_000 }, NOW)
     expect(paid).toEqual({
       paidAmount: 30_000,
       certificateAmount: 10_000,
-      tipAmount: 2_000,
       status: 'paid',
     })
     const state = money({ ...paid })
-    expect(
-      afterRefund(state, { applied: 30_000, certificateAmount: 10_000, tipAmount: 2_000 }),
-    ).toEqual({ paidAmount: 0, certificateAmount: 0, tipAmount: 0, status: 'completed' })
+    expect(afterRefund(state, { applied: 30_000, certificateAmount: 10_000 })).toEqual({
+      paidAmount: 0,
+      certificateAmount: 0,
+      status: 'completed',
+    })
     // A refund of one of two payments of a scheduled (prepaid) visit keeps its status.
     expect(
       afterRefund(money({ status: 'scheduled', paidAmount: 30_000 }), {
         applied: 10_000,
         certificateAmount: 0,
-        tipAmount: 0,
       }),
     ).toMatchObject({ paidAmount: 20_000, status: 'scheduled' })
   })

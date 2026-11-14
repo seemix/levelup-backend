@@ -1,7 +1,7 @@
 /**
  * Payments, refunds and certificate sales (spec §6.2, §5.7, §5.8, A34):
- * - `POST /api/crm/appointments/:id/payments` {entries, certificateCode?, certificateAmount?, tip?,
- *   comment?} → `{ transaction, appointment, certificate, warnings }`;
+ * - `POST /api/crm/appointments/:id/payments` {entries, certificateCode?, certificateAmount?,
+ *   comment?} (no tips, A45) → `{ transaction, appointment, certificate, warnings }`;
  * - `POST /api/crm/transactions/:id/refund` {comment?} (admin) → `{ transaction, original,
  *   appointment, certificate, warnings }`;
  * - `POST /api/crm/certificates/sell` {nominal, entries, location?, expiresAt?, buyer?: {name,
@@ -86,7 +86,6 @@ export const appointmentPaymentEndpoint = crmEndpoint(
     const entries = parseEntries(errors, body.entries, Boolean(certificateCode))
     const certificateAmount = optionalBani(errors, 'certificateAmount', body.certificateAmount)
     if (certificateAmount !== null && !certificateCode) errors.add('certificateCode')
-    const tipAmount = optionalBani(errors, 'tip', body.tip ?? body.tipAmount)
     const comment = optionalText(errors, 'comment', body.comment, COMMENT_MAX)
     errors.throwIfAny()
 
@@ -96,7 +95,6 @@ export const appointmentPaymentEndpoint = crmEndpoint(
         entries,
         certificateCode,
         certificateAmount,
-        tipAmount,
         comment,
       })
     })

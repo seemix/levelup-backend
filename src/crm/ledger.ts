@@ -52,7 +52,6 @@ export type LedgerErrorCode =
   | 'REVERSAL_TARGET_INVALID'
   | 'ALREADY_REVERSED'
   | 'CERTIFICATE_REQUIRED'
-  | 'PAYMENT_TIP_INVALID'
 
 /** A rule violation; the adapter turns it into a translated `APIError` (`toRuleError`). */
 export class LedgerError extends Error {
@@ -73,7 +72,6 @@ export type TransactionInput = {
   expenseCategory?: string | null
   appointment?: string | null
   certificateAmount?: number | null
-  tipAmount?: number | null
   reverses?: string | null
   /** Gift certificate: sold (`certificate_sale`) or used / returned (`appointment_payment`, `refund`). */
   certificate?: string | null
@@ -130,8 +128,7 @@ export const validateTransaction = (input: TransactionInput, target?: ReversalTa
       fail('LEDGER_ENTRIES_INVALID')
   if (new Set(entries.map((entry) => entry.cashRegister)).size !== entries.length)
     fail('LEDGER_SAME_REGISTER')
-  if (!isZeroOrMore(input.certificateAmount) || !isZeroOrMore(input.tipAmount))
-    fail('LEDGER_AMOUNT_INVALID')
+  if (!isZeroOrMore(input.certificateAmount)) fail('LEDGER_AMOUNT_INVALID')
 
   // Type-specific links are not allowed elsewhere.
   if (type !== 'expense' && input.expenseCategory) fail('EXPENSE_CATEGORY_NOT_ALLOWED')
@@ -139,7 +136,7 @@ export const validateTransaction = (input: TransactionInput, target?: ReversalTa
   if (
     type !== 'appointment_payment' &&
     type !== 'refund' &&
-    (input.appointment || amountOf(input.certificateAmount) > 0 || amountOf(input.tipAmount) > 0)
+    (input.appointment || amountOf(input.certificateAmount) > 0)
   )
     fail('LEDGER_AMOUNT_INVALID')
   if (input.certificate && !CERTIFICATE_TYPES.includes(type)) fail('LEDGER_AMOUNT_INVALID')
@@ -154,9 +151,7 @@ export const validateTransaction = (input: TransactionInput, target?: ReversalTa
       if (entries.length === 0 && certificate === 0) fail('LEDGER_ENTRIES_INVALID')
       // Certificate value and the certificate itself go together.
       if (certificate > 0 !== Boolean(input.certificate)) fail('CERTIFICATE_REQUIRED')
-      // Tips are money left in the registers: a certificate covers the appointment only (§5.4 p.6).
-      if (amountOf(input.tipAmount) > total) fail('PAYMENT_TIP_INVALID')
-      // Σentries + certificate = applied to the appointment + tip, the applied part is > 0.
+      // Σentries + certificate = applied to the appointment (no tips, A45), and it is > 0.
       if (paymentAppliedAmount(input) <= 0) fail('LEDGER_SUM_INVALID')
       return
     }
@@ -192,14 +187,11 @@ export const validateTransaction = (input: TransactionInput, target?: ReversalTa
 
 /**
  * Part of an `appointment_payment` that goes to the appointment:
- * Σentries + certificateAmount − tipAmount (§5.8).
+ * Σentries + certificateAmount (§5.8; tips are not recorded, A45).
  */
 export const paymentAppliedAmount = (
-  input: Pick<TransactionInput, 'entries' | 'certificateAmount' | 'tipAmount'>,
-): number =>
-  sumBani(input.entries.map((entry) => entry.amount)) +
-  amountOf(input.certificateAmount) -
-  amountOf(input.tipAmount)
+  input: Pick<TransactionInput, 'entries' | 'certificateAmount'>,
+): number => sumBani(input.entries.map((entry) => entry.amount)) + amountOf(input.certificateAmount)
 
 /** Balance change of each register caused by one operation. */
 export const balanceDeltas = (entries: readonly LedgerEntry[]): Map<string, number> => {

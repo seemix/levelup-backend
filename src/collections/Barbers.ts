@@ -12,6 +12,7 @@ import { outsideTransaction } from '@/crm/read-req'
 import { isHexColor, nextBarberColor } from '@/crm/colors'
 import { relationId, validateWeeklySchedule, WEEKDAYS, type RelationValue } from '@/crm/schedule'
 import { orderDescription } from '@/fields'
+import { moneyField } from '@/fields/money'
 import { breaksField, scheduleErrorKey, timeField } from '@/fields/schedule'
 import { crmLabel, crmLabels, crmT, type CrmKey } from '@/i18n'
 
@@ -41,9 +42,7 @@ const percentField = (name: string, label: CrmKey): NumberField => ({
   access: fieldAccess('barbers.commission'),
   admin: { width: '50%' },
   validate: (value: number | null | undefined, { req: { t } }) =>
-    value === null ||
-    value === undefined ||
-    (Number.isFinite(value) && value >= 0 && value <= 100)
+    value === null || value === undefined || (Number.isFinite(value) && value >= 0 && value <= 100)
       ? true
       : crmT(t, 'errors.percentInvalid'),
 })
@@ -237,11 +236,15 @@ export const Barbers: CollectionConfig = {
                 })
                 if (linked.docs.length > 0) return crmT(req.t, 'errors.barberUserTaken')
                 const user = await req.payload
-                  .findByID({ collection: 'users', id: userId, depth: 0, select: { roles: true }, req: outsideTransaction(req) })
+                  .findByID({
+                    collection: 'users',
+                    id: userId,
+                    depth: 0,
+                    select: { roles: true },
+                    req: outsideTransaction(req),
+                  })
                   .catch(() => null)
-                return user?.roles?.includes('barber')
-                  ? true
-                  : req.t('validation:invalidSelection')
+                return user?.roles?.includes('barber') ? true : req.t('validation:invalidSelection')
               }) satisfies RelationshipFieldSingleValidation,
             },
             {
@@ -353,6 +356,16 @@ export const Barbers: CollectionConfig = {
                 percentField('commissionServicesPercent', 'barbers.commissionServicesPercent'),
                 percentField('commissionExtrasPercent', 'barbers.commissionExtrasPercent'),
               ],
+            },
+            {
+              // Optional fixed monthly salary (A45): prorated by days in the salary report.
+              ...moneyField({
+                name: 'fixedSalary',
+                label: 'barbers.fixedSalary',
+                required: false,
+                description: 'barbers.fixedSalaryDescription',
+              }),
+              access: fieldAccess('barbers.commission'),
             },
           ],
         },

@@ -52,7 +52,6 @@ const op = (patch: Partial<SalaryOperation>): SalaryOperation => ({
   appointment: 'a1',
   cash: 0,
   certificateAmount: 0,
-  tipAmount: 0,
   ...patch,
 })
 
@@ -146,25 +145,25 @@ describe('salary: pure allocation (A13)', () => {
         extrasPercent: 20,
         servicesCommission: 11_250,
         extrasCommission: 1_500,
-        tips: 0,
+        fixedSalary: 0,
         total: 12_750,
       },
     ])
   })
 
-  it('certificate counts like money; tips go 100% to the barber and are not commissioned', () => {
-    // 13 000 money (3 000 of it tips) + 20 000 certificate → 30 000 to the appointment.
-    const payment = op({ cash: 13_000, certificateAmount: 20_000, tipAmount: 3_000 })
+  it('certificate counts like money; all the money goes to the appointment (no tips, A45)', () => {
+    // 10 000 money + 20 000 certificate → 30 000 to the appointment.
+    const payment = op({ cash: 10_000, certificateAmount: 20_000 })
     expect(breakdownOperation(payment, discounted.get('a1'))).toMatchObject({
       applied: 30_000,
-      tips: 3_000,
       certificate: 20_000,
       servicesBase: 22_500,
       extrasBase: 7_500,
     })
     const [row] = calculateSalary([payment], discounted, rates).rows
-    expect(row).toMatchObject({ servicesCommission: 11_250, extrasCommission: 1_500, tips: 3_000 })
-    expect(row!.total).toBe(15_750)
+    expect(row).toMatchObject({ servicesCommission: 11_250, extrasCommission: 1_500 })
+    expect(row).not.toHaveProperty('tips')
+    expect(row!.total).toBe(12_750)
   })
 
   it('partial payments: each one pays its share (prepayment + rest = full salary)', () => {
@@ -177,26 +176,24 @@ describe('salary: pure allocation (A13)', () => {
     expect(uneven.servicesBase + uneven.extrasBase).toBe(30_000)
   })
 
-  it('refund is subtracted (with its tips and certificate part) where it is made', () => {
+  it('refund is subtracted (with its certificate part) where it is made', () => {
     const refund = op({
       type: 'refund',
       barber: 'b2',
       appointment: 'a1',
-      cash: -13_000,
+      cash: -10_000,
       certificateAmount: 20_000,
-      tipAmount: 3_000,
     })
     expect(breakdownOperation(refund, discounted.get('a1'))).toMatchObject({
       applied: -30_000,
-      tips: -3_000,
       certificate: -20_000,
       servicesBase: -22_500,
       extrasBase: -7_500,
     })
     const { rows, totals } = calculateSalary([refund], discounted, rates)
-    // 40% of −22 500 + 10% of −7 500 − 3 000 tips.
-    expect(rows[0]).toMatchObject({ refunds: 1, payments: 0, total: -9_000 - 750 - 3_000 })
-    expect(totals.total).toBe(-12_750)
+    // 40% of −22 500 + 10% of −7 500.
+    expect(rows[0]).toMatchObject({ refunds: 1, payments: 0, total: -9_000 - 750 })
+    expect(totals.total).toBe(-9_750)
   })
 
   it('payment and its refund in one period cancel out; no barber → skipped; deleted appointment → services', () => {
@@ -238,7 +235,6 @@ describe('finance report: pure sections', () => {
     appointment: null,
     certificate: null,
     certificateAmount: 0,
-    tipAmount: 0,
     expenseCategory: null,
     reverses: null,
     ...patch,
@@ -300,7 +296,7 @@ describe('finance report: pure sections', () => {
 //   10-20        certificate C1 50 000 → cardA; C2 10 000 → cardA, expires 10-25 12:00 (unused)
 //   10-24 12:00  a3 (b2, Cut 30 000) paid 30 000 cashA                         ← before P
 //   10-24 15:00  expense −2 000 cashA (Supplies)                               ← before P
-//   10-25 00:30  a1 (b1, Cut+Beard, P25 → 30 000) paid 13 000 cashA (tip 3 000) + 20 000 C1
+//   10-25 00:30  a1 (b1, Cut+Beard, P25 → 30 000) paid 10 000 cashA + 20 000 C1
 //                (21:30 UTC of 10-24: a naive UTC day would put it before P)
 //   10-25 10:00  expense −5 000 cashA (Supplies); 10:30 reversal of the 10-24 expense (+2 000)
 //   10-25 11:00  transfer cashA → cardA 1 000
@@ -309,8 +305,8 @@ describe('finance report: pure sections', () => {
 //   10-26 00:30  a4 (b2, locB, Cut) paid 30 000 cashB                          ← after P
 //   03-29 00:30 and 23:30 (DST start: 23 hours): a5, a6 (b2, locB) paid 30 000 cashB each
 //
-// Salary P: b1 = 50% (22 500 + 30 000) + 20% 7 500 + 3 000 tips = 30 750;
-//           b2 = 40% × (−30 000) = −12 000; total 18 750.
+// Salary P: b1 = 50% (22 500 + 30 000) + 20% 7 500 = 27 750;
+//           b2 = 40% × (−30 000) = −12 000; total 15 750 (no fixed salaries).
 // ---------------------------------------------------------------------------
 
 type Json = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -498,8 +494,7 @@ describe('finance and salary reports on a controlled ledger', () => {
     expect([a1.subtotal, a1.promoDiscount, a1.total]).toEqual([40_000, 10_000, 30_000])
     ids.a1 = String(a1.id)
     await pay(a1, at(P, '00:30'), {
-      entries: [{ cashRegister: ids.cashA, amount: 13_000 }],
-      tipAmount: 3_000,
+      entries: [{ cashRegister: ids.cashA, amount: 10_000 }],
       certificateCode: ids.c1code,
     })
     await createTransaction(
@@ -547,7 +542,7 @@ describe('finance and salary reports on a controlled ledger', () => {
   })
 
   describe('salary', () => {
-    it('admin: the DST day counted by hand (discount, certificate, tips, refund)', async () => {
+    it('admin: the DST day counted by hand (discount, certificate, refund)', async () => {
       const report = await salary('admin', `from=${P}&to=${P}`)
       const rows = byId(report.rows, 'barber')
       expect(Object.keys(rows)).toEqual([ids.b1, ids.b2])
@@ -561,8 +556,8 @@ describe('finance and salary reports on a controlled ledger', () => {
         extrasPercent: 20,
         servicesCommission: 26_250,
         extrasCommission: 1_500,
-        tips: 3_000,
-        total: 30_750,
+        fixedSalary: 0,
+        total: 27_750,
       })
       expect(rows[ids.b2]).toMatchObject({
         payments: 0,
@@ -571,7 +566,7 @@ describe('finance and salary reports on a controlled ledger', () => {
         servicesCommission: -12_000,
         total: -12_000,
       })
-      expect(report.totals.total).toBe(18_750)
+      expect(report.totals.total).toBe(15_750)
       expect(report.names.barbers[ids.b1]).toBe('One')
       // Several barbers: no operation details.
       expect(report.items).toEqual([])
@@ -597,16 +592,55 @@ describe('finance and salary reports on a controlled ledger', () => {
       })
     })
 
+    it('fixed monthly salary (A45): prorated, without operations too, in the profit; active barbers only', async () => {
+      const barbers = payload.db.collections.barbers
+      await barbers.updateOne({ _id: ids.b1 }, { $set: { fixedSalary: 300_000 } })
+      try {
+        const month = await salary('admin', 'from=2026-11-01&to=2026-11-30')
+        expect(month.rows).toEqual([
+          expect.objectContaining({
+            barber: ids.b1,
+            payments: 0,
+            fixedSalary: 300_000,
+            total: 300_000,
+          }),
+        ])
+        const half = await salary('barber1', 'from=2026-11-01&to=2026-11-15')
+        expect(half.rows.map((row: Json) => [row.barber, row.fixedSalary])).toEqual([
+          [ids.b1, 150_000],
+        ])
+        // Another barber does not see it; the profit of the admin counts it.
+        expect((await salary('barber2', 'from=2026-11-01&to=2026-11-30')).rows).toEqual([])
+        expect((await finance('admin', 'from=2026-11-01&to=2026-11-30')).profit.salary).toBe(
+          300_000,
+        )
+        // With commissions on the same day: P is 1 of 31 October days → 300 000 / 31 = 9 677.
+        const day = await salary('admin', `from=${P}&to=${P}`)
+        expect(byId(day.rows, 'barber')[ids.b1]).toMatchObject({
+          fixedSalary: 9_677,
+          total: 27_750 + 9_677,
+        })
+        // An inactive (former) barber gets no fixed salary.
+        await barbers.updateOne({ _id: ids.b1 }, { $set: { active: false } })
+        expect((await salary('admin', 'from=2026-11-01&to=2026-11-30')).rows).toEqual([])
+      } finally {
+        await barbers.updateOne(
+          { _id: ids.b1 },
+          { $set: { active: true }, $unset: { fixedSalary: 1 } },
+        )
+      }
+    })
+
     it('location filter and the operation details for one barber', async () => {
       const inB = await salary('admin', `from=2026-10-01&to=2026-10-31&location=${ids.locB}`)
       expect(inB.rows.map((row: Json) => [row.barber, row.total])).toEqual([[ids.b2, 12_000]])
       const one = await salary('admin', `from=${P}&to=${P}&barber=${ids.b1}`)
       expect(one.rows).toHaveLength(1)
       expect(
-        one.items.map((item: Json) => [item.type, item.servicesBase, item.extrasBase, item.tips]),
+        one.items.map((item: Json) => [item.type, item.servicesBase, item.extrasBase]),
       ).toEqual([
-        ['appointment_payment', 22_500, 7_500, 3_000],
-        ['appointment_payment', 30_000, 0, 0],
+        ['appointment_payment', 22_500, 7_500],
+        ['appointment_payment', 30_000, 0],
       ])
     })
 
@@ -643,7 +677,7 @@ describe('finance and salary reports on a controlled ledger', () => {
       expect(csv.status).toBe(200)
       expect(csv.headers.get('content-type')).toContain('text/csv')
       expect(csv.bom).toBe(true)
-      expect(csv.text).toContain('One;2;0;525.00;50;262.50;75.00;20;15.00;30.00;307.50\r\n')
+      expect(csv.text).toContain('One;2;0;525.00;50;262.50;75.00;20;15.00;0.00;277.50\r\n')
       expect(csv.text).toContain('Operations')
     })
   })
@@ -652,37 +686,34 @@ describe('finance and salary reports on a controlled ledger', () => {
     it('admin: income, revenue by service, expenses, promo, certificates, profit', async () => {
       const report = await finance('admin', `from=${P}&to=${P}`)
       expect(report.income.totals).toEqual({
-        payments: 43_000,
+        payments: 40_000,
         refunds: -30_000,
         certificateSales: 0,
-        tips: 3_000,
-        net: 13_000,
+        net: 10_000,
       })
       expect(report.income.byLocation).toEqual([
         {
           id: ids.locA,
-          payments: 43_000,
+          payments: 40_000,
           refunds: -30_000,
           certificateSales: 0,
-          tips: 3_000,
-          net: 13_000,
+          net: 10_000,
         },
       ])
       const registers = byId(report.income.byRegister)
       expect(registers[ids.cashA]).toMatchObject({
-        payments: 13_000,
+        payments: 10_000,
         refunds: -30_000,
-        net: -17_000,
+        net: -20_000,
       })
       expect(registers[ids.cardA]).toMatchObject({ payments: 30_000, net: 30_000 })
       const barbers = byId(report.income.byBarber, 'barber')
       expect(barbers[ids.b1]).toEqual({
         barber: ids.b1,
-        payments: 43_000,
+        payments: 40_000,
         refunds: 0,
-        net: 43_000,
+        net: 40_000,
         certificate: 20_000,
-        tips: 3_000,
         revenue: 60_000,
       })
       expect(barbers[ids.b2]).toMatchObject({ refunds: -30_000, net: -30_000, revenue: -30_000 })
@@ -717,9 +748,9 @@ describe('finance and salary reports on a controlled ledger', () => {
         expired: { count: 1, amount: 10_000 },
       })
       expect(report.profit).toEqual({
-        income: 13_000,
+        income: 10_000,
         expenses: 3_000,
-        salary: 18_750,
+        salary: 15_750,
         profit: -8_750,
       })
     })
@@ -729,10 +760,10 @@ describe('finance and salary reports on a controlled ledger', () => {
       const rows = byId(report.registers.rows, 'register')
       expect(rows[ids.cashA]).toMatchObject({
         opening: 128_000,
-        inflow: 15_000,
+        inflow: 12_000,
         outflow: 36_000,
-        closing: 107_000,
-        balance: 107_000,
+        closing: 104_000,
+        balance: 104_000,
       })
       expect(rows[ids.cardA]).toMatchObject({
         opening: 60_000,
@@ -768,7 +799,7 @@ describe('finance and salary reports on a controlled ledger', () => {
         .flatMap((doc) => doc.entries)
         .reduce((sum, entry) => sum + entry.amount, 0)
       expect(all.registers.totals.closing).toBe(ledgerSum)
-      expect(all.income.totals.net).toBe(50_000 + 10_000 + 30_000 * 5 + 13_000 - 30_000)
+      expect(all.income.totals.net).toBe(50_000 + 10_000 + 30_000 * 5 + 10_000 - 30_000)
       expect(all.expenses.total).toBe(5_000)
       // Adjustment + income − expenses (transfers net to zero) = the movement.
       expect(100_000 + all.income.totals.net - all.expenses.total).toBe(ledgerSum)
@@ -783,7 +814,7 @@ describe('finance and salary reports on a controlled ledger', () => {
 
     it('barber filter cuts the payment sections only', async () => {
       const report = await finance('admin', `from=${P}&to=${P}&barber=${ids.b1}`)
-      expect(report.income.totals).toMatchObject({ payments: 43_000, refunds: 0, net: 43_000 })
+      expect(report.income.totals).toMatchObject({ payments: 40_000, refunds: 0, net: 40_000 })
       expect(report.income.byBarber.map((row: Json) => row.barber)).toEqual([ids.b1])
       expect(report.revenue.total).toBe(60_000)
       expect(report.expenses.total).toBe(3_000)
@@ -796,7 +827,7 @@ describe('finance and salary reports on a controlled ledger', () => {
       expect(own.registers.rows.map((row: Json) => row.register).sort()).toEqual(
         [ids.cashA, ids.cardA].sort(),
       )
-      expect(own.income.totals.net).toBe(13_000)
+      expect(own.income.totals.net).toBe(10_000)
       expect(own.certificates.outstanding).toEqual({ count: 1, amount: 30_000 })
 
       const b = await finance('managerB', `from=${P}&to=${P}`)
@@ -821,8 +852,8 @@ describe('finance and salary reports on a controlled ledger', () => {
       expect(admin.status).toBe(200)
       expect(admin.bom).toBe(true)
       expect(admin.text).toContain('Income by location\r\n')
-      expect(admin.text).toContain('Total;430.00;-300.00;0.00;30.00;130.00\r\n')
-      expect(admin.text).toContain('Cash A;A;1280.00;150.00;360.00;1070.00;1070.00\r\n')
+      expect(admin.text).toContain('Total;400.00;-300.00;0.00;100.00\r\n')
+      expect(admin.text).toContain('Cash A;A;1280.00;120.00;360.00;1040.00;1040.00\r\n')
       expect(admin.text).toContain('Profit;-87.50\r\n')
       const manager = await call(
         'manager',

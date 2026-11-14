@@ -30,7 +30,7 @@ CRM для барбершопу:
 | 7 | Послуги на лендингу беруться з колекції `services`, а не з захардкоженого `servicesData.tsx`. |
 | 8 | Ролі `users.roles`: `admin`, `manager`, `barber`, `editor` (лише контент сайту). Барбер-користувач пов'язаний через `barbers.user`. |
 | 9 | Міграція зі старої CRM: зараз лише поля `externalId`/`source`, імпорт — окремим етапом пізніше. |
-| 10 | Зарплата барбера: `% від послуг` + окремий `% від додаткових послуг`. Чайові — 100% барберу. |
+| 10 | Зарплата барбера: `% від послуг` + окремий `% від додаткових послуг` + необов'язкова фіксована місячна ставка (A45). Чайові не обліковуються (A45). |
 | 11 | Графік: тижневий шаблон + винятки на дати. Редагують admin/manager, барбер тільки бачить. |
 | 12 | Один барбер в один день працює лише в одній локації. |
 | 13 | Ціну й тривалість основних і додаткових послуг можна перевизначити для конкретного барбера. |
@@ -51,7 +51,7 @@ CRM для барбершопу:
 | 28 | Сертифікат — спосіб оплати, а не знижка. Дозволене часткове використання із залишком. |
 | 29 | Промокод + сертифікат в одному записі — дозволено. Два промокоди — ні. |
 | 30 | Ручну знижку можуть давати лише admin і manager. |
-| 31 | Чайові — частина оплати, зберігаються окремо, у звітах відносяться до барбера. |
+| 31 | ~~Чайові — частина оплати~~ — скасовано (A45): чайові не обліковуються. |
 | 32 | Оплата розділяється між кількома касами. Повернення коштів (refund) — тільки admin, як сторно. |
 | 33 | Кас «рахунок» на локацію може бути кілька. Інкасації та змін немає — тільки перекази. |
 | 34 | Суми у фінансових операціях не редагуються ніким, виправлення — через сторно (§5.6). |
@@ -235,6 +235,9 @@ CRM для барбершопу:
   - «Заповнити за шаблоном»: `POST /crm/schedule/fill { barbers[], dateFrom, dateTo (≤ 62 дні), keepAbsences = true }` — видаляє ручні зміни періоду (винятки, що виходять за межі періоду, обрізаються), щоб усі дні знову йшли за шаблоном; відпустки й лікарняні за замовчуванням зберігаються. У діалозі за замовчуванням — показаний місяць від сьогодні.
   - Тижневий шаблон редагується в модалці табеля (7 днів: працює/ні, години, перерви, локація, «скопіювати на всі робочі дні») і зберігається стандартним `PATCH /api/barbers/:id` (поле `weeklySchedule`, правило `barbers.schedule`: admin і manager локації барбера). Зміна шаблону діє на всі дати без ручних змін, зокрема минулі й уже «заповнені» — «заповнення» не фіксує місяць.
   - Права днів — як у `schedule-exceptions` (admin; manager — барбери своїх локацій); endpoint перевіряє policy, а записи йдуть через Local API з `overrideAccess: false`. Одна транзакція на запит (`runBookingTransaction`, повтори при WriteConflict, вичерпання → `SCHEDULE_CONFLICT`), редагування одного барбера серіалізуються документом `booking-locks { barber, date: 'schedule' }`. Перевірку перетину винятків у колекції (читає закомічені дані поза транзакцією) у межах такого запиту вимкнено context-флагом `scheduleEdit`: план сам тримає винятки без перетинів, бо рахується з даних, прочитаних у транзакції під замком. Записи на змінені дні не скасовуються; модалка попереджає про їх кількість.
+- A45. Чайові прибрано повністю (не обліковуються), додано фіксовану ставку барбера. Скасовує частину рішень 10 і 31 про чайові та згадки чайових в A13, A33, A35, A38.
+  - Чайові: немає поля `tipAmount` у `transactions` і `appointments`, поля «Чайові» у вкладці «Оплата», коду `PAYMENT_TIP_INVALID`, колонок у фінансовому звіті, зарплаті й CSV. Усі гроші оплати йдуть у рахунок запису: Σ`entries` + `certificateAmount` = сума в рахунок запису; більше, ніж до сплати, — `PAYMENT_EXCEEDS_DUE`. Поле `tip` у тілі запиту оплати ігнорується. Міграції немає: до запуску в базі немає реальних оплат. Старі локальні оплати з чайовими (seed) після оновлення рахуються як гроші в рахунок запису — `pnpm seed:reset`.
+  - Фіксована ставка: `barbers.fixedSalary` (бані, необов'язкова, вкладка «Зарплата»; права як у `%`: admin пише, барбер читає свою). Ставка місячна. У звіті «Зарплата» за період — для кожного місяця `ставка × днів періоду в місяці / днів у місяці`, округлення half-up помісячно; повний місяць дає рівно ставку. Рядок `fixedSalary` додається до `total`; барбер зі ставкою має рядок і без оплат. Ставка нараховується лише активним барберам, що підходять під фільтр звіту: барбер — `barber`, локація — одна з `barbers.locations` (у кожній локації окремо). Береться поточна ставка з картки, без історії змін. Прибуток адміна (касовий метод) враховує ставки.
 
 ## 2. Загальні правила
 
@@ -322,7 +325,7 @@ CRM для барбершопу:
 - `user` rel → `users` (uniq, nullable).
 - `locations!` rel → `locations` hasMany.
 - `services` rel → `services` hasMany — що надає барбер.
-- `commissionServicesPercent` (0–100), `commissionExtrasPercent` (0–100).
+- `commissionServicesPercent` (0–100), `commissionExtrasPercent` (0–100), `fixedSalary` (бані на місяць, необов'язкова, A45).
 - `weeklySchedule` array (≤ 7 рядків, унікальний `weekday`): `weekday!` 1–7 (пн = 1), `location!`, `start!` HH:mm, `end!` HH:mm, `breaks` array {`start`, `end`}.
   Валідація: `start < end`, перерви всередині робочого інтервалу й не перетинаються, `location ∈ locations`.
 
@@ -357,7 +360,7 @@ CRM для барбершопу:
 - `lines` (snapshot): array {`itemType` service|extra, `item` (id), `price`, `durationMinutes`}.
 - `subtotal`, `promoCode` rel, `promoDiscount`, `manualDiscount`, `manualDiscountReason`, `total` — усі readOnly, рахуються сервером.
 - `plannedCertificate` rel → `gift-certificates` (код, введений онлайн; списання відбувається при оплаті).
-- `paidAmount`, `certificateAmount`, `tipAmount` — readOnly, оновлюються з ledger.
+- `paidAmount`, `certificateAmount` — readOnly, оновлюються з ledger.
 - `paymentStatus` (похідне): `unpaid | partial | paid | refunded`.
 - `status!`: див. §5.1. Також `statusChangedAt`, `cancelledAt`, `cancelReason`.
 - `source!`: `online | staff | import`. `createdBy` rel → `users`.
@@ -380,10 +383,10 @@ CRM для барбершопу:
 - `type!`: `appointment_payment | certificate_sale | expense | transfer | refund | reversal | adjustment`.
 - `occurredAt!` idx, `location!` idx, `author!` (auto з `req.user`), `comment`.
 - `entries!` array {`cashRegister!`, `amount!` (бані зі знаком: + надходження, − списання)}.
-- Залежно від типу: `appointment`, `barber` (snapshot), `certificate` + `certificateAmount` (оплата сертифікатом, не гроші каси), `tipAmount`, `expenseCategory`, `reverses` rel → `transactions` (для `refund`/`reversal`).
+- Залежно від типу: `appointment`, `barber` (snapshot), `certificate` + `certificateAmount` (оплата сертифікатом, не гроші каси), `expenseCategory`, `reverses` rel → `transactions` (для `refund`/`reversal`).
 - `reversed` (bool, readOnly).
 - Інваріанти за типами:
-  - `appointment_payment`: усі `entries > 0`; Σ`entries` + `certificateAmount` = сума в рахунок запису + `tipAmount`.
+  - `appointment_payment`: усі `entries > 0`; Σ`entries` + `certificateAmount` = сума в рахунок запису (чайових немає, A45).
   - `certificate_sale`: Σ`entries` = номінал сертифіката, `entries > 0`.
   - `expense`: рівно одна entry, `amount < 0`, `expenseCategory!`.
   - `transfer`: дві entries, різні каси, сума = 0.
@@ -474,9 +477,9 @@ scheduled ──► completed ──► paid
 - Онлайн: код лише перевіряється, а сума «до сплати» показується після сертифіката. Фактичне списання відбувається при оплаті в салоні.
 
 ### 5.8 Оплата запису
-- Дія «Оплатити» створює `appointment_payment`: рядки «каса + сума», опційно сертифікат і чайові.
-- Сума в рахунок запису = Σ`entries` + `certificateAmount` − `tipAmount`, і вона не може перевищувати `total − paidAmount`.
-- Після оплати оновлюються `paidAmount`, `certificateAmount`, `tipAmount` і `paymentStatus` запису; якщо оплачено повністю, статус стає `paid`. Пишеться лог.
+- Дія «Оплатити» створює `appointment_payment`: рядки «каса + сума», опційно сертифікат.
+- Сума в рахунок запису = Σ`entries` + `certificateAmount`, і вона не може перевищувати `total − paidAmount`.
+- Після оплати оновлюються `paidAmount`, `certificateAmount` і `paymentStatus` запису; якщо оплачено повністю, статус стає `paid`. Пишеться лог.
 - Refund (admin): створює `refund` з дзеркальними entries, повертає сертифікат, перераховує `paidAmount`, статус `paid → completed`.
 
 ### 5.9 Захист від подвійного бронювання
@@ -515,7 +518,7 @@ scheduled ──► completed ──► paid
 - `GET /crm/slots` — як публічний, але в режимі персоналу (§5.3 п.7).
 - `POST /crm/appointments`, `PATCH /crm/appointments/:id` (зміна складу, перенесення, ручна знижка, промокод).
 - `POST /crm/appointments/:id/status` {status, reason?}.
-- `POST /crm/appointments/:id/payments` {entries, certificateCode?, certificateAmount?, tip?}.
+- `POST /crm/appointments/:id/payments` {entries, certificateCode?, certificateAmount?}.
 - `POST /crm/transactions/:id/refund` (admin), `POST /crm/transactions/:id/reverse`.
 - `POST /crm/certificates/sell` {nominal, entries, buyer?}.
 - `GET /crm/clients/lookup?phone=` — тільки admin/manager.
@@ -536,7 +539,7 @@ scheduled ──► completed ──► paid
 - **Витрати**: за категоріями та касами.
 - **Залишки кас**: поточний баланс + рух за період (на початок, прихід, розхід, на кінець).
 - **Промокоди та сертифікати**: використання промокодів (кількість, сума знижок); сертифікати — продано, використано, залишок, прострочено.
-- **Зарплата** (admin; барбер — свою): для кожного барбера `Σ нетто послуг × % + Σ нетто додаткових послуг × % + чайові` за оплатами в періоді (A13). Refund віднімається в періоді, коли його проведено.
+- **Зарплата** (admin; барбер — свою): для кожного барбера `Σ нетто послуг × % + Σ нетто додаткових послуг × %` за оплатами в періоді (A13) + фіксована ставка пропорційно дням періоду (A45). Refund віднімається в періоді, коли його проведено.
 - Експорт у CSV — для всіх звітів.
 
 ## 9. Нефункціональні вимоги

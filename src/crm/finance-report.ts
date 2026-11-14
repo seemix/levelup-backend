@@ -29,7 +29,6 @@ export type ReportOperation = {
   appointment: string | null
   certificate: string | null
   certificateAmount: number
-  tipAmount: number
   expenseCategory: string | null
   reverses: string | null
 }
@@ -77,13 +76,11 @@ export type FinanceInput = {
 }
 
 export type IncomeTotals = {
-  /** Money of appointment payments (tips included). */
+  /** Money of appointment payments. */
   payments: number
   /** Money returned by refunds (≤ 0). */
   refunds: number
   certificateSales: number
-  /** Part of the payments that are tips (net of refunds). */
-  tips: number
   net: number
 }
 
@@ -97,8 +94,7 @@ export type BarberIncomeRow = {
   net: number
   /** Paid with certificates (net of refunds). */
   certificate: number
-  tips: number
-  /** Paid to appointments: money + certificate − tips. */
+  /** Paid to appointments: money + certificate. */
   revenue: number
 }
 
@@ -157,7 +153,6 @@ const emptyIncome = (): IncomeTotals => ({
   payments: 0,
   refunds: 0,
   certificateSales: 0,
-  tips: 0,
   net: 0,
 })
 
@@ -176,7 +171,6 @@ const toSalaryOperation = (operation: ReportOperation): SalaryOperation => ({
   appointment: operation.appointment,
   cash: sumBani(operation.entries.map((entry) => entry.amount)),
   certificateAmount: operation.certificateAmount,
-  tipAmount: operation.tipAmount,
 })
 
 const isPaymentType = (type: TransactionType) => type === 'appointment_payment' || type === 'refund'
@@ -234,11 +228,8 @@ export const buildFinanceReport = (input: FinanceInput): FinanceReport => {
       toSalaryOperation(operation),
       operation.appointment ? input.appointments.get(operation.appointment) : null,
     )
-    totals.tips += parts.tips
-    location.tips += parts.tips
     revenueTotal += parts.applied
     revenueCertificate += parts.certificate
-    // Tips of a split payment are not attributed to a register.
 
     if (operation.barber) {
       const row = byBarber.get(operation.barber) ?? {
@@ -247,14 +238,12 @@ export const buildFinanceReport = (input: FinanceInput): FinanceReport => {
         refunds: 0,
         net: 0,
         certificate: 0,
-        tips: 0,
         revenue: 0,
       }
       if (operation.type === 'refund') row.refunds += cash
       else row.payments += cash
       row.net += cash
       row.certificate += parts.certificate
-      row.tips += parts.tips
       row.revenue += parts.applied
       byBarber.set(operation.barber, row)
     }
@@ -414,7 +403,7 @@ export const buildFinanceReport = (input: FinanceInput): FinanceReport => {
   }
 }
 
-/** Cash-basis profit (admin only, decision 35): net income − expenses − salaries (tips included). */
+/** Cash-basis profit (admin only, decision 35): net income − expenses − salaries (fixed included). */
 export const cashProfit = (
   report: Pick<FinanceReport, 'income' | 'expenses'>,
   salaryTotal: number,
