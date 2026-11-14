@@ -207,6 +207,10 @@ export const loadCalendar = async (
   }))
 
   // Week view shows one barber: the requested one, the user's own, or the only one of the location.
+  // Barbers of the location for the week-view selector (before the view narrows the list).
+  const barberOptions = barbers
+    .filter((row) => row.active !== false || row.id === query.barberId)
+    .map((row) => ({ id: row.id, name: row.name ?? '', own: row.id === staff.barberId }))
   let barberId = query.barberId
   if (!barberId && query.view === 'week') {
     const own = barbers.find((row) => row.id === staff.barberId)
@@ -349,6 +353,7 @@ export const loadCalendar = async (
     locations: locations
       .filter((item) => item.active || item.id === location.id)
       .map((item) => ({ id: item.id, name: item.name ?? '' })),
+    barbers: barberOptions,
     slotStepMinutes: settings.slotStepMinutes ?? DEFAULT_SLOT_SETTINGS.slotStepMinutes,
     columns,
   }

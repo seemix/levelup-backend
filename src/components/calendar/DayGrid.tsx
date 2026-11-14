@@ -22,14 +22,16 @@ import {
   nowLinePosition,
   offHoursSegments,
   visibleRange,
+  type IsoInterval,
 } from '@/crm/calendar-layout'
 import { slotStartAt } from '@/crm/appointment-form'
 import { snapDeltaMinutes, snapDeltaPx } from '@/crm/calendar-move'
 import { barberColorAt } from '@/crm/colors'
-import { toLocalTime } from '@/crm/time'
+import { toLocalDate, toLocalTime } from '@/crm/time'
 
 import { AppointmentBlock } from './AppointmentBlock'
 import { ColumnHeader } from './ColumnHeader'
+import type { ExceptionKind } from './ScheduleExceptionModal'
 import type { CalendarAppointment, CalendarData } from './types'
 import { useCrmT } from './useCrmT'
 
@@ -44,6 +46,27 @@ const TOUCH_TOLERANCE_PX = 8
 const MOUSE_DISTANCE_PX = 6
 
 type Column = CalendarData['columns'][number]
+
+/** Droppable id of a column: day view — one per barber, week view — one per day of the barber. */
+const columnKey = (column: Column) => `${column.barber.id}|${column.date}`
+
+/** Visible range of the grid: the union of the ranges of the columns (each in its own date). */
+const gridRange = (columns: Column[], fallbackDate: string) => {
+  const ranges = columns
+    .map((column) => {
+      const intervals: IsoInterval[] = [
+        ...column.intervals,
+        ...column.appointments.map((item) => ({ start: item.start, end: item.end })),
+      ]
+      return intervals.length === 0 ? null : visibleRange(column.date, intervals)
+    })
+    .filter((range): range is { from: number; to: number } => range !== null)
+  if (ranges.length === 0) return visibleRange(fallbackDate, [])
+  return {
+    from: Math.min(...ranges.map((range) => range.from)),
+    to: Math.max(...ranges.map((range) => range.to)),
+  }
+}
 
 /** A column is a drop target; a barber may only drop into their own column (server re-checks). */
 const DropColumn = ({
@@ -82,8 +105,11 @@ type Props = {
   canMove: (appointment: CalendarAppointment, column: Column) => boolean
   /** May the user drop into this column? */
   canDropInto: (column: Column) => boolean
-  /** Drag finished: appointment `id` goes to `barberId`, shifted by `deltaMinutes`. */
-  onMove: (id: string, barberId: string, deltaMinutes: number) => void
+  /** Drag finished: appointment `id` goes to `barberId` and the local `date`, shifted by `deltaMinutes`. */
+  onMove: (id: string, barberId: string, date: string, deltaMinutes: number) => void
+  /** Admin/manager: may add a schedule exception to this column (menu in the header)? */
+  canSchedule: boolean
+  onSchedule: (column: Column, kind: ExceptionKind) => void
 }
 
 export const DayGrid = ({
@@ -95,6 +121,8 @@ export const DayGrid = ({
   canMove,
   canDropInto,
   onMove,
+  canSchedule,
+  onSchedule,
 }: Props) => {
   const t = useCrmT()
   const [dragging, setDragging] = useState<{
@@ -114,25 +142,23 @@ export const DayGrid = ({
     return () => clearInterval(timer)
   }, [])
 
-  const { date, columns } = data
+  const { columns } = data
+  const week = data.view === 'week'
+  // Rows and labels follow the first column's date (they differ only on DST days of a week).
+  const date = columns[0]?.date ?? data.date
+  const today = toLocalDate(now)
+  // Colour follows the barber, not the column (week view has seven columns of one barber).
+  const barberIds = useMemo(() => [...new Set(columns.map((item) => item.barber.id))], [columns])
+  const colorOf = (column: Column) =>
+    column.barber.color ?? barberColorAt(barberIds.indexOf(column.barber.id))
   const step = data.slotStepMinutes
-  const range = useMemo(
-    () =>
-      visibleRange(
-        date,
-        columns.flatMap((column) => [
-          ...column.intervals,
-          ...column.appointments.map((item) => ({ start: item.start, end: item.end })),
-        ]),
-      ),
-    [date, columns],
-  )
+  const range = useMemo(() => gridRange(columns, date), [date, columns])
   const hours = useMemo(
     () => gridRows(date, range.from, range.to, 60).filter((row) => row.hour),
     [date, range],
   )
   const height = (range.to - range.from) * PX_PER_MINUTE
-  const nowTop = nowLinePosition(date, now, range, PX_PER_MINUTE)
+  const nowTop = week ? null : nowLinePosition(date, now, range, PX_PER_MINUTE)
 
   // The preview snaps to the 15-minute grid (horizontal movement is free to reach other columns).
   const snap: Modifier = ({ transform }) => ({
@@ -141,21 +167,25 @@ export const DayGrid = ({
   })
   const onDragStart = (event: DragStartEvent) => {
     const id = String(event.active.id)
-    for (const [index, column] of columns.entries()) {
+    for (const column of columns) {
       const appointment = column.appointments.find((item) => 'id' in item && item.id === id)
-      if (appointment)
-        setDragging({ id, appointment, color: column.barber.color ?? barberColorAt(index) })
+      if (appointment) setDragging({ id, appointment, color: colorOf(column) })
     }
   }
   const onDragEnd = (event: DragEndEvent) => {
     setDragging(null)
     if (!event.over) return
+    const [barberId, targetDate] = String(event.over.id).split('|')
     onMove(
       String(event.active.id),
-      String(event.over.id),
+      barberId,
+      targetDate,
       snapDeltaMinutes(event.delta.y, PX_PER_MINUTE, step),
     )
   }
+
+  const columnNow = (columnDate: string) =>
+    columnDate === today ? nowLinePosition(columnDate, now, range, PX_PER_MINUTE) : null
 
   const style = {
     '--calendar-columns': columns.length,
@@ -177,7 +207,14 @@ export const DayGrid = ({
         <div className="calendar-grid__head">
           <div className="calendar-grid__corner" />
           {columns.map((column) => (
-            <ColumnHeader key={`${column.barber.id}-${column.date}`} column={column} />
+            <ColumnHeader
+              key={columnKey(column)}
+              column={column}
+              mode={week ? 'week' : 'day'}
+              today={column.date === today}
+              canSchedule={canSchedule}
+              onSchedule={(kind) => onSchedule(column, kind)}
+            />
           ))}
         </div>
         <div className="calendar-grid__body">
@@ -197,12 +234,18 @@ export const DayGrid = ({
               </span>
             )}
           </div>
-          {columns.map((column, index) => {
-            const color = column.barber.color ?? barberColorAt(index)
+          {columns.map((column) => {
+            const color = colorOf(column)
             const items = column.appointments
               .map((appointment) => ({
                 appointment,
-                position: blockPosition(date, appointment, range, PX_PER_MINUTE, MIN_BLOCK_HEIGHT),
+                position: blockPosition(
+                  column.date,
+                  appointment,
+                  range,
+                  PX_PER_MINUTE,
+                  MIN_BLOCK_HEIGHT,
+                ),
               }))
               .filter(
                 (item): item is typeof item & { position: NonNullable<typeof item.position> } =>
@@ -210,14 +253,14 @@ export const DayGrid = ({
               )
             const lanes = assignLanes(
               items.map(({ appointment }) => ({
-                start: minutesFromDayStart(date, appointment.start),
-                end: minutesFromDayStart(date, appointment.end),
+                start: minutesFromDayStart(column.date, appointment.start),
+                end: minutesFromDayStart(column.date, appointment.end),
               })),
             )
             return (
               <DropColumn
-                key={`${column.barber.id}-${column.date}`}
-                id={column.barber.id}
+                key={columnKey(column)}
+                id={columnKey(column)}
                 disabled={!canDropInto(column)}
                 className={`calendar-grid__column${column.barber.own ? ' calendar-grid__column--own' : ''}${canCreate(column) ? ' calendar-grid__column--bookable' : ''}`}
                 onClick={(event) => {
@@ -230,21 +273,29 @@ export const DayGrid = ({
                   const y = event.clientY - event.currentTarget.getBoundingClientRect().top
                   onCreate(
                     column.barber.id,
-                    slotStartAt(date, range.from + y / PX_PER_MINUTE, step),
+                    slotStartAt(column.date, range.from + y / PX_PER_MINUTE, step),
                   )
                 }}
               >
-                {offHoursSegments(date, column.intervals, range, PX_PER_MINUTE).map((segment) => (
-                  <div
-                    key={segment.top}
-                    className="calendar-grid__off"
-                    style={{ top: segment.top, height: segment.height }}
-                  />
-                ))}
+                {offHoursSegments(column.date, column.intervals, range, PX_PER_MINUTE).map(
+                  (segment) => (
+                    <div
+                      key={segment.top}
+                      className="calendar-grid__off"
+                      style={{ top: segment.top, height: segment.height }}
+                    />
+                  ),
+                )}
                 {column.off && (
                   <span className="calendar-grid__off-label">
                     {t(`calendar.off.${column.off}`)}
                   </span>
+                )}
+                {week && columnNow(column.date) !== null && (
+                  <div
+                    className="calendar-grid__now calendar-grid__now--column"
+                    style={{ top: columnNow(column.date) ?? 0 }}
+                  />
                 )}
                 {items.map(({ appointment, position }, itemIndex) => (
                   <AppointmentBlock

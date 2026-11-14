@@ -234,3 +234,9 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "comment": "Client unhappy" }
+
+### Schedule exception preview (stage 20): scheduled appointments of the barber in the date range,
+### shown as a warning before a day off / vacation / custom hours is created from the calendar.
+### → { count, appointments: [{ id, start }] }; admin and the manager of the barber, otherwise 403
+GET {{api}}/crm/schedule-exceptions/preview?barber={{barber}}&dateFrom=2026-12-14&dateTo=2026-12-20
+Authorization: Bearer {{token}}

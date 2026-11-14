@@ -10,6 +10,8 @@ export type CalendarData = {
   to: string
   location: string
   locations: { id: string; name: string }[]
+  /** Barbers of the location (week-view selector). */
+  barbers: { id: string; name: string; own: boolean }[]
   slotStepMinutes: number
   columns: CalendarColumn[]
 }

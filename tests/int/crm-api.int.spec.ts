@@ -294,6 +294,9 @@ describe('CRM API', () => {
       expect(json.columns.every((column: Json) => column.barber.id === ids.b2)).toBe(true)
       expect(json.columns[2]).toMatchObject({ date: '2026-12-16', off: 'day_off', intervals: [] })
       expect(json.columns[0].appointments).toHaveLength(2)
+      // The selector of the week view: barbers of the location, in every view.
+      expect(json.barbers.map((item: Json) => item.id)).toEqual([ids.b1, ids.b2])
+      expect(json.barbers.find((item: Json) => item.id === ids.b2).own).toBe(true)
 
       // A barber looking at a colleague's week sees only busy time.
       const colleague = await calendar('barber2', `&view=week&barber=${ids.b1}`)
@@ -739,6 +742,74 @@ describe('CRM API', () => {
       expect((await call('manager', 'GET', `/crm/appointments/${ids.a1}`)).status).toBe(200)
       expect((await call('managerB', 'GET', `/crm/appointments/${ids.a1}`)).status).toBe(404)
       expect((await call('admin', 'GET', '/crm/appointments/not-an-id')).status).toBe(404)
+    })
+  })
+
+  describe('GET /crm/schedule-exceptions/preview', () => {
+    const preview = (who: Who, barber: string, from = DAY, to = DAY) =>
+      call(
+        who,
+        'GET',
+        `/crm/schedule-exceptions/preview?barber=${barber}&dateFrom=${from}&dateTo=${to}`,
+      )
+
+    const scheduledCount = async (barber: string) =>
+      (
+        await payload.find({
+          collection: 'appointments',
+          where: {
+            and: [
+              { barber: { equals: barber } },
+              { kind: { equals: 'appointment' } },
+              { status: { equals: 'scheduled' } },
+              { startAt: { greater_than_equal: iso('00:00') } },
+              { startAt: { less_than: iso('00:00', '2026-12-15') } },
+            ],
+          },
+          pagination: false,
+          overrideAccess: true,
+        })
+      ).totalDocs
+
+    it('admin and the manager of the location: scheduled appointments of the range, no personal data', async () => {
+      const expected = await scheduledCount(ids.b1)
+      expect(expected).toBeGreaterThan(0)
+      for (const who of ['admin', 'manager'] as const) {
+        const { status, json } = await preview(who, ids.b1)
+        expect(status).toBe(200)
+        expect(json.count).toBe(expected)
+        expect(Object.keys(json.appointments[0]).sort()).toEqual(['id', 'start'])
+      }
+      // A range without appointments.
+      expect((await preview('admin', ids.b1, '2027-03-01', '2027-03-02')).json).toEqual({
+        count: 0,
+        appointments: [],
+      })
+    })
+
+    it('forbidden for barbers and for managers of other locations; validates the query', async () => {
+      expect((await preview('barber1', ids.b1)).status).toBe(403)
+      expect((await preview('managerB', ids.b1)).status).toBe(403)
+      const bad = await preview('admin', ids.b1, '2026-12-20', '2026-12-10')
+      expect(bad.status).toBe(400)
+      expect(bad.json.error.details.fields).toEqual(['dateFrom'])
+      expect((await preview('admin', 'x')).status).toBe(400)
+    })
+
+    it('an exception is created through the collection API with the same rights', async () => {
+      const body = {
+        barber: ids.b1,
+        kind: 'vacation',
+        dateFrom: '2027-01-10',
+        dateTo: '2027-01-12',
+      }
+      expect((await call('barber1', 'POST', '/schedule-exceptions', body)).status).toBe(403)
+      expect((await call('managerB', 'POST', '/schedule-exceptions', body)).status).toBe(403)
+      expect((await call('manager', 'POST', '/schedule-exceptions', body)).status).toBe(201)
+      // An overlapping exception is a validation error with a translated message.
+      const overlap = await call('manager', 'POST', '/schedule-exceptions', body)
+      expect(overlap.status).toBe(400)
+      expect(overlap.json.errors[0].data.errors[0].message).toEqual(expect.any(String))
     })
   })
 

@@ -13,6 +13,7 @@ import {
   refundTransactionEndpoint,
   sellCertificateEndpoint,
 } from './payments'
+import { scheduleExceptionPreviewEndpoint } from './schedule-exceptions'
 import { staffSlotsEndpoint } from './slots'
 import { reverseTransactionEndpoint } from './transactions'
 
@@ -30,4 +31,5 @@ export const crmEndpoints: Endpoint[] = [
   appointmentPaymentEndpoint,
   refundTransactionEndpoint,
   sellCertificateEndpoint,
+  scheduleExceptionPreviewEndpoint,
 ]

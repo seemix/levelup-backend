@@ -61,16 +61,21 @@ export const crmRequest = async <T>(
   const payload = (await response.json().catch(() => null)) as {
     error?: { code?: string; details?: Record<string, unknown> }
     // Standard Payload REST (collections): business rules carry the machine code in `data.code`.
-    errors?: { data?: { code?: string } }[]
+    errors?: { data?: { code?: string; errors?: { message?: string }[] } }[]
   } | null
-  if (!response.ok)
+  if (!response.ok) {
+    // Field validation of a collection: messages are already translated by the server.
+    const messages = (payload?.errors?.[0]?.data?.errors ?? [])
+      .map((item) => item.message)
+      .filter((message): message is string => typeof message === 'string')
     throw new CrmApiError(
       payload?.error?.code ??
         payload?.errors?.[0]?.data?.code ??
         (response.status >= 500 ? 'INTERNAL_ERROR' : 'UNKNOWN'),
       response.status,
-      payload?.error?.details,
+      messages.length > 0 ? { ...payload?.error?.details, messages } : payload?.error?.details,
     )
+  }
   return payload as T
 }
 

@@ -12,7 +12,12 @@ import { AppointmentModal, type ModalTarget } from './AppointmentModal'
 import { CrmApiError, useCrmApi, useErrorText } from './api'
 import { DayGrid } from './DayGrid'
 import { Modal } from './Modal'
-import { Toolbar } from './Toolbar'
+import {
+  ScheduleExceptionModal,
+  type ExceptionKind,
+  type ExceptionTarget,
+} from './ScheduleExceptionModal'
+import { Toolbar, type CalendarMode } from './Toolbar'
 import type { CalendarData } from './types'
 import { useCrmT } from './useCrmT'
 import { WarningsPanel } from './WarningsPanel'
@@ -22,19 +27,27 @@ type MoveState = {
   start: { start: string }
   fromBarber: string
   toBarber: string
+  /** Local dates of the source and the target column (differ only in week view). */
+  dates: { from: string; to: string }
   delta: number
   snapshot: CalendarData
   busy: boolean
   pending: { warnings: CrmWarning[]; total: { from: number; to: number } | null } | null
 }
 
-/** Day calendar: loads `/api/crm/calendar` and keeps date, location and the cancelled toggle. */
+/**
+ * Day (columns = barbers) and week (columns = 7 days of one barber) calendar: loads
+ * `/api/crm/calendar` and keeps view, date, location, barber and the cancelled toggle.
+ */
 export const CalendarClient = () => {
   const { config } = useConfig()
   const { i18n } = useTranslation()
   const t = useCrmT()
   const [date, setDate] = useState(() => todayLocal())
   const [location, setLocation] = useState<string | null>(null)
+  const [view, setView] = useState<CalendarMode>('day')
+  const [barber, setBarber] = useState<string | null>(null)
+  const [scheduleTarget, setScheduleTarget] = useState<ExceptionTarget | null>(null)
   const [cancelled, setCancelled] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [modal, setModal] = useState<ModalTarget | null>(null)
@@ -47,12 +60,21 @@ export const CalendarClient = () => {
     key: '',
     data: null,
   })
-  const key = [date, location ?? '', cancelled ? 1 : 0, i18n.language, attempt].join('|')
+  const key = [
+    view,
+    date,
+    location ?? '',
+    view === 'week' ? (barber ?? '') : '',
+    cancelled ? 1 : 0,
+    i18n.language,
+    attempt,
+  ].join('|')
 
   useEffect(() => {
     const controller = new AbortController()
-    const params = new URLSearchParams({ date, view: 'day', locale: i18n.language })
+    const params = new URLSearchParams({ date, view, locale: i18n.language })
     if (location) params.set('location', location)
+    if (view === 'week' && barber) params.set('barber', barber)
     if (cancelled) params.set('cancelled', '1')
     fetch(`${config.routes.api}/crm/calendar?${params}`, {
       credentials: 'include',
@@ -67,7 +89,7 @@ export const CalendarClient = () => {
         if ((error as { name?: string }).name !== 'AbortError') setResult({ key, data: null })
       })
     return () => controller.abort()
-  }, [key, date, location, cancelled, i18n.language, config.routes.api])
+  }, [key, date, location, view, barber, cancelled, i18n.language, config.routes.api])
 
   const api = useCrmApi()
   const errorText = useErrorText()
@@ -88,7 +110,14 @@ export const CalendarClient = () => {
     try {
       await api(`/crm/appointments/${state.id}`, {
         method: 'PATCH',
-        body: moveBody(state.start, state.fromBarber, state.toBarber, state.delta, confirm),
+        body: moveBody(
+          state.start,
+          state.fromBarber,
+          state.toBarber,
+          state.delta,
+          confirm,
+          state.dates,
+        ),
       })
       setMove(null)
       moveRef.current = false
@@ -106,7 +135,7 @@ export const CalendarClient = () => {
     }
   }
 
-  const onMove = (id: string, toBarber: string, delta: number) => {
+  const onMove = (id: string, toBarber: string, toDate: string, delta: number) => {
     if (!data || moveRef.current) return
     const column = data.columns.find((item) =>
       item.appointments.some((appointment) => 'id' in appointment && appointment.id === id),
@@ -115,7 +144,7 @@ export const CalendarClient = () => {
       (appointment) => 'id' in appointment && appointment.id === id,
     )
     if (!column || !item || !('id' in item)) return
-    const columns = moveInColumns(data.columns, id, toBarber, delta)
+    const columns = moveInColumns(data.columns, id, toBarber, delta, toDate)
     if (!columns) return
     moveRef.current = true
     setMoveError(null)
@@ -126,6 +155,7 @@ export const CalendarClient = () => {
         start: { start: item.start },
         fromBarber: column.barber.id,
         toBarber,
+        dates: { from: column.date, to: toDate },
         delta,
         snapshot: data,
         busy: true,
@@ -135,10 +165,25 @@ export const CalendarClient = () => {
     )
   }
 
+  const changeView = (next: CalendarMode) => {
+    if (next === 'week' && !barber) {
+      // The week shows one barber: the user's own, else the first column of the day.
+      const columns = data?.columns ?? []
+      const column = columns.find((item) => item.barber.own) ?? columns[0]
+      setBarber(column?.barber.id ?? null)
+    }
+    setView(next)
+  }
+
   return (
     <div className="calendar">
       <h1 className="visually-hidden">{t('calendar.title')}</h1>
       <Toolbar
+        view={view}
+        onView={changeView}
+        barbers={data?.barbers ?? []}
+        barber={view === 'week' ? barber : null}
+        onBarber={setBarber}
         date={date}
         locations={data?.locations ?? []}
         location={data?.location ?? location}
@@ -146,17 +191,27 @@ export const CalendarClient = () => {
         onDate={setDate}
         onToday={() => setDate(todayLocal())}
         onShift={(days) => setDate((current) => addLocalDays(current, days))}
-        onLocation={setLocation}
+        onLocation={(id) => {
+          // Barbers differ per location: the week of the previous barber makes no sense here.
+          setLocation(id)
+          setBarber(null)
+          setView('day')
+        }}
         onCancelled={setCancelled}
         onNew={() => {
           const columns = data?.columns ?? []
+          // Week view: today's column when it is shown, else the first day of the week.
           const column =
-            columns.find((item) => item.barber.own) ?? (isManager ? columns[0] : undefined)
+            columns.find((item) => item.barber.own && item.date === todayLocal()) ??
+            columns.find((item) => item.barber.own) ??
+            (isManager
+              ? (columns.find((item) => item.date === todayLocal()) ?? columns[0])
+              : undefined)
           if (!data || !column) return
           setModal({
             type: 'create',
             barberId: column.barber.id,
-            start: defaultNewStart(date, new Date(), data.slotStepMinutes),
+            start: defaultNewStart(column.date, new Date(), data.slotStepMinutes),
           })
         }}
       />
@@ -190,6 +245,8 @@ export const CalendarClient = () => {
           }
           canDropInto={(column) => isManager || column.barber.own}
           onMove={onMove}
+          canSchedule={isManager}
+          onSchedule={(column, kind: ExceptionKind) => setScheduleTarget({ column, kind })}
         />
       )}
       {moveError && (
@@ -226,6 +283,14 @@ export const CalendarClient = () => {
             onConfirm={() => void sendMove(move, true)}
           />
         </Modal>
+      )}
+      {scheduleTarget && data && (
+        <ScheduleExceptionModal
+          target={scheduleTarget}
+          locationId={data.location}
+          onClose={() => setScheduleTarget(null)}
+          onSaved={() => setAttempt((value) => value + 1)}
+        />
       )}
       {modal && data && (
         <AppointmentModal
