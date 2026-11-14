@@ -70,6 +70,25 @@ Authorization: Bearer {{token}}
 GET {{api}}/crm/reports/clients/{{client}}?page=1&locale=ru
 Authorization: Bearer {{token}}
 
+### Finance report (stage 22, A38): admin and manager (own locations). `from`/`to` required local days
+### (≤ 731 days). → { from, to, income { totals, byLocation, byRegister, byBarber }, revenue, expenses,
+### registers { rows, totals }, promo, certificates, profit (admin only, else null), names }
+GET {{api}}/crm/reports/finance?from=2026-11-01&to=2026-11-30&location={{location}}&locale=ru
+Authorization: Bearer {{token}}
+
+### Finance report as CSV (all sections; profit only for admin)
+GET {{api}}/crm/reports/finance?from=2026-11-01&to=2026-11-30&format=csv&locale=ru
+Authorization: Bearer {{token}}
+
+### Salary report (A13, A38): admin — every barber (`barber`, `location` filter); a barber — own only
+### (another `barber` → 403); manager → 403. → { from, to, barber, rows, totals, items, names }
+GET {{api}}/crm/reports/salary?from=2026-11-01&to=2026-11-30&barber={{barber}}&locale=ru
+Authorization: Bearer {{token}}
+
+### Salary report as CSV
+GET {{api}}/crm/reports/salary?from=2026-11-01&to=2026-11-30&format=csv&locale=ru
+Authorization: Bearer {{token}}
+
 ### Create an appointment (client: null = "without a name"; a barber may omit `barber` — their own)
 POST {{api}}/crm/appointments
 Authorization: Bearer {{token}}

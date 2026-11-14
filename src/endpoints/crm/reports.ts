@@ -44,7 +44,7 @@ export type ClientReportQuery = {
   csv: boolean
 }
 
-const positiveInt = (value: string | null, fallback: number, max: number): number | null => {
+export const positiveInt = (value: string | null, fallback: number, max: number): number | null => {
   if (value === null || value === '') return fallback
   if (!/^\d{1,6}$/.test(value)) return null
   const number = Number(value)
@@ -97,7 +97,7 @@ export const parseClientReportQuery = (params: URLSearchParams): ClientReportQue
 }
 
 /** Allowed locations: `null` = all (admin); a manager is limited to their own, and a foreign one is 403. */
-const allowedLocations = async (
+export const allowedLocations = async (
   req: PayloadRequest,
   staff: StaffContext,
   requested: string | null,
@@ -125,7 +125,7 @@ const csvLabels = (locale: Locale): CsvLabels => {
   }
 }
 
-const dayBounds = (from: string | null, to: string | null) => ({
+export const dayBounds = (from: string | null, to: string | null) => ({
   from: from ? localDayRange(from).start : null,
   // `to` is an inclusive day: the range ends at the start of the next one.
   to: to ? localDayRange(to).end : null,

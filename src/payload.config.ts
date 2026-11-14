@@ -85,6 +85,16 @@ export default buildConfig({
           path: '/reports/clients',
           exact: true,
         },
+        reportsFinance: {
+          Component: '@/components/reports/FinanceReportPage#FinanceReportPage',
+          path: '/reports/finance',
+          exact: true,
+        },
+        reportsSalary: {
+          Component: '@/components/reports/SalaryReportPage#SalaryReportPage',
+          path: '/reports/salary',
+          exact: true,
+        },
         cash: {
           Component: '@/components/finance/FinancePage#FinancePage',
           path: '/cash',

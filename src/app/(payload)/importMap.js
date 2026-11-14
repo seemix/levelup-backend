@@ -32,6 +32,8 @@ import { FinanceNavLink as FinanceNavLink_b9ffd84a6ac6372a49b70ded4ded8bdb } fro
 import { ReportsNavLink as ReportsNavLink_5b79dae4bfc36f4984cf0511e115caea } from '@/components/reports/ReportsNavLink'
 import { CalendarPage as CalendarPage_cea1f112ed6921b40f70b68a5b63e5f5 } from '@/components/calendar/CalendarPage'
 import { ClientsReportPage as ClientsReportPage_b94b8e50cae4107f9dabc268d7b27bef } from '@/components/reports/ClientsReportPage'
+import { FinanceReportPage as FinanceReportPage_941a0805cd32f2ea837bae2b14f28099 } from '@/components/reports/FinanceReportPage'
+import { SalaryReportPage as SalaryReportPage_de09db7acbd029f63b5d8ef125ab2505 } from '@/components/reports/SalaryReportPage'
 import { FinancePage as FinancePage_81f2c27e38b3ce5c2aac4f0c4d0b5eb1 } from '@/components/finance/FinancePage'
 import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } from '@payloadcms/next/rsc'
 
@@ -71,6 +73,8 @@ export const importMap = {
   "@/components/reports/ReportsNavLink#ReportsNavLink": ReportsNavLink_5b79dae4bfc36f4984cf0511e115caea,
   "@/components/calendar/CalendarPage#CalendarPage": CalendarPage_cea1f112ed6921b40f70b68a5b63e5f5,
   "@/components/reports/ClientsReportPage#ClientsReportPage": ClientsReportPage_b94b8e50cae4107f9dabc268d7b27bef,
+  "@/components/reports/FinanceReportPage#FinanceReportPage": FinanceReportPage_941a0805cd32f2ea837bae2b14f28099,
+  "@/components/reports/SalaryReportPage#SalaryReportPage": SalaryReportPage_de09db7acbd029f63b5d8ef125ab2505,
   "@/components/finance/FinancePage#FinancePage": FinancePage_81f2c27e38b3ce5c2aac4f0c4d0b5eb1,
   "@payloadcms/next/rsc#CollectionCards": CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1
 }

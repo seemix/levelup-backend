@@ -125,3 +125,25 @@
   display: flex;
   gap: 8px;
 }
+
+// Finance and salary reports (spec A38).
+.reports__sections {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 1.5);
+}
+
+.reports__section {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.5);
+}
+
+.reports__total td {
+  font-weight: 600;
+  border-top: 1px solid var(--theme-elevation-300);
+}
+
+.reports__negative {
+  color: var(--theme-error-500);
+}

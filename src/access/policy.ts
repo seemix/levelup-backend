@@ -63,6 +63,12 @@ export type Resource =
   | 'finance'
   /** Client report and the visit history in the client card (§3.1, §8): admin and manager (own locations). */
   | 'reports.clients'
+  /** Finance report (§8, decision 35): admin and manager (own locations, without salaries and profit). */
+  | 'reports.finance'
+  /** Profit and salaries inside the finance report: admin only (decision 35). */
+  | 'reports.profit'
+  /** Salary report (§8, §3.1): admin — every barber; a barber — only their own (cut by the endpoint). */
+  | 'reports.salary'
   /** Cash registers (§4.13): admin CRUD; manager reads own locations; barber reads all (no balance). */
   | 'cash-registers'
   /** `cash-registers.balance`: admin and manager read; nobody writes it (ledger hook, `$inc`). */
@@ -360,6 +366,16 @@ const rules: Record<Resource, Rule> = {
   // Rows are cut by the manager's locations in the endpoint (raw aggregation, no collection access).
   'reports.clients': (user, action) =>
     action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
+
+  // The endpoint cuts a manager to their locations (raw ledger reads, no collection access).
+  'reports.finance': (user, action) =>
+    action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
+
+  'reports.profit': (user, action) => action === 'read' && isAdmin(user),
+
+  // A barber reads only the salary of their own barber (forced by the endpoint); a manager — nothing.
+  'reports.salary': (user, action) =>
+    action === 'read' && (isAdmin(user) || hasRole(user, 'barber')),
 
   'cash-registers': (user, action, doc) => {
     if (action !== 'read') return isAdmin(user)
