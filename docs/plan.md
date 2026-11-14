@@ -34,7 +34,7 @@
 **Перевірка:** `tests/int/access.int.spec.ts` розширено; вручну — вхід під кожною роллю.
 
 ## Етап 2. Каталог послуг — sonnet
-- [x] `service-categories`, `services`, `extras` (localized, access за матрицею, група «CRM / Каталог»).
+- [x] `service-categories`, `services`, `extras` (localized, access за матрицею, група «Каталог»).
 - [x] Валідації (тривалість кратна 5, ціна ≥ 0), відображення ціни в MDL в адмінці (кастомна Cell/Field для бань).
 - [x] Тести доступу (анонім читає лише активні).
 

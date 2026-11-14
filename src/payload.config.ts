@@ -62,6 +62,18 @@ export default buildConfig({
   },
   admin: {
     user: Users.slug,
+    // Browser-tab metadata of the admin panel. The favicon is the one used by the landing page
+    // (copied from levelup-front into /public); the admin is not for search engines.
+    meta: {
+      titleSuffix: ' | LevelUp',
+      defaultOGImageType: 'off',
+      description: 'LevelUp Barbershop CRM',
+      robots: 'noindex, nofollow',
+      icons: [
+        { rel: 'icon', type: 'image/x-icon', url: '/favicon.ico', sizes: '32x32' },
+        { rel: 'shortcut icon', type: 'image/x-icon', url: '/favicon.ico' },
+      ],
+    },
     importMap: {
       baseDir: path.resolve(dirname),
     },
@@ -70,12 +82,17 @@ export default buildConfig({
         Logo: '@/app/(payload)/components/Logo',
         Icon: '@/app/(payload)/components/Logo',
       },
+      // The calendar is the main screen: its link goes first, above the collection groups.
+      beforeNavLinks: ['@/components/calendar/CalendarNavLink#CalendarNavLink'],
       afterNavLinks: [
-        '@/components/calendar/CalendarNavLink#CalendarNavLink',
         '@/components/finance/FinanceNavLink#FinanceNavLink',
         '@/components/reports/ReportsNavLink#ReportsNavLink',
       ],
       views: {
+        // Home page: calendar for staff, default dashboard for editors.
+        dashboard: {
+          Component: '@/components/dashboard/Dashboard#Dashboard',
+        },
         calendar: {
           Component: '@/components/calendar/CalendarPage#CalendarPage',
           path: '/calendar',

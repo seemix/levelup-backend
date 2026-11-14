@@ -1,9 +1,8 @@
 'use client'
 import { useAuth, useConfig } from '@payloadcms/ui'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 
 import { useCrmT } from '../calendar/useCrmT'
+import { adminPrefix, CrmNavLink } from '../nav/CrmNavLink'
 
 const FINANCE_ROLES = ['admin', 'manager']
 
@@ -12,16 +11,13 @@ export const FinanceNavLink = () => {
   const { user } = useAuth()
   const { config } = useConfig()
   const t = useCrmT()
-  const pathname = usePathname()
   const roles = (user as { roles?: string[] } | null)?.roles ?? []
   if (!roles.some((role) => FINANCE_ROLES.includes(role))) return null
-  const href = `${config.routes.admin === '/' ? '' : config.routes.admin}/cash`
   return (
-    <Link
-      className={`calendar-nav-link${pathname === href ? ' calendar-nav-link--active' : ''}`}
-      href={href}
-    >
-      {t('finance.nav')}
-    </Link>
+    <CrmNavLink
+      href={`${adminPrefix(config.routes.admin)}/cash`}
+      id="nav-crm-cash"
+      label={t('finance.nav')}
+    />
   )
 }

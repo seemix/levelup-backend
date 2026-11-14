@@ -3,13 +3,13 @@ import type { CrmTranslations } from './types'
 export const ru: CrmTranslations = {
   groups: {
     content: 'Контент',
-    settings: 'CRM / Настройки',
-    catalog: 'CRM / Каталог',
-    barbers: 'CRM / Барберы',
-    clients: 'CRM / Клиенты',
-    promotions: 'CRM / Акции',
-    appointments: 'CRM / Записи',
-    finance: 'CRM / Финансы',
+    settings: 'Настройки',
+    catalog: 'Каталог',
+    barbers: 'Барберы',
+    clients: 'Клиенты',
+    promotions: 'Акции',
+    appointments: 'Записи',
+    finance: 'Финансы',
   },
   fields: {
     orderDescription: 'Сначала показываются меньшие числа',

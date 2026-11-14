@@ -1,13 +1,13 @@
 export const en = {
   groups: {
     content: 'Content',
-    settings: 'CRM / Settings',
-    catalog: 'CRM / Catalog',
-    barbers: 'CRM / Barbers',
-    clients: 'CRM / Clients',
-    promotions: 'CRM / Promotions',
-    appointments: 'CRM / Appointments',
-    finance: 'CRM / Finance',
+    settings: 'Settings',
+    catalog: 'Catalog',
+    barbers: 'Barbers',
+    clients: 'Clients',
+    promotions: 'Promotions',
+    appointments: 'Appointments',
+    finance: 'Finance',
   },
   fields: {
     orderDescription: 'Lower numbers are shown first',

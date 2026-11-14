@@ -1,27 +1,25 @@
 'use client'
 import { useAuth, useConfig } from '@payloadcms/ui'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 
+import { adminPrefix, CrmNavLink } from '../nav/CrmNavLink'
 import { useCrmT } from './useCrmT'
 
 const STAFF_ROLES = ['admin', 'manager', 'barber']
 
-/** Navigation link to the calendar (shown to staff only). */
+/** Navigation link to the calendar (shown to staff only). The calendar is the admin home page. */
 export const CalendarNavLink = () => {
   const { user } = useAuth()
   const { config } = useConfig()
   const t = useCrmT()
-  const pathname = usePathname()
   const roles = (user as { roles?: string[] } | null)?.roles ?? []
   if (!roles.some((role) => STAFF_ROLES.includes(role))) return null
-  const href = `${config.routes.admin === '/' ? '' : config.routes.admin}/calendar`
+  const admin = adminPrefix(config.routes.admin)
   return (
-    <Link
-      className={`calendar-nav-link${pathname === href ? ' calendar-nav-link--active' : ''}`}
-      href={href}
-    >
-      {t('calendar.nav')}
-    </Link>
+    <CrmNavLink
+      alsoActive={[`${admin}/calendar`]}
+      href={admin || '/'}
+      id="nav-crm-calendar"
+      label={t('calendar.nav')}
+    />
   )
 }

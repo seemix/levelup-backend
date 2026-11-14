@@ -3,13 +3,13 @@ import type { CrmTranslations } from './types'
 export const ro: CrmTranslations = {
   groups: {
     content: 'Conținut',
-    settings: 'CRM / Setări',
-    catalog: 'CRM / Catalog',
-    barbers: 'CRM / Frizeri',
-    clients: 'CRM / Clienți',
-    promotions: 'CRM / Promoții',
-    appointments: 'CRM / Programări',
-    finance: 'CRM / Finanțe',
+    settings: 'Setări',
+    catalog: 'Catalog',
+    barbers: 'Frizeri',
+    clients: 'Clienți',
+    promotions: 'Promoții',
+    appointments: 'Programări',
+    finance: 'Finanțe',
   },
   fields: {
     orderDescription: 'Mai întâi sunt afișate numerele mai mici',
