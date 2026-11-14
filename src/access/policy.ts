@@ -61,6 +61,8 @@ export type Resource =
   | 'calendar'
   /** Finance admin view «Cash registers» (§3.1): admin and manager; a barber pays from the appointment only. */
   | 'finance'
+  /** Client report and the visit history in the client card (§3.1, §8): admin and manager (own locations). */
+  | 'reports.clients'
   /** Cash registers (§4.13): admin CRUD; manager reads own locations; barber reads all (no balance). */
   | 'cash-registers'
   /** `cash-registers.balance`: admin and manager read; nobody writes it (ledger hook, `$inc`). */
@@ -354,6 +356,10 @@ const rules: Record<Resource, Rule> = {
 
   // The finance view; the data are cut by the row rules of the collections (§3.1).
   finance: (user, action) => action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
+
+  // Rows are cut by the manager's locations in the endpoint (raw aggregation, no collection access).
+  'reports.clients': (user, action) =>
+    action === 'read' && (isAdmin(user) || hasRole(user, 'manager')),
 
   'cash-registers': (user, action, doc) => {
     if (action !== 'read') return isAdmin(user)

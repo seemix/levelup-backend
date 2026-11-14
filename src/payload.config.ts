@@ -72,11 +72,17 @@ export default buildConfig({
       afterNavLinks: [
         '@/components/calendar/CalendarNavLink#CalendarNavLink',
         '@/components/finance/FinanceNavLink#FinanceNavLink',
+        '@/components/reports/ReportsNavLink#ReportsNavLink',
       ],
       views: {
         calendar: {
           Component: '@/components/calendar/CalendarPage#CalendarPage',
           path: '/calendar',
+          exact: true,
+        },
+        reportsClients: {
+          Component: '@/components/reports/ClientsReportPage#ClientsReportPage',
+          path: '/reports/clients',
           exact: true,
         },
         cash: {

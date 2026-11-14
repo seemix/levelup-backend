@@ -1,0 +1,127 @@
+// Client report and the client card block (spec A37). Payload CSS variables only: both themes work.
+
+.reports {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base);
+
+  &__toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: calc(var(--base) * 0.5);
+  }
+
+  &__title,
+  &__subtitle {
+    margin: 0;
+  }
+
+  &__subtitle {
+    font-size: var(--font-size-h4, 20px);
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--theme-elevation-600);
+    font-size: var(--font-size-xs);
+  }
+
+  &__filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    align-items: end;
+  }
+
+  &__scroll {
+    overflow-x: auto;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th,
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--theme-elevation-100);
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      color: var(--theme-elevation-600);
+      font-weight: 600;
+    }
+
+    &-num {
+      text-align: right !important;
+    }
+  }
+
+  &__sort {
+    all: unset;
+    cursor: pointer;
+    font-weight: inherit;
+
+    &:focus-visible {
+      outline: 2px solid var(--theme-elevation-800);
+      outline-offset: 2px;
+    }
+  }
+
+  &__badge {
+    margin-left: 6px;
+    color: var(--theme-error-500);
+    font-size: var(--font-size-xs);
+  }
+
+  &__pager {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 0;
+  }
+
+  &__stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    border: 1px solid var(--theme-elevation-150);
+    border-radius: var(--style-radius-m);
+
+    dt {
+      color: var(--theme-elevation-600);
+      font-size: var(--font-size-xs);
+    }
+
+    dd {
+      margin: 0;
+      font-size: var(--font-size-h4, 20px);
+      font-weight: 600;
+    }
+  }
+}
+
+.client-history {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--base) * 0.75);
+  margin-block: var(--base);
+}
+
+.reports__actions {
+  display: flex;
+  gap: 8px;
+}

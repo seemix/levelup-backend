@@ -132,5 +132,11 @@ export const Clients: CollectionConfig = {
       type: 'textarea',
       label: crmLabel('clients.notes'),
     },
+    {
+      // Statistics and visit history (§8, A37): a view-only block, nothing is stored.
+      name: 'visitHistory',
+      type: 'ui',
+      admin: { components: { Field: '@/components/reports/ClientHistory#ClientHistory' } },
+    },
   ],
 }

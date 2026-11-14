@@ -56,6 +56,20 @@ Authorization: Bearer {{token}}
 GET {{api}}/crm/clients/lookup?phone=069100001
 Authorization: Bearer {{token}}
 
+### Client report (A37; admin, manager — own locations): visits (completed|paid), last visit, average check
+### (paid), cancellations, no-show. `from`/`to` — local days; `sort`: name|visits|lastVisit|avgCheck|
+### cancelledByClient|cancelledBySalon|noShows; `order`: asc|desc; `format=csv` — a file (all rows).
+GET {{api}}/crm/reports/clients?from=2026-11-01&to=2026-11-30&location={{location}}&q=069&sort=visits&order=desc&page=1
+Authorization: Bearer {{token}}
+
+### Client report as CSV
+GET {{api}}/crm/reports/clients?format=csv&locale=ru
+Authorization: Bearer {{token}}
+
+### Client card block: statistics + visit history (newest first, 20 per page)
+GET {{api}}/crm/reports/clients/{{client}}?page=1&locale=ru
+Authorization: Bearer {{token}}
+
 ### Create an appointment (client: null = "without a name"; a barber may omit `barber` — their own)
 POST {{api}}/crm/appointments
 Authorization: Bearer {{token}}
