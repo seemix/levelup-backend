@@ -1,14 +1,31 @@
 'use client'
 import { useAuth, useConfig, useTranslation } from '@payloadcms/ui'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-import { formatDateTime } from '@/crm/time'
+import { formatDateTime, toLocalDate } from '@/crm/time'
 
 import { useCrmT } from '../calendar/useCrmT'
+import { adminPrefix } from '../nav/CrmNavLink'
 
 /** Window event: new appointments arrived — an open calendar reloads itself. */
 export const APPOINTMENTS_CREATED_EVENT = 'crm:appointments-created'
+
+/**
+ * Window event (cancelable): open an appointment. A mounted calendar handles it and calls
+ * `preventDefault()`; otherwise the notifier navigates to the calendar with the same URL params.
+ */
+export const OPEN_APPOINTMENT_EVENT = 'crm:open-appointment'
+
+export type OpenAppointmentDetail = { id: string; date: string; location: string | null }
+
+/** URL params of the calendar that open an appointment on load. */
+export const openAppointmentParams = ({ id, date, location }: OpenAppointmentDetail) => {
+  const params = new URLSearchParams({ appointment: id, date })
+  if (location) params.set('location', location)
+  return params
+}
 
 const STAFF_ROLES = ['admin', 'manager', 'barber']
 const POLL_MS = 20_000
@@ -17,7 +34,14 @@ const OVERLAP_MS = 10_000
 const TOAST_MS = 20_000
 const MAX_TOASTS = 5
 
-type Item = { id: string; start: string; client: string; barber: string; source: string | null }
+type Item = {
+  id: string
+  start: string
+  client: string
+  barber: string
+  location: string | null
+  source: string | null
+}
 type Toast = Item & { key: number }
 
 /** Short beep; browsers may block audio before the first click on the page — then it is silent. */
@@ -54,6 +78,7 @@ export const NewAppointmentNotifier = () => {
   const { config } = useConfig()
   const { i18n } = useTranslation()
   const t = useCrmT()
+  const router = useRouter()
   const [toasts, setToasts] = useState<Toast[]>([])
   const cursor = useRef<string | null>(null)
   const seen = useRef(new Set<string>())
@@ -115,12 +140,33 @@ export const NewAppointmentNotifier = () => {
     return () => clearTimeout(timer)
   }, [toasts])
 
+  const dismiss = (key: number) =>
+    setToasts((current) => current.filter((item) => item.key !== key))
+
+  /** Open the appointment: in the mounted calendar, otherwise go to the calendar page. */
+  const open = (toast: Toast) => {
+    dismiss(toast.key)
+    const detail: OpenAppointmentDetail = {
+      id: toast.id,
+      date: toLocalDate(new Date(toast.start)),
+      location: toast.location,
+    }
+    const event = new CustomEvent(OPEN_APPOINTMENT_EVENT, { detail, cancelable: true })
+    if (!window.dispatchEvent(event)) return
+    router.push(`${adminPrefix(config.routes.admin)}/calendar?${openAppointmentParams(detail)}`)
+  }
+
   if (!isStaff || toasts.length === 0) return null
   return createPortal(
     <div className="crm-notifications" role="status" aria-live="polite">
       {toasts.map((toast) => (
         <div className="crm-notifications__toast" key={toast.key}>
-          <div className="crm-notifications__body">
+          <button
+            type="button"
+            className="crm-notifications__body"
+            title={t('notifications.open')}
+            onClick={() => open(toast)}
+          >
             <strong>
               {t('notifications.newAppointment')}
               {toast.source === 'online' ? ` · ${t('notifications.online')}` : ''}
@@ -132,12 +178,13 @@ export const NewAppointmentNotifier = () => {
                 when: formatDateTime(new Date(toast.start), i18n.language),
               })}
             </span>
-          </div>
+          </button>
           <button
             type="button"
             className="crm-notifications__close"
             aria-label={t('notifications.close')}
-            onClick={() => setToasts((current) => current.filter((item) => item.key !== toast.key))}
+            title={t('notifications.close')}
+            onClick={() => dismiss(toast.key)}
           >
             ×
           </button>

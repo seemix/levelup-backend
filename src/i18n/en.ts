@@ -405,6 +405,7 @@ export const en = {
     line: '{{client}} · {{barber}} · {{when}}',
     online: 'Online booking',
     close: 'Close',
+    open: 'Open appointment',
   },
   calendar: {
     title: 'Calendar',

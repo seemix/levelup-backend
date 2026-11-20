@@ -81,6 +81,8 @@ export const newAppointmentsEndpoint = crmEndpoint('get', '/new-appointments', a
         start: new Date(row.startAt).toISOString(),
         client: client ? [client.firstName, client.lastName].filter(Boolean).join(' ') : '',
         barber: barbers.get(relationId(row.barber) ?? '') ?? '',
+        // Where to open it in the calendar (toast click).
+        location: relationId(row.location) ?? null,
         source: row.source ?? null,
       }
     }),

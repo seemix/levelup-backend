@@ -407,6 +407,7 @@ export const ro: CrmTranslations = {
     line: '{{client}} · {{barber}} · {{when}}',
     online: 'Programare online',
     close: 'Închide',
+    open: 'Deschide programarea',
   },
   calendar: {
     title: 'Calendar',

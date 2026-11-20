@@ -1,13 +1,18 @@
 'use client'
 import { useAuth, useConfig, useTranslation } from '@payloadcms/ui'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 import { defaultNewStart } from '@/crm/appointment-form'
 import { moveBody, moveInColumns } from '@/crm/calendar-move'
 import type { CrmWarning } from '@/endpoints/crm/http'
-import { addLocalDays, todayLocal } from '@/crm/time'
+import { addLocalDays, isLocalDate, todayLocal } from '@/crm/time'
 
-import { APPOINTMENTS_CREATED_EVENT } from '../notifications/NewAppointmentNotifier'
+import {
+  APPOINTMENTS_CREATED_EVENT,
+  OPEN_APPOINTMENT_EVENT,
+  type OpenAppointmentDetail,
+} from '../notifications/NewAppointmentNotifier'
 import './calendar.scss'
 import { AppointmentModal, type ModalTarget } from './AppointmentModal'
 import { CrmApiError, useCrmApi, useErrorText } from './api'
@@ -36,6 +41,14 @@ type MoveState = {
   pending: { warnings: CrmWarning[]; total: { from: number; to: number } | null } | null
 }
 
+/** Appointment to open from the URL (`?appointment&date&location`), or `null`. */
+const readOpenParams = (params: URLSearchParams | null): OpenAppointmentDetail | null => {
+  const id = params?.get('appointment')
+  const date = params?.get('date')
+  if (!id || !date || !isLocalDate(date)) return null
+  return { id, date, location: params?.get('location') || null }
+}
+
 /**
  * Day (columns = barbers) and week (columns = 7 days of one barber) calendar: loads
  * `/api/crm/calendar` and keeps view, date, location, barber and the cancelled toggle.
@@ -44,14 +57,42 @@ export const CalendarClient = () => {
   const { config } = useConfig()
   const { i18n } = useTranslation()
   const t = useCrmT()
-  const [date, setDate] = useState(() => todayLocal())
-  const [location, setLocation] = useState<string | null>(null)
+  // `?appointment&date&location` (a click on a new-appointment toast) opens that appointment.
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+  // Read once on mount: later URL changes (dropping the params) must not reopen it.
+  const [linked] = useState(() => readOpenParams(searchParams))
+  const [date, setDate] = useState(() => linked?.date ?? todayLocal())
+  const [location, setLocation] = useState<string | null>(linked?.location ?? null)
   const [view, setView] = useState<CalendarMode>('day')
   const [barber, setBarber] = useState<string | null>(null)
   const [scheduleTarget, setScheduleTarget] = useState<ExceptionTarget | null>(null)
   const [cancelled, setCancelled] = useState(false)
   const [attempt, setAttempt] = useState(0)
-  const [modal, setModal] = useState<ModalTarget | null>(null)
+  const [modal, setModal] = useState<ModalTarget | null>(() =>
+    linked ? { type: 'view', id: linked.id } : null,
+  )
+
+  // The link params did their job: drop them, so a reload does not reopen the appointment.
+  useEffect(() => {
+    if (linked) router.replace(pathname)
+  }, [linked, router, pathname])
+
+  // A toast click while the calendar is open: show the appointment's day and open it here.
+  useEffect(() => {
+    const openAppointment = (event: Event) => {
+      const detail = (event as CustomEvent<OpenAppointmentDetail>).detail
+      event.preventDefault()
+      setView('day')
+      setBarber(null)
+      setDate(detail.date)
+      if (detail.location) setLocation(detail.location)
+      setModal({ type: 'view', id: detail.id })
+    }
+    window.addEventListener(OPEN_APPOINTMENT_EVENT, openAppointment)
+    return () => window.removeEventListener(OPEN_APPOINTMENT_EVENT, openAppointment)
+  }, [])
   const { user } = useAuth()
   const roles = ((user as { roles?: string[] } | null)?.roles ?? []) as string[]
   // Convenience only: the server checks every request (decisions 30, 36, 37).
