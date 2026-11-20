@@ -87,6 +87,25 @@ describe('calendar layout helpers', () => {
     })
   })
 
+  it('frames the range by the shop opening hours, widened only by content outside them (A49)', () => {
+    const shop = { start: '10:00', end: '20:00' }
+    expect(visibleRange(DATE, [], shop)).toEqual({ from: 600, to: 1200 })
+    expect(visibleRange(DATE, [{ start: at('11:00'), end: at('15:00') }], shop)).toEqual({
+      from: 600,
+      to: 1200,
+    })
+    expect(visibleRange(DATE, [{ start: at('08:30'), end: at('21:15') }], shop)).toEqual({
+      from: 480,
+      to: 1320,
+    })
+    expect(visibleRange(DATE, [], { start: '09:30', end: '19:30' })).toEqual({
+      from: 540,
+      to: 1200,
+    })
+    // A closed day (`null`) falls back to the content-based range.
+    expect(visibleRange(DATE, [], null)).toEqual({ from: 540, to: 1200 })
+  })
+
   it('assigns lanes to overlapping blocks', () => {
     expect(
       assignLanes([

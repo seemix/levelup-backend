@@ -76,6 +76,10 @@ export const en = {
     remindersEnabled: 'Client reminders enabled',
     remindersEnabledHint:
       'Appointment reminder email. When off, no reminders are sent, including already scheduled ones.',
+    openingHours: 'Barbershop opening hours',
+    openingHoursRow: 'Day',
+    openingHoursHint:
+      'Clients can book online only within these hours; the calendar shows this range. A weekday without a row is closed. Empty — no limit. Staff can still book outside these hours: add a schedule for the barber at the needed time.',
     slotStepMinutes: 'Slot step, min',
     minLeadMinutes: 'Minimum time before booking, min',
     horizonDays: 'Booking horizon, days',

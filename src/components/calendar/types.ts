@@ -1,3 +1,4 @@
+import type { ShopDay } from '@/crm/schedule'
 import type { CalendarColumn } from '@/endpoints/crm/calendar'
 
 export type { CalendarColumn }
@@ -13,6 +14,8 @@ export type CalendarData = {
   /** Barbers of the location (week-view selector). */
   barbers: { id: string; name: string; own: boolean }[]
   slotStepMinutes: number
+  /** Shop opening hours per date (`null` value — closed); `null` — not set (A49). */
+  shopHours: Record<string, ShopDay | null> | null
   columns: CalendarColumn[]
 }
 

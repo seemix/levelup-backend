@@ -15,7 +15,14 @@
 import type { PayloadRequest } from 'payload'
 
 import { allowed, type PolicyScope, type StaffContext } from '@/access/policy'
-import { relationId, type BarberSchedule, type RelationValue } from '@/crm/schedule'
+import {
+  relationId,
+  shopHoursByDate,
+  type BarberSchedule,
+  type OpeningHoursRow,
+  type RelationValue,
+  type ShopDay,
+} from '@/crm/schedule'
 import {
   isMonth,
   monthRange,
@@ -79,6 +86,8 @@ export type RosterResponse = {
   today: string
   location: string
   locations: { id: string; name: string }[]
+  /** Shop opening hours per date (`null` value — closed); `null` — not set (A49). */
+  shopHours: Record<string, ShopDay | null> | null
   barbers: RosterBarber[]
 }
 
@@ -160,6 +169,14 @@ export const loadRoster = async (
 
   const exceptions = await loadExceptions(req, barberIds, from, to)
 
+  const settings = (await req.payload.findGlobal({
+    slug: 'booking-settings',
+    overrideAccess: true,
+    depth: 0,
+    req,
+    select: { openingHours: true },
+  })) as { openingHours?: OpeningHoursRow[] | null }
+
   const avatarUrl = await loadAvatarUrls(req, barbers)
 
   // Scheduled appointments per barber and day: the warning before a day is changed.
@@ -195,6 +212,7 @@ export const loadRoster = async (
     locations: locations
       .filter((item) => item.active || item.id === location.id)
       .map((item) => ({ id: item.id, name: item.name ?? '' })),
+    shopHours: shopHoursByDate(settings.openingHours, dates),
     barbers: barbers.map((barber) => {
       const own = exceptions.filter((item) => relationId(item.barber) === barber.id)
       const schedule = { weeklySchedule: barber.weeklySchedule, locations: barber.locations }

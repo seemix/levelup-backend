@@ -1,7 +1,22 @@
-import type { ArrayField, TextField } from 'payload'
+import type { ArrayField, SelectField, TextField } from 'payload'
 import { isLocalDate, isLocalTime, timeToMinutes } from '@/crm/time'
-import { validateBreaks, type ScheduleError, type TimeRange } from '@/crm/schedule'
+import { validateBreaks, WEEKDAYS, type ScheduleError, type TimeRange } from '@/crm/schedule'
 import { crmLabel, crmT, type CrmKey } from '@/i18n'
+
+const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+
+/** ISO weekday 1–7 (stored as a string), labelled in the admin language. */
+export const weekdayField = (width?: string): SelectField => ({
+  name: 'weekday',
+  type: 'select',
+  required: true,
+  label: crmLabel('barbers.weekday'),
+  options: WEEKDAYS.map((day) => ({
+    value: String(day),
+    label: crmLabel(`weekdays.${WEEKDAY_KEYS[day - 1]}`),
+  })),
+  admin: width ? { width } : undefined,
+})
 
 /** Machine codes of `src/crm/schedule.ts` → admin messages. */
 export const scheduleErrorKey: Record<ScheduleError, CrmKey> = {
@@ -61,7 +76,9 @@ export const breaksField = (): ArrayField => ({
   },
 })
 
-type TextValidateOptions = Parameters<Extract<TextField['validate'], (...args: never[]) => unknown>>[1]
+type TextValidateOptions = Parameters<
+  Extract<TextField['validate'], (...args: never[]) => unknown>
+>[1]
 
 /**
  * Local date `YYYY-MM-DD` (spec §2.2). `check` runs after the format check

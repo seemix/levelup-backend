@@ -174,6 +174,7 @@ export const loadSlotRange = async (
       horizonDays: true,
       bufferMinutes: true,
       onlineBookingEnabled: true,
+      openingHours: true,
     },
   })
   const stored = settingsDoc as Partial<SlotSettings>
@@ -183,6 +184,7 @@ export const loadSlotRange = async (
     horizonDays: stored.horizonDays ?? DEFAULT_SLOT_SETTINGS.horizonDays,
     bufferMinutes: stored.bufferMinutes ?? DEFAULT_SLOT_SETTINGS.bufferMinutes,
     onlineBookingEnabled: stored.onlineBookingEnabled ?? DEFAULT_SLOT_SETTINGS.onlineBookingEnabled,
+    openingHours: stored.openingHours?.length ? stored.openingHours : null,
   }
 
   // 2. Service, 3. extras.

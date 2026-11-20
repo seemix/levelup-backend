@@ -52,6 +52,9 @@ export type ScheduleException = {
   breaks?: TimeRange[] | null
 }
 
+/** A row of the shop opening hours (`booking-settings.openingHours`); a missing weekday = closed. */
+export type OpeningHoursRow = TimeRange & { weekday: number | string }
+
 export type BarberSchedule = {
   weeklySchedule?: readonly WeeklyScheduleRow[] | null
   /** Barber locations; used as a fallback when a `custom_hours` exception has no location of its own. */
@@ -125,6 +128,22 @@ export const validateWeeklySchedule = (
     if (error) return error
     const location = relationId(row.location)
     if (!location || !allowedLocations.has(location)) return 'LOCATION_NOT_ALLOWED'
+  }
+  return null
+}
+
+/** Shop opening hours (`booking-settings.openingHours`, A49): ≤ 7 rows, unique weekday 1–7, `start < end`. */
+export const validateOpeningHours = (
+  rows: readonly Partial<OpeningHoursRow>[] | null | undefined,
+): ScheduleError | null => {
+  const seen = new Set<number>()
+  for (const row of rows ?? []) {
+    const weekday = Number(row.weekday)
+    if (!(WEEKDAYS as readonly number[]).includes(weekday)) return 'WEEKDAY_INVALID'
+    if (seen.has(weekday)) return 'WEEKDAY_DUPLICATE'
+    seen.add(weekday)
+    const error = validateDayInterval(row)
+    if (error) return error
   }
   return null
 }
@@ -207,6 +226,34 @@ const toIntervals = (date: string, day: DaySchedule): WorkingInterval[] => {
       end: localToInstant(date, endTime),
     }
   })
+}
+
+/** Local opening hours of the shop on a date (A49). */
+export type ShopDay = { start: string; end: string }
+
+/**
+ * Shop opening hours on a local date: `undefined` — no opening hours are set (no shop-wide limit),
+ * `null` — the shop is closed that weekday (hours are set, but not for this weekday).
+ */
+export const shopHoursOn = (
+  rows: readonly OpeningHoursRow[] | null | undefined,
+  date: string,
+): ShopDay | null | undefined => {
+  if (!rows || rows.length === 0) return undefined
+  const weekday = isoWeekday(date)
+  const row = rows.find((item) => Number(item.weekday) === weekday)
+  const minutes = row ? toMinutes(row) : null
+  if (!row || !minutes || minutes.start >= minutes.end) return null
+  return { start: row.start as string, end: row.end as string }
+}
+
+/** Opening hours for each date: `null` when no opening hours are set at all (JSON-friendly form). */
+export const shopHoursByDate = (
+  rows: readonly OpeningHoursRow[] | null | undefined,
+  dates: readonly string[],
+): Record<string, ShopDay | null> | null => {
+  if (!rows || rows.length === 0) return null
+  return Object.fromEntries(dates.map((date) => [date, shopHoursOn(rows, date) ?? null]))
 }
 
 /**

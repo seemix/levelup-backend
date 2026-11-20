@@ -2,11 +2,18 @@
  * Free slot calculation (spec §5.3). Pure functions: no database access and no clock —
  * `now` comes in with the input. Dates are local `YYYY-MM-DD`, instants are UTC `Date`.
  */
-import { getWorkingIntervals, type BarberSchedule, type ScheduleException } from './schedule'
+import {
+  getWorkingIntervals,
+  shopHoursOn,
+  type BarberSchedule,
+  type OpeningHoursRow,
+  type ScheduleException,
+} from './schedule'
 import {
   addLocalDays,
   addMinutes,
   isLocalDate,
+  localToInstant,
   localDayRange,
   localGridInstants,
   toLocalDate,
@@ -29,6 +36,11 @@ export type SlotSettings = {
   horizonDays: number
   bufferMinutes: number
   onlineBookingEnabled: boolean
+  /**
+   * Shop opening hours (A49): online slots must fit inside them; staff may book outside
+   * (`OUTSIDE_SCHEDULE` still depends on the barber schedule only). Empty — no shop-wide limit.
+   */
+  openingHours?: readonly OpeningHoursRow[] | null
 }
 
 /** Defaults of `booking-settings` (spec §4.3, A7), used when the global has never been saved. */
@@ -139,9 +151,15 @@ type BarberDay = {
   onlineEligible: boolean
 }
 
-const prepareDay = (
-  input: SlotInput,
-): { days: BarberDay[]; dayRange: Range; dateBookable: boolean } => {
+type PreparedDay = {
+  days: BarberDay[]
+  dayRange: Range
+  dateBookable: boolean
+  /** Shop opening hours of the date (online only): `undefined` — no limit, `null` — closed. */
+  shop: Range | null | undefined
+}
+
+const prepareDay = (input: SlotInput): PreparedDay => {
   const { date, settings, now, mode } = input
   if (!isLocalDate(date)) throw new RangeError(`Invalid date: ${date}`)
   const today = todayLocal(now)
@@ -168,7 +186,11 @@ const prepareDay = (
       mode === 'online' && barber.active && barber.onlineBooking && barber.providesService
     return { barber, working, busy, appointmentsCount, onlineEligible }
   })
-  return { days, dayRange: localDayRange(date), dateBookable }
+  const hours = shopHoursOn(settings.openingHours, date)
+  const shop = hours
+    ? { start: localToInstant(date, hours.start), end: localToInstant(date, hours.end) }
+    : hours
+  return { days, dayRange: localDayRange(date), dateBookable, shop }
 }
 
 type Evaluation = SlotOption | 'SLOT_TAKEN' | 'SLOT_UNAVAILABLE'
@@ -177,8 +199,7 @@ type Evaluation = SlotOption | 'SLOT_TAKEN' | 'SLOT_UNAVAILABLE'
 const evaluate = (
   input: SlotInput,
   day: BarberDay,
-  dayRange: Range,
-  dateBookable: boolean,
+  { dayRange, dateBookable, shop }: PreparedDay,
   start: Date,
 ): Evaluation => {
   const { barber } = day
@@ -190,6 +211,7 @@ const evaluate = (
 
   if (input.mode === 'online') {
     if (!dateBookable || !day.onlineEligible || !inSchedule) return 'SLOT_UNAVAILABLE'
+    if (shop !== undefined && (shop === null || !contains(shop, slot))) return 'SLOT_UNAVAILABLE'
     if (start < addMinutes(input.now, input.settings.minLeadMinutes)) return 'SLOT_UNAVAILABLE'
   }
   // Overlap with another appointment or block is never allowed (spec §5.3 p.7).
@@ -214,15 +236,11 @@ const compareCandidates = (
     (b.day.barber.order ?? Number.POSITIVE_INFINITY) ||
   (a.day.barber.id < b.day.barber.id ? -1 : a.day.barber.id > b.day.barber.id ? 1 : 0)
 
-const optionsAt = (
-  input: SlotInput,
-  prepared: ReturnType<typeof prepareDay>,
-  start: Date,
-): SlotOption[] =>
+const optionsAt = (input: SlotInput, prepared: PreparedDay, start: Date): SlotOption[] =>
   prepared.days
     .map((day) => ({
       day,
-      option: evaluate(input, day, prepared.dayRange, prepared.dateBookable, start),
+      option: evaluate(input, day, prepared, start),
     }))
     .filter((c): c is { day: BarberDay; option: SlotOption } => typeof c.option !== 'string')
     .sort(compareCandidates)
@@ -230,7 +248,7 @@ const optionsAt = (
 
 /**
  * Free slots of one barber, or the union for "any barber" (spec §5.3).
- * Online: grid starts inside working time in the location, after `now + minLead`, within the horizon.
+ * Online: grid starts inside working time in the location and the shop opening hours, after `now + minLead`, within the horizon.
  * Staff: every grid start of the local day that does not overlap a busy interval;
  * starts outside working time carry `OUTSIDE_SCHEDULE`.
  */
@@ -262,7 +280,7 @@ export const checkSlot = (input: SlotInput, barberId: string, start: Date): Slot
   if (!day) return { ok: false, code: 'SLOT_UNAVAILABLE' }
   if (input.mode === 'online' && !onGrid(input, start))
     return { ok: false, code: 'SLOT_UNAVAILABLE' }
-  const result = evaluate(input, day, prepared.dayRange, prepared.dateBookable, start)
+  const result = evaluate(input, day, prepared, start)
   return typeof result === 'string' ? { ok: false, code: result } : { ok: true, start, ...result }
 }
 

@@ -10,9 +10,11 @@ import {
   addMinutes,
   localDayMinutes,
   localDayRange,
+  localToInstant,
   minutesBetween,
   toLocalTime,
 } from './time'
+import type { ShopDay } from './schedule'
 
 export type IsoInterval = { start: string; end: string }
 
@@ -114,15 +116,31 @@ export const nowLinePosition = (
 const DEFAULT_RANGE = { from: 9 * 60, to: 20 * 60 }
 
 /**
- * Visible range of the day, whole hours: covers working intervals and appointments of all columns
- * with one hour of margin; a fixed default when the day is empty.
+ * Visible range of the day, whole hours.
+ * With shop opening hours of the date (A49): exactly those hours, widened to whole hours
+ * only where working intervals or appointments go beyond them.
+ * Without them: covers intervals and appointments with one hour of margin; a fixed default when empty.
  */
 export const visibleRange = (
   date: string,
   intervals: readonly IsoInterval[],
+  shop?: ShopDay | null,
   margin = 60,
 ): { from: number; to: number } => {
   const dayMinutes = localDayMinutes(date)
+  if (shop) {
+    // Elapsed minutes, not wall-clock ones: they differ on DST days.
+    let from = minutesFromDayStart(date, localToInstant(date, shop.start))
+    let to = minutesFromDayStart(date, localToInstant(date, shop.end))
+    for (const item of intervals) {
+      from = Math.min(from, minutesFromDayStart(date, item.start))
+      to = Math.max(to, minutesFromDayStart(date, item.end))
+    }
+    return {
+      from: Math.max(0, Math.floor(from / 60) * 60),
+      to: Math.min(dayMinutes, Math.ceil(to / 60) * 60),
+    }
+  }
   if (intervals.length === 0)
     return { ...DEFAULT_RANGE, to: Math.min(DEFAULT_RANGE.to, dayMinutes) }
   let from = Infinity

@@ -1392,6 +1392,14 @@ export interface BookingSetting {
   id: string;
   onlineBookingEnabled: boolean;
   remindersEnabled: boolean;
+  openingHours?:
+    | {
+        weekday: '1' | '2' | '3' | '4' | '5' | '6' | '7';
+        start?: string | null;
+        end?: string | null;
+        id?: string | null;
+      }[]
+    | null;
   slotStepMinutes: number;
   minLeadMinutes: number;
   horizonDays: number;
@@ -1438,6 +1446,14 @@ export interface AboutUsSelect<T extends boolean = true> {
 export interface BookingSettingsSelect<T extends boolean = true> {
   onlineBookingEnabled?: T;
   remindersEnabled?: T;
+  openingHours?:
+    | T
+    | {
+        weekday?: T;
+        start?: T;
+        end?: T;
+        id?: T;
+      };
   slotStepMinutes?: T;
   minLeadMinutes?: T;
   horizonDays?: T;

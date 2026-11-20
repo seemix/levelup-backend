@@ -402,6 +402,78 @@ describe('computeSlots: staff mode', () => {
   })
 })
 
+describe('computeSlots: shop opening hours (A49)', () => {
+  const withHours = (openingHours: SlotSettings['openingHours']) => ({
+    settings: { ...settings, openingHours },
+  })
+  // Custom hours of the barber beyond the shop hours: staff added a schedule for the evening.
+  const lateBarber = makeBarber({
+    exceptions: [
+      { dateFrom: MON, dateTo: MON, kind: 'custom_hours', start: '09:00', end: '21:00' },
+    ],
+  })
+
+  it('online slots fit inside both the barber schedule and the shop hours', () => {
+    const slots = times(
+      computeSlots(input(withHours([{ weekday: 1, start: '10:00', end: '17:00' }]))),
+    )
+    expect(slots[0]).toBe('10:00')
+    expect(slots.at(-1)).toBe('16:30')
+    expect(slots).not.toContain('13:00') // the barber break still applies
+  })
+
+  it('online: a weekday without a row is closed; no rows — no shop-wide limit', () => {
+    expect(computeSlots(input(withHours([{ weekday: 2, start: '10:00', end: '17:00' }])))).toEqual(
+      [],
+    )
+    expect(times(computeSlots(input(withHours([]))))).toEqual(times(computeSlots(input())))
+  })
+
+  it('online: a barber schedule beyond the shop hours is not bookable by clients', () => {
+    const slots = times(
+      computeSlots(
+        input({
+          ...withHours([{ weekday: 1, start: '09:00', end: '18:00' }]),
+          barbers: [lateBarber],
+        }),
+      ),
+    )
+    expect(slots.at(-1)).toBe('17:30')
+    expect(
+      checkSlot(
+        input({
+          ...withHours([{ weekday: 1, start: '09:00', end: '18:00' }]),
+          barbers: [lateBarber],
+        }),
+        'b1',
+        at('19:00'),
+      ),
+    ).toEqual({
+      ok: false,
+      code: 'SLOT_UNAVAILABLE',
+    })
+  })
+
+  it('staff: the shop hours do not limit booking; the added barber schedule removes the warning', () => {
+    const hours = withHours([{ weekday: 1, start: '09:00', end: '18:00' }])
+    const result = checkSlot(
+      input({ mode: 'staff', ...hours, barbers: [lateBarber] }),
+      'b1',
+      at('19:00'),
+    )
+    expect(result).toMatchObject({ ok: true, warnings: [] })
+    const closed = withHours([{ weekday: 2, start: '09:00', end: '18:00' }])
+    expect(checkSlot(input({ mode: 'staff', ...closed }), 'b1', at('10:00'))).toMatchObject({
+      ok: true,
+      warnings: [],
+    })
+    expect(checkSlot(input({ mode: 'staff', ...hours }), 'b1', at('19:00'))).toMatchObject({
+      ok: true,
+      warnings: ['OUTSIDE_SCHEDULE'],
+    })
+  })
+})
+
 describe('checkSlot', () => {
   it('online: valid start returns the end and duration', () => {
     expect(checkSlot(input(), 'b1', at('10:00'))).toEqual({

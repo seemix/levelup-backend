@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest'
 import {
   dateRangesOverlap,
   getWorkingIntervals,
+  shopHoursByDate,
+  shopHoursOn,
   subtractBreaks,
   validateBreaks,
   validateDateRange,
+  validateOpeningHours,
   validateWeeklySchedule,
   type BarberSchedule,
   type ScheduleException,
@@ -221,6 +224,43 @@ describe('validateWeeklySchedule', () => {
     )
     // Select values arrive as strings.
     expect(validateWeeklySchedule([{ ...row, weekday: '3' as never }], locs)).toBeNull()
+  })
+})
+
+describe('shop opening hours (A49)', () => {
+  const rows = [
+    { weekday: '1', start: '10:00', end: '20:00' },
+    { weekday: '6', start: '10:00', end: '16:00' },
+  ]
+
+  it('validates rows: weekday 1–7 once, start before end', () => {
+    expect(validateOpeningHours(rows)).toBeNull()
+    expect(validateOpeningHours([])).toBeNull()
+    expect(validateOpeningHours([{ weekday: 8, start: '10:00', end: '20:00' }])).toBe(
+      'WEEKDAY_INVALID',
+    )
+    expect(validateOpeningHours([...rows, { weekday: 1, start: '09:00', end: '12:00' }])).toBe(
+      'WEEKDAY_DUPLICATE',
+    )
+    expect(validateOpeningHours([{ weekday: 2, start: '20:00', end: '10:00' }])).toBe(
+      'END_BEFORE_START',
+    )
+    expect(validateOpeningHours([{ weekday: 2, start: '25:00', end: '26:00' }])).toBe(
+      'TIME_INVALID',
+    )
+  })
+
+  it('hours of a date: set — the row of the weekday, missing row — closed, no rows — no limit', () => {
+    expect(shopHoursOn(rows, '2026-11-16')).toEqual({ start: '10:00', end: '20:00' })
+    expect(shopHoursOn(rows, '2026-11-21')).toEqual({ start: '10:00', end: '16:00' })
+    expect(shopHoursOn(rows, '2026-11-17')).toBeNull()
+    expect(shopHoursOn([], '2026-11-16')).toBeUndefined()
+    expect(shopHoursOn(null, '2026-11-16')).toBeUndefined()
+    expect(shopHoursByDate(rows, ['2026-11-16', '2026-11-17'])).toEqual({
+      '2026-11-16': { start: '10:00', end: '20:00' },
+      '2026-11-17': null,
+    })
+    expect(shopHoursByDate(undefined, ['2026-11-16'])).toBeNull()
   })
 })
 

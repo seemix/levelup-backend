@@ -1,6 +1,8 @@
-import type { GlobalConfig, NumberField } from 'payload'
+import type { GlobalConfig, NumberField, TextField } from 'payload'
 import { accessFor, fieldAccessFor } from '@/access/policy'
+import { validateOpeningHours } from '@/crm/schedule'
 import { settingsGroup } from '@/fields'
+import { scheduleErrorKey, timeField, weekdayField } from '@/fields/schedule'
 import { crmLabel, crmT, type CrmKey } from '@/i18n'
 
 const integerField = (
@@ -24,6 +26,11 @@ const integerField = (
       return crmT(t, 'errors.outOfRange', { min, max: max ?? '∞' })
     return true
   },
+})
+
+const third = (field: TextField): TextField => ({
+  ...field,
+  admin: { ...field.admin, width: '33%' },
 })
 
 /** Non-public fields: hidden from anonymous readers (spec §3.1 — "public fields"). */
@@ -57,6 +64,29 @@ export const BookingSettings: GlobalConfig = {
       defaultValue: true,
       label: crmLabel('bookingSettings.remindersEnabled'),
       admin: { description: crmLabel('bookingSettings.remindersEnabledHint') },
+    },
+    {
+      // Shop opening hours (A49): limit online booking and frame the calendar; staff may still
+      // book outside them. Empty — no shop-wide limit; a weekday without a row — closed.
+      name: 'openingHours',
+      type: 'array',
+      maxRows: 7,
+      label: crmLabel('bookingSettings.openingHours'),
+      labels: {
+        singular: crmLabel('bookingSettings.openingHoursRow'),
+        plural: crmLabel('bookingSettings.openingHours'),
+      },
+      admin: { description: crmLabel('bookingSettings.openingHoursHint'), initCollapsed: false },
+      validate: (value: unknown, { req: { t } }) => {
+        const error = validateOpeningHours(Array.isArray(value) ? value : [])
+        return error ? crmT(t, scheduleErrorKey[error]) : true
+      },
+      fields: [
+        {
+          type: 'row',
+          fields: [weekdayField('34%'), third(timeField('start')), third(timeField('end'))],
+        },
+      ],
     },
     {
       type: 'row',

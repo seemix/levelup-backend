@@ -12,7 +12,7 @@ import {
   type IsoInterval,
 } from '@/crm/calendar-layout'
 import { barberColorAt } from '@/crm/colors'
-import { subtractBreaks } from '@/crm/schedule'
+import { subtractBreaks, type ShopDay } from '@/crm/schedule'
 import { localToInstant, minutesToTime, timeToMinutes, toLocalDate, toLocalTime } from '@/crm/time'
 
 import { BarberAvatar } from '../calendar/BarberAvatar'
@@ -45,6 +45,8 @@ type Props = {
   /** Location of the roster: a day in another location is shown faded. */
   locationId: string
   busy: boolean
+  /** Shop opening hours per date (A49): frame the time axis. */
+  shopHours: Record<string, ShopDay | null> | null
   onEdit: (barber: RosterBarber, date: string) => void
   onPattern: (barber: RosterBarber) => void
 }
@@ -54,7 +56,15 @@ type Props = {
  * working hours as blocks in the barber colour, breaks and non-working time hatched. A click on a
  * column opens the editor of that day (when the user may change it).
  */
-export const ScheduleGrid = ({ columns, mode, locationId, busy, onEdit, onPattern }: Props) => {
+export const ScheduleGrid = ({
+  columns,
+  mode,
+  locationId,
+  busy,
+  shopHours,
+  onEdit,
+  onPattern,
+}: Props) => {
   const t = useCrmT()
   const { i18n } = useTranslation()
   const [now, setNow] = useState(() => new Date())
@@ -71,15 +81,19 @@ export const ScheduleGrid = ({ columns, mode, locationId, busy, onEdit, onPatter
   )
   const range = useMemo(() => {
     const ranges = columns
-      .map((column) => ({ day: column.day.date, list: intervals.get(column) ?? [] }))
-      .filter((item) => item.list.length > 0)
-      .map((item) => visibleRange(item.day, item.list))
-    if (ranges.length === 0) return visibleRange(date, [])
+      .map((column) => ({
+        day: column.day.date,
+        list: intervals.get(column) ?? [],
+        shop: shopHours?.[column.day.date],
+      }))
+      .filter((item) => item.list.length > 0 || item.shop)
+      .map((item) => visibleRange(item.day, item.list, item.shop))
+    if (ranges.length === 0) return visibleRange(date, [], shopHours?.[date])
     return {
       from: Math.min(...ranges.map((item) => item.from)),
       to: Math.max(...ranges.map((item) => item.to)),
     }
-  }, [columns, intervals, date])
+  }, [columns, intervals, date, shopHours])
   const hours = useMemo(
     () => gridRows(date, range.from, range.to, 60).filter((row) => row.hour),
     [date, range],

@@ -50,18 +50,26 @@ type Column = CalendarData['columns'][number]
 /** Droppable id of a column: day view — one per barber, week view — one per day of the barber. */
 const columnKey = (column: Column) => `${column.barber.id}|${column.date}`
 
-/** Visible range of the grid: the union of the ranges of the columns (each in its own date). */
-const gridRange = (columns: Column[], fallbackDate: string) => {
+/**
+ * Visible range of the grid: the union of the ranges of the columns (each in its own date);
+ * shop opening hours of a date frame its columns (A49).
+ */
+const gridRange = (
+  columns: Column[],
+  fallbackDate: string,
+  shopHours: CalendarData['shopHours'],
+) => {
   const ranges = columns
     .map((column) => {
       const intervals: IsoInterval[] = [
         ...column.intervals,
         ...column.appointments.map((item) => ({ start: item.start, end: item.end })),
       ]
-      return intervals.length === 0 ? null : visibleRange(column.date, intervals)
+      const shop = shopHours?.[column.date]
+      return intervals.length === 0 && !shop ? null : visibleRange(column.date, intervals, shop)
     })
     .filter((range): range is { from: number; to: number } => range !== null)
-  if (ranges.length === 0) return visibleRange(fallbackDate, [])
+  if (ranges.length === 0) return visibleRange(fallbackDate, [], shopHours?.[fallbackDate])
   return {
     from: Math.min(...ranges.map((range) => range.from)),
     to: Math.max(...ranges.map((range) => range.to)),
@@ -173,7 +181,10 @@ export const DayGrid = ({
   const blockColor = (appointment: CalendarAppointment, column: Column) =>
     ('color' in appointment && appointment.color) || colorOf(column)
   const step = data.slotStepMinutes
-  const range = useMemo(() => gridRange(columns, date), [date, columns])
+  const range = useMemo(
+    () => gridRange(columns, date, data.shopHours),
+    [date, columns, data.shopHours],
+  )
   const hours = useMemo(
     () => gridRows(date, range.from, range.to, 60).filter((row) => row.hour),
     [date, range],

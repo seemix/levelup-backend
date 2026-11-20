@@ -10,10 +10,10 @@ import {
 import { accessFor, fieldAccessFor, type Resource } from '@/access/policy'
 import { outsideTransaction } from '@/crm/read-req'
 import { isHexColor, nextBarberColor } from '@/crm/colors'
-import { relationId, validateWeeklySchedule, WEEKDAYS, type RelationValue } from '@/crm/schedule'
+import { relationId, validateWeeklySchedule, type RelationValue } from '@/crm/schedule'
 import { orderDescription } from '@/fields'
 import { moneyField } from '@/fields/money'
-import { breaksField, scheduleErrorKey, timeField } from '@/fields/schedule'
+import { breaksField, scheduleErrorKey, timeField, weekdayField } from '@/fields/schedule'
 import { crmLabel, crmLabels, crmT, type CrmKey } from '@/i18n'
 
 const fieldAccess = (
@@ -30,8 +30,6 @@ const fieldAccess = (
 const contentAccess = fieldAccess('content', ['create', 'update'])
 /** CRM fields: staff read, admin writes. */
 const crmAccess = fieldAccess('barbers.crm')
-
-const WEEKDAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 
 const percentField = (name: string, label: CrmKey): NumberField => ({
   name,
@@ -333,17 +331,7 @@ export const Barbers: CollectionConfig = {
                 {
                   type: 'row',
                   fields: [
-                    {
-                      name: 'weekday',
-                      type: 'select',
-                      required: true,
-                      label: crmLabel('barbers.weekday'),
-                      options: WEEKDAYS.map((day) => ({
-                        value: String(day),
-                        label: crmLabel(`weekdays.${WEEKDAY_KEYS[day - 1]}`),
-                      })),
-                      admin: { width: '50%' },
-                    },
+                    weekdayField('50%'),
                     {
                       name: 'location',
                       type: 'relationship',

@@ -78,6 +78,10 @@ export const ro: CrmTranslations = {
     remindersEnabled: 'Mementouri pentru clienți activate',
     remindersEnabledHint:
       'Email de memento despre programare. Dacă este dezactivat, mementourile nu se trimit, inclusiv cele deja planificate.',
+    openingHours: 'Programul frizeriei',
+    openingHoursRow: 'Zi',
+    openingHoursHint:
+      'Programarea online a clienților — doar în aceste ore; calendarul afișează acest interval. Ziua săptămânii fără rând — zi liberă. Gol — fără restricție. Personalul poate programa și în afara programului: adăugați frizerului un program pentru ora necesară.',
     slotStepMinutes: 'Pasul sloturilor, min',
     minLeadMinutes: 'Timp minim până la programare, min',
     horizonDays: 'Orizont de programare, zile',

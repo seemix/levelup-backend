@@ -157,6 +157,7 @@ describe('loadSlotInput', () => {
       horizonDays: 30,
       bufferMinutes: 0,
       onlineBookingEnabled: true,
+      openingHours: null,
     })
     expect(input.barbers.map((b) => b.id)).toEqual([b1, b2])
     const [one, two] = input.barbers

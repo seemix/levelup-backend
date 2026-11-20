@@ -346,6 +346,7 @@ export const ScheduleClient = () => {
           mode={view}
           locationId={data.location}
           busy={!settled}
+          shopHours={data.shopHours}
           onEdit={(barber, day) => setEditing({ barber: barber.id, dates: [day] })}
           onPattern={(barber) => setPattern(barber.id)}
         />

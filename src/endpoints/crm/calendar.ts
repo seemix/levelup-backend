@@ -16,7 +16,9 @@ import { ACTIVE_STATUSES, CANCELLED_STATUSES } from '@/crm/appointment-status'
 import {
   getWorkingIntervals,
   relationId,
+  shopHoursByDate,
   type BarberSchedule,
+  type OpeningHoursRow,
   type RelationValue,
   type ScheduleException,
 } from '@/crm/schedule'
@@ -172,8 +174,8 @@ export const loadCalendar = async (
     overrideAccess: true,
     depth: 0,
     req,
-    select: { slotStepMinutes: true },
-  })) as { slotStepMinutes?: number | null }
+    select: { slotStepMinutes: true, openingHours: true },
+  })) as { slotStepMinutes?: number | null; openingHours?: OpeningHoursRow[] | null }
 
   const locations = await visibleLocations(req, staff, locale)
   const location = query.locationId
@@ -339,6 +341,7 @@ export const loadCalendar = async (
       .map((item) => ({ id: item.id, name: item.name ?? '' })),
     barbers: barberOptions,
     slotStepMinutes: settings.slotStepMinutes ?? DEFAULT_SLOT_SETTINGS.slotStepMinutes,
+    shopHours: shopHoursByDate(settings.openingHours, dates),
     columns,
   }
 }
