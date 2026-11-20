@@ -68,6 +68,14 @@ button:active {
   border-radius: var(--style-radius-s, 3px);
   background: var(--theme-elevation-100);
 }
+// «Content» group (slides, about us) goes to the very bottom, below the CRM links («Reports»).
+// `.nav__wrap` is a flex column; the group is found by its links, since the label is localized.
+.nav__wrap > .nav-group:has(#nav-slides, #nav-global-about-us) {
+  order: 1;
+}
+.nav__wrap > .nav__controls {
+  order: 2;
+}
 .card__title {
   font-weight: 500;
 }

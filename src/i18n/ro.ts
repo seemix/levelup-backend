@@ -10,6 +10,7 @@ export const ro: CrmTranslations = {
     promotions: 'Promoții',
     appointments: 'Programări',
     finance: 'Finanțe',
+    reports: 'Rapoarte',
   },
   fields: {
     orderDescription: 'Mai întâi sunt afișate numerele mai mici',
@@ -113,6 +114,20 @@ export const ro: CrmTranslations = {
     name: 'Nume',
     description: 'Descriere scurtă',
     image: 'Fotografie',
+    avatar: 'Avatar în CRM',
+    avatarDescription:
+      'Fotografie rotundă în calendar și în program. Dacă lipsește, se folosește fotografia de pe site.',
+    avatarUpload: 'Încarcă fotografie',
+    avatarFromPhoto: 'Din fotografia de pe site',
+    avatarNoPhoto: 'Adăugați mai întâi fotografia pentru site',
+    avatarRemove: 'Elimină',
+    avatarCropTitle: 'Decupare avatar',
+    avatarCropHint:
+      'Trageți fotografia pentru a alege zona; mărirea — cu glisorul sau rotița mouse-ului',
+    avatarZoom: 'Mărire',
+    avatarSave: 'Salvează',
+    avatarCancel: 'Anulează',
+    avatarError: 'Fotografia nu a putut fi procesată sau încărcată',
     about: 'Despre frizer',
     publicRequired: 'Obligatoriu dacă frizerul este afișat pe site',
     position: 'Funcție',

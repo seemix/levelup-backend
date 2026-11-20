@@ -28,6 +28,8 @@ import { editScheduleDays, fillSchedule, loadExceptions } from '@/crm/schedule-e
 import { eachLocalDate, isLocalDate, localDayRange, toLocalDate, todayLocal } from '@/crm/time'
 
 import { SYSTEM_READ } from '../booking/context'
+
+import { loadAvatarUrls } from './avatars'
 import { InputErrors, isId, localeOf, ok, readBody } from '../booking/http'
 import { visibleLocations } from './calendar'
 import { crmEndpoint, crmError } from './http'
@@ -43,9 +45,8 @@ type BarberRow = BarberSchedule & {
   active?: boolean | null
   user?: RelationValue
   image?: RelationValue
+  avatar?: RelationValue
 }
-
-type MediaRow = { id: string; url?: string | null; sizes?: { thumbnail?: { url?: string | null } } }
 
 export type RosterBarber = {
   id: string
@@ -124,6 +125,7 @@ export const loadRoster = async (
       active: true,
       user: true,
       image: true,
+      avatar: true,
       locations: true,
       weeklySchedule: true,
     },
@@ -158,30 +160,7 @@ export const loadRoster = async (
 
   const exceptions = await loadExceptions(req, barberIds, from, to)
 
-  const imageIds = [
-    ...new Set(barbers.map((row) => relationId(row.image)).filter((id): id is string => !!id)),
-  ]
-  const media =
-    imageIds.length === 0
-      ? []
-      : ((
-          await req.payload.find({
-            collection: 'media',
-            ...SYSTEM_READ,
-            req,
-            where: { id: { in: imageIds } },
-            // Payload builds `url` from `filename`: without it both URLs come back as null.
-            select: {
-              filename: true,
-              url: true,
-              sizes: { thumbnail: { filename: true, url: true } },
-            },
-          })
-        ).docs as unknown as MediaRow[])
-  const imageUrl = (id: string | null) => {
-    const doc = id ? media.find((item) => String(item.id) === id) : undefined
-    return doc ? (doc.sizes?.thumbnail?.url ?? doc.url ?? null) : null
-  }
+  const avatarUrl = await loadAvatarUrls(req, barbers)
 
   // Scheduled appointments per barber and day: the warning before a day is changed.
   const counts = new Map<string, number>()
@@ -224,7 +203,7 @@ export const loadRoster = async (
         name: barber.name ?? '',
         position: barber.position ?? null,
         color: barber.color ?? null,
-        image: imageUrl(relationId(barber.image)),
+        image: avatarUrl(barber),
         own: barber.id === staff.barberId,
         canEdit: mayEditDays(req, staff, barber.id),
         canEditPattern: allowed(req.user, 'update', 'barbers.schedule', barber),

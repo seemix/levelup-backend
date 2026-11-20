@@ -1,13 +1,19 @@
 'use client'
-import { useAuth, useConfig } from '@payloadcms/ui'
+import { NavGroup, useAuth, useConfig } from '@payloadcms/ui'
 
 import type { CrmKey } from '@/i18n'
 
 import { useCrmT } from '../calendar/useCrmT'
 import { adminPrefix, CrmNavLink } from '../nav/CrmNavLink'
 
-/** Report links by role (§3.1); the server returns 404 / 403 to everyone else anyway. */
+/** Links of the «Reports» group by role (§3.1); the server returns 404 / 403 to everyone else anyway. */
 const LINKS: { path: string; id: string; key: CrmKey; roles: string[] }[] = [
+  {
+    path: '/cash',
+    id: 'nav-crm-cash',
+    key: 'finance.nav',
+    roles: ['admin', 'manager'],
+  },
   {
     path: '/reports/clients',
     id: 'nav-crm-report-clients',
@@ -28,7 +34,10 @@ const LINKS: { path: string; id: string; key: CrmKey; roles: string[] }[] = [
   },
 ]
 
-/** Navigation links to the reports: clients and finance (admin, manager), salary (admin, barber). */
+/**
+ * «Reports» menu group: cash registers, clients and finance reports (admin, manager),
+ * salary (admin, barber). Hidden when the user has none of them.
+ */
 export const ReportsNavLink = () => {
   const { user } = useAuth()
   const { config } = useConfig()
@@ -38,7 +47,7 @@ export const ReportsNavLink = () => {
   const links = LINKS.filter((link) => roles.some((role) => link.roles.includes(role)))
   if (links.length === 0) return null
   return (
-    <>
+    <NavGroup label={t('groups.reports')}>
       {links.map((link) => (
         <CrmNavLink
           key={link.path}
@@ -47,6 +56,6 @@ export const ReportsNavLink = () => {
           label={t(link.key)}
         />
       ))}
-    </>
+    </NavGroup>
   )
 }

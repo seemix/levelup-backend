@@ -24,6 +24,8 @@ import { DEFAULT_SLOT_SETTINGS } from '@/crm/slots'
 import { addLocalDays, isLocalDate, isoWeekday, localDayRange, todayLocal } from '@/crm/time'
 
 import { SYSTEM_READ } from '../booking/context'
+
+import { loadAvatarUrls } from './avatars'
 import { InputErrors, isId, localeOf, ok, type Locale } from '../booking/http'
 import { locationScope } from './access'
 import { crmEndpoint, crmError } from './http'
@@ -50,13 +52,12 @@ type BarberRow = {
   order?: number | null
   active?: boolean | null
   image?: RelationValue
+  avatar?: RelationValue
   locations?: RelationValue[] | null
   weeklySchedule?: BarberSchedule['weeklySchedule']
 }
 
 type ExceptionRow = ScheduleException & { barber: RelationValue }
-
-type MediaRow = { id: string; url?: string | null; sizes?: { thumbnail?: { url?: string | null } } }
 
 export type CalendarQuery = {
   date: string
@@ -197,6 +198,7 @@ export const loadCalendar = async (
       order: true,
       active: true,
       image: true,
+      avatar: true,
       locations: true,
       weeklySchedule: true,
     },
@@ -296,30 +298,7 @@ export const loadCalendar = async (
   // A barber sees their own column first (spec §9).
   barbers.sort((a, b) => Number(b.id === staff.barberId) - Number(a.id === staff.barberId))
 
-  const imageIds = [
-    ...new Set(barbers.map((row) => relationId(row.image)).filter((id): id is string => !!id)),
-  ]
-  const media =
-    imageIds.length === 0
-      ? []
-      : ((
-          await req.payload.find({
-            collection: 'media',
-            ...SYSTEM_READ,
-            req,
-            where: { id: { in: imageIds } },
-            // Payload builds `url` from `filename`: without it both URLs come back as null.
-            select: {
-              filename: true,
-              url: true,
-              sizes: { thumbnail: { filename: true, url: true } },
-            },
-          })
-        ).docs as unknown as MediaRow[])
-  const imageUrl = (id: string | null) => {
-    const doc = id ? media.find((item) => String(item.id) === id) : undefined
-    return doc ? (doc.sizes?.thumbnail?.url ?? doc.url ?? null) : null
-  }
+  const avatarUrl = await loadAvatarUrls(req, barbers)
 
   const columns: CalendarColumn[] = barbers.flatMap((barber) => {
     const head: ColumnBarber = {
@@ -327,7 +306,7 @@ export const loadCalendar = async (
       name: barber.name ?? '',
       position: barber.position ?? null,
       color: barber.color ?? null,
-      image: imageUrl(relationId(barber.image)),
+      image: avatarUrl(barber),
       active: barber.active !== false,
       own: barber.id === staff.barberId,
     }

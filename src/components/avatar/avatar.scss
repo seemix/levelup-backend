@@ -1,0 +1,93 @@
+.avatar-field {
+  margin-bottom: var(--base);
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: calc(var(--base) * 0.75);
+  }
+
+  &__preview {
+    width: 72px;
+    height: 72px;
+    flex: none;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--theme-elevation-100);
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: calc(var(--base) * 0.5);
+  }
+
+  &__error {
+    margin-top: calc(var(--base) * 0.5);
+    color: var(--theme-error-500);
+  }
+}
+
+.avatar-crop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--base) * 0.75);
+
+  &__viewport {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--style-radius-s);
+    background: var(--theme-elevation-100);
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    img {
+      position: absolute;
+      max-width: none;
+      pointer-events: none;
+    }
+  }
+
+  /* Round mask: what the calendar shows. */
+  &__mask {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.45);
+    pointer-events: none;
+  }
+
+  &__zoom {
+    display: flex;
+    align-items: center;
+    gap: calc(var(--base) * 0.5);
+    width: 100%;
+    max-width: 320px;
+
+    input {
+      flex: 1;
+    }
+  }
+
+  &__hint {
+    margin: 0;
+    color: var(--theme-elevation-500);
+    font-size: var(--font-size-xs);
+  }
+}
+
+.avatar-field__preview--empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-elevation-600);
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+}

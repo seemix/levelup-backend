@@ -1,3 +1,4 @@
+import { AvatarField as AvatarField_e2dc36e5b287e17e158c013ce66e1d49 } from '@/components/avatar/AvatarField'
 import { RscEntryLexicalCell as RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
 import { RscEntryLexicalField as RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
 import { LexicalDiffComponent as LexicalDiffComponent_44fe37237e0ebf4470c9990d8cb7b07e } from '@payloadcms/richtext-lexical/rsc'
@@ -29,7 +30,6 @@ import { PromoValueCell as PromoValueCell_24576fc485adcef6bf677d39d99f1213 } fro
 import { PromoValueField as PromoValueField_eeccb02b960a9432234c20d2875ff5d2 } from '@/components/promo/PromoValueField'
 import { default as default_ed3cbed3b52ba9e0c712bb19e7066c56 } from '@/app/(payload)/components/Logo'
 import { NewAppointmentNotifier as NewAppointmentNotifier_00916feb0ce79f2464aad2386d11ea67 } from '@/components/notifications/NewAppointmentNotifier'
-import { FinanceNavLink as FinanceNavLink_b9ffd84a6ac6372a49b70ded4ded8bdb } from '@/components/finance/FinanceNavLink'
 import { ReportsNavLink as ReportsNavLink_5b79dae4bfc36f4984cf0511e115caea } from '@/components/reports/ReportsNavLink'
 import { CalendarNavLink as CalendarNavLink_fa7df0f16fcd1e2602e7855233a45c4d } from '@/components/calendar/CalendarNavLink'
 import { ScheduleNavLink as ScheduleNavLink_4be96f778e96d4d98e554f3c2c6013d0 } from '@/components/schedule/ScheduleNavLink'
@@ -44,6 +44,7 @@ import { CollectionCards as CollectionCards_f9c02e79a4aed9a3924487c0cd4cafb1 } f
 
 /** @type import('payload').ImportMap */
 export const importMap = {
+  "@/components/avatar/AvatarField#AvatarField": AvatarField_e2dc36e5b287e17e158c013ce66e1d49,
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalCell": RscEntryLexicalCell_44fe37237e0ebf4470c9990d8cb7b07e,
   "@payloadcms/richtext-lexical/rsc#RscEntryLexicalField": RscEntryLexicalField_44fe37237e0ebf4470c9990d8cb7b07e,
   "@payloadcms/richtext-lexical/rsc#LexicalDiffComponent": LexicalDiffComponent_44fe37237e0ebf4470c9990d8cb7b07e,
@@ -75,7 +76,6 @@ export const importMap = {
   "@/components/promo/PromoValueField#PromoValueField": PromoValueField_eeccb02b960a9432234c20d2875ff5d2,
   "@/app/(payload)/components/Logo#default": default_ed3cbed3b52ba9e0c712bb19e7066c56,
   "@/components/notifications/NewAppointmentNotifier#NewAppointmentNotifier": NewAppointmentNotifier_00916feb0ce79f2464aad2386d11ea67,
-  "@/components/finance/FinanceNavLink#FinanceNavLink": FinanceNavLink_b9ffd84a6ac6372a49b70ded4ded8bdb,
   "@/components/reports/ReportsNavLink#ReportsNavLink": ReportsNavLink_5b79dae4bfc36f4984cf0511e115caea,
   "@/components/calendar/CalendarNavLink#CalendarNavLink": CalendarNavLink_fa7df0f16fcd1e2602e7855233a45c4d,
   "@/components/schedule/ScheduleNavLink#ScheduleNavLink": ScheduleNavLink_4be96f778e96d4d98e554f3c2c6013d0,

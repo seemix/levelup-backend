@@ -179,6 +179,18 @@ export const Barbers: CollectionConfig = {
               access: contentAccess,
             },
             {
+              // A48: square CRM avatar (cropped upload or crop of `image`); empty → `image`.
+              name: 'avatar',
+              type: 'upload',
+              relationTo: 'media',
+              label: crmLabel('barbers.avatar'),
+              access: contentAccess,
+              admin: {
+                description: crmLabel('barbers.avatarDescription'),
+                components: { Field: '@/components/avatar/AvatarField#AvatarField' },
+              },
+            },
+            {
               name: 'about',
               type: 'richText',
               localized: true,

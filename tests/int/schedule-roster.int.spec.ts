@@ -255,6 +255,53 @@ describe('Schedule roster API (A44)', () => {
         await payload.db.collections.media.collection.deleteOne({ _id: insertedId })
       }
     })
+
+    it('barber avatar (A48): takes precedence over the site photo in the roster and the calendar', async () => {
+      const media = payload.db.collections.media.collection
+      const photo = await media.insertOne({
+        alt: { ru: 'Photo' },
+        filename: 'roster-photo.webp',
+        mimeType: 'image/webp',
+        sizes: { thumbnail: { filename: 'roster-photo-400x600.webp', width: 400, height: 600 } },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      const avatar = await media.insertOne({
+        alt: { ru: 'Avatar' },
+        filename: 'roster-avatar.webp',
+        mimeType: 'image/webp',
+        sizes: { thumbnail: { filename: 'roster-avatar-400x400.webp', width: 400, height: 400 } },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      await payload.db.collections.barbers.updateOne(
+        { _id: ids.b2 },
+        { $set: { image: photo.insertedId, avatar: avatar.insertedId } },
+      )
+      // Only an avatar, no site photo.
+      await payload.db.collections.barbers.updateOne(
+        { _id: ids.b1 },
+        { $set: { avatar: avatar.insertedId } },
+      )
+      try {
+        const { json } = await roster('admin', `&location=${ids.locA}`)
+        expect(rowOf(json, ids.b2).image).toBe('/api/media/file/roster-avatar-400x400.webp')
+        expect(rowOf(json, ids.b1).image).toBe('/api/media/file/roster-avatar-400x400.webp')
+        const calendar = await call(
+          'admin',
+          'GET',
+          `/crm/calendar?date=2027-03-01&location=${ids.locA}`,
+        )
+        const column = (calendar.json.columns as Json[]).find((item) => item.barber.id === ids.b2)
+        expect(column?.barber.image).toBe('/api/media/file/roster-avatar-400x400.webp')
+      } finally {
+        await payload.db.collections.barbers.updateMany(
+          { _id: { $in: [ids.b1, ids.b2] } },
+          { $unset: { image: 1, avatar: 1 } },
+        )
+        await media.deleteMany({ _id: { $in: [photo.insertedId, avatar.insertedId] } })
+      }
+    })
   })
 
   describe('POST /crm/schedule/days', () => {

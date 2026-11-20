@@ -275,6 +275,7 @@ export interface Barber {
   position?: string | null;
   description?: string | null;
   image?: (string | null) | Media;
+  avatar?: (string | null) | Media;
   about?: {
     root: {
       type: string;
@@ -969,6 +970,7 @@ export interface BarbersSelect<T extends boolean = true> {
   position?: T;
   description?: T;
   image?: T;
+  avatar?: T;
   about?: T;
   color?: T;
   user?: T;

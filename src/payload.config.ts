@@ -88,7 +88,6 @@ export default buildConfig({
       ],
       afterNavLinks: [
         '@/components/notifications/NewAppointmentNotifier#NewAppointmentNotifier',
-        '@/components/finance/FinanceNavLink#FinanceNavLink',
         '@/components/reports/ReportsNavLink#ReportsNavLink',
       ],
       views: {
