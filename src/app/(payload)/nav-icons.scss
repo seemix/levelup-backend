@@ -83,16 +83,19 @@ $nav-icons: (
   &::before {
     content: '';
     flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    background-color: currentColor;
-    opacity: 0.75;
+    width: 16px;
+    height: 16px;
+    background-color: var(--sidebar-icon, currentColor);
     mask: no-repeat center / contain;
+    transition: background-color 100ms ease;
   }
 
-  &:has(.nav__link-indicator)::before,
   &:hover::before {
-    opacity: 1;
+    background-color: var(--sidebar-text-hover, currentColor);
+  }
+
+  &:has(.nav__link-indicator)::before {
+    background-color: var(--sidebar-icon-active, currentColor);
   }
 }
 
