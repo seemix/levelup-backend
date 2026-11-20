@@ -17,12 +17,14 @@ import { APPOINTMENT_KINDS, APPOINTMENT_STATUSES } from '@/crm/appointment-statu
 import {
   changeAppointmentStatus,
   createAppointment,
+  MAX_DURATION_MINUTES,
   runBookingTransaction,
   updateAppointment,
   type AppointmentDoc,
   type AppointmentInput,
   type AppointmentServiceResult,
 } from '@/crm/appointments'
+import { isHexColor } from '@/crm/colors'
 import { ruleError } from '@/crm/errors'
 import { tryNormalizePhone } from '@/crm/phone'
 import { findPromoByCode } from '@/crm/promo'
@@ -43,7 +45,6 @@ import { detailView, loadNames, scopeOf, type AppointmentRow } from './view'
 export const NOTE_MAX = 1000
 export const NAME_MAX = 60
 export const REASON_MAX = 500
-const MAX_BLOCK_MINUTES = 24 * 60
 
 /** Body fields of create/patch; `undefined` = not sent (patch leaves the stored value). */
 type ClientSpec = { phone: string; firstName: string | null; lastName: string | null }
@@ -71,6 +72,8 @@ const PATCH_FIELDS = [
   'extras',
   'start',
   'durationMinutes',
+  'customDurationMinutes',
+  'color',
   'promoCode',
   'manualDiscount',
   'clientComment',
@@ -138,16 +141,27 @@ export const parseAppointmentBody = (
     if (!start || Number.isNaN(start.getTime())) errors.add('start')
     else data.startAt = start
   } else if (mode === 'create') errors.add('start')
+  const minutes = (value: unknown): value is number =>
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= MAX_DURATION_MINUTES
   if (has(body, 'durationMinutes')) {
-    const value = body.durationMinutes
-    if (
-      typeof value !== 'number' ||
-      !Number.isInteger(value) ||
-      value <= 0 ||
-      value > MAX_BLOCK_MINUTES
-    )
-      errors.add('durationMinutes')
-    else data.durationMinutes = value
+    if (!minutes(body.durationMinutes)) errors.add('durationMinutes')
+    else data.durationMinutes = body.durationMinutes
+  }
+  // Manual length of an appointment (A47): `null` = back to the services' length.
+  if (has(body, 'customDurationMinutes')) {
+    const value = body.customDurationMinutes
+    if (value === null) data.customDurationMinutes = null
+    else if (minutes(value)) data.customDurationMinutes = value
+    else errors.add('customDurationMinutes')
+  }
+  // Calendar block color (A47): `null` = the barber's color.
+  if (has(body, 'color')) {
+    if (body.color === null) data.color = null
+    else if (isHexColor(body.color)) data.color = body.color.toUpperCase()
+    else errors.add('color')
   }
 
   let promoCode: string | null | undefined

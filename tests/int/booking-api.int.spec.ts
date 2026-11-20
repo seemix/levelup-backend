@@ -116,11 +116,9 @@ describe('public booking API', () => {
       overrideAccess: true,
     })
     ids.locOff = (await create('locations', { name: 'Closed', active: false })).id
-    ids.cat = (await create('service-categories', { name: 'Hair' })).id
     ids.cut = (
       await create('services', {
         name: 'Стрижка',
-        category: ids.cat,
         durationMinutes: 30,
         price: 30_000,
       })
@@ -261,7 +259,6 @@ describe('public booking API', () => {
         name: 'Tuns',
         price: 30_000,
         priceFrom: 30_000,
-        category: ids.cat,
       })
       expect(cut.barbers.sort()).toEqual([ids.b1, ids.b2].sort())
       expect(json.extras.find((e: Json) => e.id === ids.wax)).toMatchObject({

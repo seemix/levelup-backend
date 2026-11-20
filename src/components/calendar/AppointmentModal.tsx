@@ -3,6 +3,7 @@ import { useAuth } from '@payloadcms/ui'
 import { useEffect, useMemo, useState } from 'react'
 
 import { emptyForm, type FormState } from '@/crm/appointment-form'
+import { barberColorAt } from '@/crm/colors'
 import { baniToLeiText } from '@/crm/money'
 import { toLocalDate, toLocalTime } from '@/crm/time'
 
@@ -38,6 +39,8 @@ const formFromDetail = (detail: AppointmentDetail): FormState => {
     date: toLocalDate(start),
     time: toLocalTime(start),
     duration: String(a.durationMinutes),
+    customDuration: a.customDurationMinutes === null ? '' : String(a.customDurationMinutes),
+    color: a.color ?? '',
     service: a.service?.id ?? '',
     extras: a.extras.map((extra) => extra.id),
     clientId: a.client?.id ?? null,
@@ -99,6 +102,12 @@ export const AppointmentModal = ({ target, data, isManager, onClose, onChanged }
     for (const column of data.columns) seen.set(column.barber.id, column.barber)
     return [...seen.values()]
   }, [data.columns])
+  // Default block color = the barber's one, resolved like the grid does (A47).
+  const barberColor = (id: string) => {
+    const index = barbers.findIndex((barber) => barber.id === id)
+    const column = data.columns.find((item) => item.barber.id === id)
+    return column?.barber.color ?? barberColorAt(Math.max(index, 0))
+  }
   const own = barbers.find((barber) => barber.own)
   // A barber works in their own column only (decision 37); admin/manager pick any active barber.
   const barberLocked = !isManager && !!own
@@ -130,6 +139,7 @@ export const AppointmentModal = ({ target, data, isManager, onClose, onChanged }
             locationId={data.location}
             barbers={selectable(target.barberId)}
             barberLocked={barberLocked}
+            barberColor={barberColor}
             isManager={isManager}
             services={catalog.services}
             extras={catalog.extras}
@@ -171,6 +181,7 @@ export const AppointmentModal = ({ target, data, isManager, onClose, onChanged }
             locationId={detail.appointment.location ?? data.location}
             barbers={selectable(detail.appointment.barber)}
             barberLocked={barberLocked}
+            barberColor={barberColor}
             isManager={isManager}
             services={catalog.services}
             extras={catalog.extras}

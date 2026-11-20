@@ -72,7 +72,6 @@ export interface Config {
     barbers: Barber;
     slides: Slide;
     locations: Location;
-    'service-categories': ServiceCategory;
     services: Service;
     extras: Extra;
     'schedule-exceptions': ScheduleException;
@@ -104,7 +103,6 @@ export interface Config {
     barbers: BarbersSelect<false> | BarbersSelect<true>;
     slides: SlidesSelect<false> | SlidesSelect<true>;
     locations: LocationsSelect<false> | LocationsSelect<true>;
-    'service-categories': ServiceCategoriesSelect<false> | ServiceCategoriesSelect<true>;
     services: ServicesSelect<false> | ServicesSelect<true>;
     extras: ExtrasSelect<false> | ExtrasSelect<true>;
     'schedule-exceptions': ScheduleExceptionsSelect<false> | ScheduleExceptionsSelect<true>;
@@ -339,21 +337,8 @@ export interface Service {
   onlineBooking: boolean;
   name: string;
   description?: string | null;
-  category?: (string | null) | ServiceCategory;
   durationMinutes: number;
   price: number;
-  updatedAt: string;
-  createdAt: string;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "service-categories".
- */
-export interface ServiceCategory {
-  id: string;
-  order?: number | null;
-  active: boolean;
-  name: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -435,6 +420,8 @@ export interface Appointment {
   startAt: string;
   durationMinutes?: number | null;
   endAt?: string | null;
+  customDurationMinutes?: number | null;
+  color?: string | null;
   promoCode?: (string | null) | PromoCode;
   manualDiscountType?: ('amount' | 'percent') | null;
   manualDiscountValue?: number | null;
@@ -797,10 +784,6 @@ export interface PayloadLockedDocument {
         value: string | Location;
       } | null)
     | ({
-        relationTo: 'service-categories';
-        value: string | ServiceCategory;
-      } | null)
-    | ({
         relationTo: 'services';
         value: string | Service;
       } | null)
@@ -1043,17 +1026,6 @@ export interface LocationsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "service-categories_select".
- */
-export interface ServiceCategoriesSelect<T extends boolean = true> {
-  order?: T;
-  active?: T;
-  name?: T;
-  updatedAt?: T;
-  createdAt?: T;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "services_select".
  */
 export interface ServicesSelect<T extends boolean = true> {
@@ -1062,7 +1034,6 @@ export interface ServicesSelect<T extends boolean = true> {
   onlineBooking?: T;
   name?: T;
   description?: T;
-  category?: T;
   durationMinutes?: T;
   price?: T;
   updatedAt?: T;
@@ -1172,6 +1143,8 @@ export interface AppointmentsSelect<T extends boolean = true> {
   startAt?: T;
   durationMinutes?: T;
   endAt?: T;
+  customDurationMinutes?: T;
+  color?: T;
   promoCode?: T;
   manualDiscountType?: T;
   manualDiscountValue?: T;
@@ -1416,6 +1389,7 @@ export interface AboutUs {
 export interface BookingSetting {
   id: string;
   onlineBookingEnabled: boolean;
+  remindersEnabled: boolean;
   slotStepMinutes: number;
   minLeadMinutes: number;
   horizonDays: number;
@@ -1461,6 +1435,7 @@ export interface AboutUsSelect<T extends boolean = true> {
  */
 export interface BookingSettingsSelect<T extends boolean = true> {
   onlineBookingEnabled?: T;
+  remindersEnabled?: T;
   slotStepMinutes?: T;
   minLeadMinutes?: T;
   horizonDays?: T;

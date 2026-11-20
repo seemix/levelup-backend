@@ -184,6 +184,7 @@ describe('CRM API', () => {
       ['/crm/appointments/000000000000000000000000', 'PATCH', {}],
       ['/crm/appointments/000000000000000000000000/status', 'POST', {}],
       ['/crm/clients/lookup?phone=069100001', 'GET'],
+      ['/crm/clients/search?q=ion', 'GET'],
       ['/crm/appointments/000000000000000000000000', 'GET'],
       ['/crm/appointments/preview', 'POST', {}],
     ]
@@ -585,6 +586,51 @@ describe('CRM API', () => {
       })
     })
 
+    it('a barber sets a manual length and a block color; the calendar returns them (A47)', async () => {
+      const id = await appointment({
+        barber: ids.b1,
+        client: ids.c1,
+        startAt: iso('16:00', '2026-12-18'),
+      })
+      const bad = await call('barber1', 'PATCH', `/crm/appointments/${id}`, {
+        customDurationMinutes: 1.5,
+        color: 'red',
+      })
+      expect(bad.status).toBe(400)
+      expect(bad.json.error.details.fields).toEqual(['customDurationMinutes', 'color'])
+
+      const { status, json } = await call('barber1', 'PATCH', `/crm/appointments/${id}`, {
+        customDurationMinutes: 50,
+        color: '#ef4444',
+      })
+      expect(status).toBe(200)
+      expect(json.appointment).toMatchObject({
+        customDurationMinutes: 50,
+        durationMinutes: 50,
+        color: '#EF4444',
+        end: iso('16:50', '2026-12-18'),
+      })
+      const calendar = await call(
+        'admin',
+        'GET',
+        `/crm/calendar?date=2026-12-18&location=${ids.locA}`,
+      )
+      const block = calendar.json.columns
+        .flatMap((column: { appointments: { id?: string }[] }) => column.appointments)
+        .find((item: { id?: string }) => item.id === id)
+      expect(block).toMatchObject({ color: '#EF4444', durationMinutes: 50 })
+
+      const reset = await call('barber1', 'PATCH', `/crm/appointments/${id}`, {
+        customDurationMinutes: null,
+        color: null,
+      })
+      expect(reset.json.appointment).toMatchObject({
+        customDurationMinutes: null,
+        durationMinutes: 30,
+        color: null,
+      })
+    })
+
     it('hides other scopes (404) and rejects unknown fields', async () => {
       expect((await call('barber1', 'PATCH', `/crm/appointments/${ids.a2}`, {})).status).toBe(404)
       expect((await call('managerB', 'PATCH', `/crm/appointments/${ids.a1}`, {})).status).toBe(404)
@@ -710,6 +756,36 @@ describe('CRM API', () => {
       const bad = await call('admin', 'GET', '/crm/clients/lookup?phone=123')
       expect(bad.status).toBe(400)
       expect(bad.json.error.code).toBe('PHONE_INVALID')
+    })
+  })
+
+  describe('GET /crm/clients/search', () => {
+    it('admin and manager find clients by first name, last name or phone part (case-insensitive)', async () => {
+      for (const who of ['admin', 'manager'] as const) {
+        const byName = await call(who, 'GET', '/crm/clients/search?q=ION')
+        expect(byName.status).toBe(200)
+        expect(byName.json.clients.map((item: Json) => item.id)).toContain(ids.c1)
+        expect(byName.json.clients[0]).toEqual(
+          expect.objectContaining({ firstName: expect.any(String), phone: expect.any(String) }),
+        )
+        const byPhone = await call(who, 'GET', '/crm/clients/search?q=100001')
+        expect(byPhone.json.clients.map((item: Json) => item.id)).toContain(ids.c1)
+      }
+      expect(
+        JSON.stringify((await call('admin', 'GET', '/crm/clients/search?q=ion')).json),
+      ).not.toContain('ion@example.com')
+    })
+
+    it('every word must match; a too short or unknown query gives an empty list', async () => {
+      const none = await call('admin', 'GET', '/crm/clients/search?q=ion%20zzzzzz')
+      expect(none.json).toEqual({ clients: [] })
+      const short = await call('admin', 'GET', '/crm/clients/search?q=i')
+      expect(short.json).toEqual({ clients: [] })
+    })
+
+    it('barbers have no access', async () => {
+      const barber = await call('barber1', 'GET', '/crm/clients/search?q=ion')
+      expect(barber.status).toBe(403)
     })
   })
 

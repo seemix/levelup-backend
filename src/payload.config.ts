@@ -16,7 +16,6 @@ import { Media } from '@/collections/Media'
 import { Barbers } from '@/collections/Barbers'
 import { Slides } from '@/collections/Slides'
 import { Locations } from '@/collections/Locations'
-import { ServiceCategories } from '@/collections/ServiceCategories'
 import { Services } from '@/collections/Services'
 import { Extras } from '@/collections/Extras'
 import { ScheduleExceptions } from '@/collections/ScheduleExceptions'
@@ -146,7 +145,6 @@ export default buildConfig({
     Barbers,
     Slides,
     Locations,
-    ServiceCategories,
     Services,
     Extras,
     ScheduleExceptions,

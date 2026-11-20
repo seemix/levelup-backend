@@ -169,6 +169,9 @@ export const DayGrid = ({
   const barberIds = useMemo(() => [...new Set(columns.map((item) => item.barber.id))], [columns])
   const colorOf = (column: Column) =>
     column.barber.color ?? barberColorAt(barberIds.indexOf(column.barber.id))
+  // A block's own color (A47) wins; busy views and blocks without one take the barber's.
+  const blockColor = (appointment: CalendarAppointment, column: Column) =>
+    ('color' in appointment && appointment.color) || colorOf(column)
   const step = data.slotStepMinutes
   const range = useMemo(() => gridRange(columns, date), [date, columns])
   const hours = useMemo(
@@ -187,7 +190,7 @@ export const DayGrid = ({
     const id = String(event.active.id)
     for (const column of columns) {
       const appointment = column.appointments.find((item) => 'id' in item && item.id === id)
-      if (appointment) setDragging({ id, appointment, color: colorOf(column) })
+      if (appointment) setDragging({ id, appointment, color: blockColor(appointment, column) })
     }
   }
   const onDragEnd = (event: DragEndEvent) => {
@@ -253,7 +256,6 @@ export const DayGrid = ({
             )}
           </div>
           {columns.map((column) => {
-            const color = colorOf(column)
             const items = column.appointments
               .map((appointment) => ({
                 appointment,
@@ -328,7 +330,7 @@ export const DayGrid = ({
                   <AppointmentBlock
                     key={'id' in appointment ? appointment.id : `${appointment.start}-${itemIndex}`}
                     appointment={appointment}
-                    color={color}
+                    color={blockColor(appointment, column)}
                     position={position}
                     lane={lanes[itemIndex]}
                     onOpen={onOpen}

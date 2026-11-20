@@ -1,6 +1,6 @@
 /**
  * `GET /api/booking/config?locale=` (spec §6.1): everything the booking page needs to render the
- * choice — active locations, barbers who book online, categories, services, extras, prices
+ * choice — active locations, barbers who book online, services, extras, prices
  * ("from" before a barber is chosen, decision 22, §5.4 p.8) and public settings.
  * Only public fields are returned (no schedules, commissions, users, colors, settings for staff).
  */
@@ -21,7 +21,6 @@ type ItemRow = {
   order?: number | null
   price: number
   durationMinutes: number
-  category?: RelationValue
   appliesTo?: RelationValue[] | null
 }
 
@@ -102,17 +101,6 @@ export const loadBookingConfig = async (req: PayloadRequest) => {
   }[]
   const locationIds = locations.map((location) => String(location.id))
 
-  const { docs: categoryDocs } = await payload.find({
-    collection: 'service-categories',
-    ...SYSTEM_READ,
-    ...localized,
-    req,
-    where: { active: { equals: true } },
-    sort: 'order',
-    limit: 0,
-    select: { name: true, order: true },
-  })
-
   const online: Where = { and: [{ active: { equals: true } }, { onlineBooking: { equals: true } }] }
   const services = (
     await payload.find({
@@ -126,7 +114,6 @@ export const loadBookingConfig = async (req: PayloadRequest) => {
       select: {
         name: true,
         description: true,
-        category: true,
         durationMinutes: true,
         price: true,
         order: true,
@@ -244,7 +231,6 @@ export const loadBookingConfig = async (req: PayloadRequest) => {
         id: service.id,
         name: service.name ?? '',
         description: service.description ?? null,
-        category: relationId(service.category),
         price: service.price,
         durationMinutes: service.durationMinutes,
         priceFrom: min(offers.map((offer) => offer.price)),
@@ -275,9 +261,6 @@ export const loadBookingConfig = async (req: PayloadRequest) => {
       phone: location.phone ?? null,
       mapUrl: location.mapUrl ?? null,
     })),
-    categories: (categoryDocs as unknown as { id: string; name?: string | null }[]).map(
-      (category) => ({ id: String(category.id), name: category.name ?? '' }),
-    ),
     services: bookableServices,
     extras: extras
       .map((extra) => {

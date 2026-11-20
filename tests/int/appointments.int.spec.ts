@@ -812,4 +812,75 @@ describe('appointments', () => {
       expect((await read('barber1')).appointmentsInRange).toBeUndefined()
     })
   })
+
+  describe('custom duration and block color (A47)', () => {
+    const date = '2026-12-21'
+
+    it('a manual length replaces the services one, survives composition changes, null clears it', async () => {
+      // Barber One: cut = 45 min (barber price).
+      const doc = await book({ startAt: iso('10:00', date), customDurationMinutes: 90 }, 'barber1')
+      expect(doc).toMatchObject({ durationMinutes: 90, customDurationMinutes: 90 })
+      expect(doc.endAt).toBe(iso('11:30', date))
+
+      // Changing the services keeps the manual length (only the price is recalculated).
+      const changed = (
+        await updateAppointment(await reqFor('barber1'), doc.id, { extras: [ids.wash] })
+      ).doc as Doc
+      expect(changed).toMatchObject({ durationMinutes: 90, total: 40_000 })
+
+      // The manual length takes the slot: a colleague's appointment cannot overlap it.
+      expect(
+        await errorCode(book({ startAt: iso('11:00', date), client: ids.client2 }, 'admin')),
+      ).toBe('SLOT_TAKEN')
+
+      const cleared = (
+        await updateAppointment(await reqFor('admin'), doc.id, { customDurationMinutes: null })
+      ).doc as Doc
+      expect(cleared).toMatchObject({ durationMinutes: 55, customDurationMinutes: null })
+      expect(cleared.endAt).toBe(iso('10:55', date))
+      const logs = await logsOf(doc.id)
+      expect(
+        logs.some((log) =>
+          (log.changes as { field: string }[] | undefined)?.some(
+            (change) => change.field === 'durationMinutes',
+          ),
+        ),
+      ).toBe(true)
+    })
+
+    it('rejects a manual length that is not whole minutes or crosses midnight', async () => {
+      expect(
+        await errorCode(book({ startAt: iso('12:00', date), customDurationMinutes: 0 }, 'admin')),
+      ).toBe('DURATION_INVALID')
+      expect(
+        await errorCode(book({ startAt: iso('23:00', date), customDurationMinutes: 120 }, 'admin')),
+      ).toBe('DURATION_INVALID')
+    })
+
+    it('color: own color or null (barber color); the online booking cannot set staff fields', async () => {
+      const doc = await book({ startAt: iso('13:00', date), color: '#ef4444' }, 'manager')
+      expect(doc.color).toBe('#EF4444')
+      const block = await book(
+        { kind: 'block', startAt: iso('15:00', date), durationMinutes: 30, color: '#10B981' },
+        'admin',
+      )
+      expect(block).toMatchObject({ color: '#10B981', customDurationMinutes: null })
+      const reset = (await updateAppointment(await reqFor('admin'), doc.id, { color: null }))
+        .doc as Doc
+      expect(reset.color ?? null).toBeNull()
+
+      const online = await book(
+        {
+          barber: ids.b2,
+          startAt: iso('16:00', date),
+          color: '#EF4444',
+          customDurationMinutes: 120,
+        },
+        undefined,
+        { mode: 'online', now: EARLY },
+      )
+      expect(online.color ?? null).toBeNull()
+      expect(online).toMatchObject({ durationMinutes: 30, customDurationMinutes: null })
+    })
+  })
 })

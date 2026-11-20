@@ -7,7 +7,7 @@ import {
 } from './appointments'
 import { appointmentDetailEndpoint, previewAppointmentEndpoint } from './appointment-detail'
 import { calendarEndpoint } from './calendar'
-import { clientLookupEndpoint } from './clients'
+import { clientLookupEndpoint, clientSearchEndpoint } from './clients'
 import { newAppointmentsEndpoint } from './notifications'
 import {
   appointmentPaymentEndpoint,
@@ -30,6 +30,7 @@ export const crmEndpoints: Endpoint[] = [
   patchAppointmentEndpoint,
   appointmentStatusEndpoint,
   clientLookupEndpoint,
+  clientSearchEndpoint,
   appointmentDetailEndpoint,
   previewAppointmentEndpoint,
   reverseTransactionEndpoint,

@@ -177,6 +177,46 @@ describe('buildPatchBody', () => {
   })
 })
 
+describe('custom duration and block color (A47)', () => {
+  it('validates a manual length: empty = by services, otherwise whole minutes up to a day', () => {
+    expect(validateForm(form({ customDuration: '' }))).toEqual({})
+    expect(validateForm(form({ customDuration: '75' }))).toEqual({})
+    expect(validateForm(form({ customDuration: '0' })).customDuration).toBe('durationInvalid')
+    expect(validateForm(form({ customDuration: '12.5' })).customDuration).toBe('durationInvalid')
+    expect(validateForm(form({ customDuration: '1441' })).customDuration).toBe('durationInvalid')
+  })
+
+  it('create: color for any kind, the manual length only for an appointment', () => {
+    expect(buildCreateBody(form(), options)).not.toHaveProperty('color')
+    expect(buildCreateBody(form(), options)).not.toHaveProperty('customDurationMinutes')
+    expect(
+      buildCreateBody(form({ customDuration: '75', color: '#EF4444' }), options),
+    ).toMatchObject({ customDurationMinutes: 75, color: '#EF4444' })
+    const block = buildCreateBody(
+      form({ kind: 'block', customDuration: '75', color: '#10B981' }),
+      options,
+    )
+    expect(block).toMatchObject({ durationMinutes: 60, color: '#10B981' })
+    expect(block).not.toHaveProperty('customDurationMinutes')
+  })
+
+  it('patch: only changes; clearing sends null', () => {
+    const before = form({ customDuration: '90', color: '#EF4444' })
+    expect(buildPatchBody(before, { ...before }, options)).toEqual({})
+    expect(buildPatchBody(before, { ...before, customDuration: '60' }, options)).toEqual({
+      customDurationMinutes: 60,
+    })
+    expect(buildPatchBody(before, { ...before, customDuration: '', color: '' }, options)).toEqual({
+      customDurationMinutes: null,
+      color: null,
+    })
+    const block = form({ kind: 'block', color: '' })
+    expect(buildPatchBody(block, { ...block, color: '#3B82F6' }, options)).toEqual({
+      color: '#3B82F6',
+    })
+  })
+})
+
 describe('buildPreviewBody', () => {
   it('only for an appointment with a barber and a service; bad discount → none', () => {
     expect(buildPreviewBody(form({ kind: 'block' }), options)).toBeNull()

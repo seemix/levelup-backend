@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 
 import {
   buildCreateBody,
@@ -8,6 +8,7 @@ import {
   validateForm,
   type FormState,
 } from '@/crm/appointment-form'
+import { BARBER_COLORS } from '@/crm/colors'
 import { formatMoney } from '@/crm/money'
 import { tryNormalizePhone } from '@/crm/phone'
 
@@ -19,6 +20,7 @@ import {
   type CatalogExtra,
   type CatalogService,
   type ClientLookup,
+  type ClientSearch,
   type PricePreview,
 } from './api'
 import { useCrmT } from './useCrmT'
@@ -34,6 +36,8 @@ type Props = {
   barbers: { id: string; name: string }[]
   /** `true` when the barber is fixed to the user's own column (role `barber`). */
   barberLocked: boolean
+  /** Calendar color of a barber: the block's default color (A47). */
+  barberColor: (barberId: string) => string
   /** Admin/manager: client lookup, promo code and manual discount (decisions 30, 36). */
   isManager: boolean
   services: CatalogService[]
@@ -55,6 +59,7 @@ export const AppointmentForm = ({
   locationId,
   barbers,
   barberLocked,
+  barberColor,
   isManager,
   services,
   extras,
@@ -75,6 +80,12 @@ export const AppointmentForm = ({
   const [lookup, setLookup] = useState<{
     phone: string
     client: NonNullable<ClientLookup['client']> | null
+  } | null>(null)
+  // Search of an existing client by name/phone (admin/manager): the result belongs to its query.
+  const [nameQuery, setNameQuery] = useState('')
+  const [nameResult, setNameResult] = useState<{
+    query: string
+    clients: ClientSearch['clients']
   } | null>(null)
   const [preview, setPreview] = useState<{
     key: string
@@ -125,6 +136,37 @@ export const AppointmentForm = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [normalizedPhone, lookupActive])
 
+  const searchQuery = nameQuery.trim()
+  const searchActive = isManager && searchQuery.length >= 2
+  useEffect(() => {
+    if (!searchActive) return
+    const controller = new AbortController()
+    const timer = setTimeout(() => {
+      api<ClientSearch>(`/crm/clients/search?q=${encodeURIComponent(searchQuery)}`, {
+        signal: controller.signal,
+      })
+        .then(({ clients }) => setNameResult({ query: searchQuery, clients }))
+        .catch(() => undefined)
+    }, DEBOUNCE_MS)
+    return () => {
+      clearTimeout(timer)
+      controller.abort()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, searchActive])
+  const searchFound = searchActive && nameResult?.query === searchQuery ? nameResult.clients : null
+
+  const pickClient = (client: ClientSearch['clients'][number]) => {
+    patch({
+      clientId: client.id,
+      phone: client.phone,
+      firstName: client.firstName,
+      lastName: client.lastName ?? '',
+    })
+    setNameQuery('')
+    setNameResult(null)
+  }
+
   // Server-side price preview (§5.4): the same code that prices the saved appointment.
   const previewBody = useMemo(
     () => buildPreviewBody(state, { ...options, clientId: state.clientId }),
@@ -165,6 +207,11 @@ export const AppointmentForm = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewKey])
+
+  // Length of the chosen services (the manual one replaces it); known once the preview is in.
+  const servicesDuration =
+    previewBody && preview?.key === previewKey && preview.data ? preview.data.durationMinutes : null
+  const defaultColor = barberColor(state.barber)
 
   const money = (bani: number) => formatMoney(bani, language)
   const serviceName = (id: string) =>
@@ -310,7 +357,57 @@ export const AppointmentForm = ({
             {fieldError('duration', issueText('duration'))}
           </label>
         )}
+        {!isBlock && (
+          <label className="calendar-modal__field">
+            <span>{t('calendar.form.duration')}</span>
+            <input
+              type="number"
+              min={1}
+              step={5}
+              inputMode="numeric"
+              placeholder={servicesDuration === null ? '' : String(servicesDuration)}
+              value={state.customDuration}
+              onChange={(event) => patch({ customDuration: event.target.value })}
+            />
+            <small className="calendar-modal__muted">
+              {servicesDuration === null
+                ? t('calendar.form.durationByServices')
+                : t('calendar.form.durationByServicesCount', { count: servicesDuration })}
+            </small>
+            {fieldError('customDuration', issueText('customDuration'))}
+          </label>
+        )}
       </div>
+
+      <fieldset className="calendar-modal__field calendar-modal__colors">
+        <legend>{t('calendar.form.color')}</legend>
+        <div className="calendar-modal__swatches" role="radiogroup">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={state.color === ''}
+            title={t('calendar.form.colorDefault')}
+            className={`calendar-modal__swatch calendar-modal__swatch--default${state.color === '' ? ' calendar-modal__swatch--active' : ''}`}
+            style={{ '--swatch': defaultColor } as CSSProperties}
+            onClick={() => patch({ color: '' })}
+          >
+            {t('calendar.form.colorDefault')}
+          </button>
+          {BARBER_COLORS.map((color) => (
+            <button
+              key={color}
+              type="button"
+              role="radio"
+              aria-checked={state.color === color}
+              aria-label={color}
+              title={color}
+              className={`calendar-modal__swatch${state.color === color ? ' calendar-modal__swatch--active' : ''}`}
+              style={{ '--swatch': color } as CSSProperties}
+              onClick={() => patch({ color })}
+            />
+          ))}
+        </div>
+      </fieldset>
 
       {!isBlock && (
         <>
@@ -375,6 +472,51 @@ export const AppointmentForm = ({
             </label>
             {!state.withoutName && (
               <>
+                {isManager && (
+                  <div className="calendar-modal__field">
+                    <label className="calendar-modal__field">
+                      <span>{t('calendar.form.clientSearch')}</span>
+                      <input
+                        type="search"
+                        autoComplete="off"
+                        maxLength={80}
+                        placeholder={t('calendar.form.clientSearchPlaceholder')}
+                        value={nameQuery}
+                        onChange={(event) => setNameQuery(event.target.value)}
+                      />
+                    </label>
+                    {searchActive && searchFound === null && (
+                      <p className="calendar-modal__hint">{t('calendar.form.clientSearching')}</p>
+                    )}
+                    {searchFound !== null && searchFound.length === 0 && (
+                      <p className="calendar-modal__hint">{t('calendar.form.clientSearchEmpty')}</p>
+                    )}
+                    {searchFound !== null && searchFound.length > 0 && (
+                      <ul className="calendar-modal__client-results" role="listbox">
+                        {searchFound.map((client) => (
+                          <li key={client.id}>
+                            <button
+                              type="button"
+                              role="option"
+                              aria-selected={state.clientId === client.id}
+                              onClick={() => pickClient(client)}
+                            >
+                              <span>
+                                {[client.firstName, client.lastName].filter(Boolean).join(' ')}
+                              </span>
+                              <span className="calendar-modal__muted">{client.phone}</span>
+                              {client.blocked && (
+                                <span className="calendar-modal__warn">
+                                  {t('calendar.form.clientBlocked')}
+                                </span>
+                              )}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
                 <label className="calendar-modal__field">
                   <span>{t('calendar.form.phone')}</span>
                   <input

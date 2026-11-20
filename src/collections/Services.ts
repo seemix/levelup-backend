@@ -13,7 +13,7 @@ export const Services: CollectionConfig = {
   admin: {
     useAsTitle: 'name',
     group: catalogGroup,
-    defaultColumns: ['name', 'category', 'durationMinutes', 'price', 'active'],
+    defaultColumns: ['name', 'durationMinutes', 'price', 'active'],
   },
   defaultSort: 'order',
   fields: [
@@ -54,13 +54,6 @@ export const Services: CollectionConfig = {
       type: 'textarea',
       localized: true,
       label: crmLabel('services.description'),
-    },
-    {
-      name: 'category',
-      type: 'relationship',
-      relationTo: 'service-categories',
-      index: true,
-      label: crmLabel('services.category'),
     },
     durationField({
       label: 'services.durationMinutes',

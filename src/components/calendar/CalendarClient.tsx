@@ -92,6 +92,9 @@ export const CalendarClient = () => {
     return () => controller.abort()
   }, [key, date, location, view, barber, cancelled, i18n.language, config.routes.api])
 
+  // A move in flight (sync flag for event handlers); declared before the effect that reads it.
+  const moveRef = useRef(false)
+
   // A new appointment arrived (notifier): reload the grid, unless a drag is in flight.
   useEffect(() => {
     const reload = () => {
@@ -106,7 +109,6 @@ export const CalendarClient = () => {
   const [moveError, setMoveError] = useState<string | null>(null)
   // A move in flight: the optimistic position is already shown; `snapshot` is the rollback point.
   const [move, setMove] = useState<MoveState | null>(null)
-  const moveRef = useRef(false)
 
   const settled = result.key === key
   const error = settled && result.data === null

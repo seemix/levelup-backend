@@ -33,12 +33,28 @@ export const isReminderDue = (appointment: ReminderCandidate, now: Date): boolea
   return startAt >= from && startAt <= to
 }
 
-/** Ids of the appointments to remind now (client with an email only). */
+/** `booking-settings.remindersEnabled`; a global saved before the field existed counts as enabled. */
+export const areRemindersEnabled = async (
+  payload: Payload,
+  req?: PayloadRequest,
+): Promise<boolean> => {
+  const settings = (await payload.findGlobal({
+    slug: 'booking-settings',
+    depth: 0,
+    overrideAccess: true,
+    select: { remindersEnabled: true },
+    ...(req ? { req } : {}),
+  })) as { remindersEnabled?: boolean | null }
+  return settings.remindersEnabled !== false
+}
+
+/** Ids of the appointments to remind now (client with an email only; none while reminders are off). */
 export const findReminderAppointmentIds = async (
   payload: Payload,
   now: Date,
   req?: PayloadRequest,
 ): Promise<string[]> => {
+  if (!(await areRemindersEnabled(payload, req))) return []
   const { from, to } = reminderWindow(now)
   const { docs } = await payload.find({
     collection: 'appointments',

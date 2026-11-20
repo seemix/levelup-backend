@@ -953,3 +953,82 @@ $column-min: 168px;
   background: var(--theme-error-500);
   color: #fff;
 }
+
+// Search results of an existing client in the appointment form.
+.calendar-modal__client-results {
+  display: flex;
+  flex-direction: column;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--theme-elevation-150);
+  border-radius: var(--style-radius-m);
+  overflow: hidden;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin: 0;
+    padding: 6px 10px;
+    border: 0;
+    background: transparent;
+    color: var(--theme-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible,
+    &[aria-selected='true'] {
+      background: var(--theme-elevation-100);
+    }
+  }
+
+  li + li {
+    border-top: 1px solid var(--theme-elevation-100);
+  }
+}
+
+.calendar-modal__muted {
+  color: var(--theme-elevation-500);
+}
+
+// Block color (A47): "barber's color" + the palette.
+.calendar-modal__swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.calendar-modal__swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  outline: 1px solid var(--theme-elevation-150);
+  background: var(--swatch);
+  cursor: pointer;
+
+  &--default {
+    width: auto;
+    padding: 0 10px;
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--swatch) 28%, var(--theme-bg));
+    border-left: 6px solid var(--swatch);
+    color: var(--theme-text);
+    font-size: 12px;
+  }
+
+  &--active {
+    border-color: var(--theme-text);
+  }
+
+  &--default.calendar-modal__swatch--active {
+    border-left-color: var(--swatch);
+    outline: 2px solid var(--theme-text);
+  }
+}

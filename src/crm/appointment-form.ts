@@ -25,6 +25,10 @@ export type FormState = {
   time: string
   /** Block length in minutes (text of the input). */
   duration: string
+  /** Manual length of an appointment (A47); empty = the services' length. */
+  customDuration: string
+  /** Calendar block color `#RRGGBB`; empty = the barber's color (A47). */
+  color: string
   service: string
   extras: string[]
   /** Existing client chosen by the lookup (admin/manager). */
@@ -49,6 +53,8 @@ export const emptyForm = (init: Partial<FormState> = {}): FormState => ({
   date: '',
   time: '',
   duration: '60',
+  customDuration: '',
+  color: '',
   service: '',
   extras: [],
   clientId: null,
@@ -90,6 +96,17 @@ export const parseManualDiscount = (state: FormState): ManualDiscountBody | null
   return { type: state.discountType, value, reason: state.discountReason.trim() || null }
 }
 
+/** Whole minutes, one day at most (the server checks the same). */
+const MAX_MINUTES = 24 * 60
+const validMinutes = (text: string): boolean => {
+  const minutes = Number(text.trim())
+  return text.trim() !== '' && Number.isInteger(minutes) && minutes > 0 && minutes <= MAX_MINUTES
+}
+
+/** Manual length of the form: a number, or `null` = the services' length. Call after `validateForm`. */
+const customDurationOf = (state: FormState): number | null =>
+  state.customDuration.trim() === '' ? null : Number(state.customDuration.trim())
+
 /** Fields the form validates itself; the server remains the authority. */
 export const validateForm = (state: FormState): Partial<Record<keyof FormState, FormIssue>> => {
   const issues: Partial<Record<keyof FormState, FormIssue>> = {}
@@ -97,9 +114,12 @@ export const validateForm = (state: FormState): Partial<Record<keyof FormState, 
   if (!isLocalDate(state.date)) issues.date = 'dateInvalid'
   if (!isLocalTime(state.time)) issues.time = 'timeInvalid'
   if (state.kind === 'block') {
-    const minutes = Number(state.duration)
-    if (!Number.isInteger(minutes) || minutes <= 0) issues.duration = 'durationInvalid'
-  } else if (!state.service) issues.service = 'required'
+    if (!validMinutes(state.duration)) issues.duration = 'durationInvalid'
+  } else {
+    if (!state.service) issues.service = 'required'
+    if (state.customDuration.trim() !== '' && !validMinutes(state.customDuration))
+      issues.customDuration = 'durationInvalid'
+  }
   if (parseManualDiscount(state) === undefined) issues.discountValue = 'discountValueInvalid'
   return issues
 }
@@ -138,9 +158,12 @@ export const buildCreateBody = (state: FormState, options: BodyOptions): Body =>
     start: formStart(state),
     ...(state.clientComment.trim() ? { clientComment: state.clientComment.trim() } : {}),
     ...(state.internalNote.trim() ? { internalNote: state.internalNote.trim() } : {}),
+    ...(state.color ? { color: state.color } : {}),
   }
   if (state.kind === 'block') return { ...body, durationMinutes: Number(state.duration) }
   Object.assign(body, { service: state.service, extras: state.extras }, clientBody(state))
+  const custom = customDurationOf(state)
+  if (custom !== null) body.customDurationMinutes = custom
   if (state.promoCode.trim()) body.promoCode = state.promoCode.trim()
   const discount = options.canDiscount ? parseManualDiscount(state) : null
   if (discount) body.manualDiscount = discount
@@ -167,6 +190,8 @@ export const buildPatchBody = (
   } else {
     if (state.service !== initial.service) body.service = state.service
     if (!sameList(state.extras, initial.extras)) body.extras = state.extras
+    if (customDurationOf(state) !== customDurationOf(initial))
+      body.customDurationMinutes = customDurationOf(state)
     const clientChanged =
       state.withoutName !== initial.withoutName ||
       state.clientId !== initial.clientId ||
@@ -180,6 +205,7 @@ export const buildPatchBody = (
       if (JSON.stringify(after) !== before) body.manualDiscount = after
     }
   }
+  if (state.color !== initial.color) body.color = state.color || null
   if (state.clientComment.trim() !== initial.clientComment.trim())
     body.clientComment = state.clientComment.trim() || null
   if (state.internalNote.trim() !== initial.internalNote.trim())

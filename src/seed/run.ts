@@ -22,7 +22,6 @@ import { addLocalDays, isoWeekday, localToInstant, todayLocal } from '@/crm/time
 import {
   SEED_BARBERS,
   SEED_CASH_REGISTERS,
-  SEED_CATEGORIES,
   SEED_CERTIFICATE,
   SEED_CLIENTS,
   SEED_EXPENSE_CATEGORIES,
@@ -113,11 +112,6 @@ export const resetSeed = async (payload: Payload): Promise<SeedSummary> => {
   await wipe(
     'expense-categories',
     { name: { in: SEED_EXPENSE_CATEGORIES.map((item) => item.name.ru) } },
-    'ru',
-  )
-  await wipe(
-    'service-categories',
-    { name: { in: SEED_CATEGORIES.map((item) => item.name.ru) } },
     'ru',
   )
   if (userIds.length > 0) await wipe('users', { id: { in: userIds } })
@@ -247,26 +241,6 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
   }
 
   // 4. Catalog.
-  const categoryIds: Record<string, string> = {}
-  for (const [index, category] of SEED_CATEGORIES.entries()) {
-    let doc = await findOne(
-      payload,
-      'service-categories',
-      { name: { equals: category.name.ru } },
-      'ru',
-    )
-    if (!doc) {
-      doc = await createLocalized(
-        payload,
-        'service-categories',
-        { active: true, order: index + 1 },
-        { name: category.name },
-      )
-      count('service-categories')
-    }
-    categoryIds[category.key] = id(doc)
-  }
-
   const serviceIds: Record<string, string> = {}
   for (const service of SEED_SERVICES) {
     const existing = await findOne(payload, 'services', { name: { equals: service.name.ru } }, 'ru')
@@ -278,7 +252,6 @@ export const runSeed = async (payload: Payload, options: SeedOptions): Promise<S
       payload,
       'services',
       {
-        category: categoryIds[service.category],
         durationMinutes: service.durationMinutes,
         price: service.price,
         active: true,

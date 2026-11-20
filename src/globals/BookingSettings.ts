@@ -51,6 +51,14 @@ export const BookingSettings: GlobalConfig = {
       label: crmLabel('bookingSettings.onlineBookingEnabled'),
     },
     {
+      name: 'remindersEnabled',
+      type: 'checkbox',
+      required: true,
+      defaultValue: true,
+      label: crmLabel('bookingSettings.remindersEnabled'),
+      admin: { description: crmLabel('bookingSettings.remindersEnabledHint') },
+    },
+    {
       type: 'row',
       fields: [
         integerField('slotStepMinutes', 'bookingSettings.slotStepMinutes', 15, 5, 120),

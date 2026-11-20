@@ -405,6 +405,28 @@ describe('appointment emails', () => {
       expect(await remind(id, later)).toMatchObject({ status: 'sent' })
     })
 
+    it('sends nothing while reminders are switched off, including already queued jobs', async () => {
+      const spy = sendEmail()
+      const { doc } = await book({
+        barber: ids.b4,
+        startAt: addMinutes(inWindow, 240).toISOString(),
+      })
+      const id = String(doc.id)
+      const later = addMinutes(NOW, 240)
+      await runJobs()
+      spy.mockClear()
+      await payload.updateGlobal({ slug: 'booking-settings', data: { remindersEnabled: false } })
+      try {
+        expect(await findReminderAppointmentIds(payload, later)).toEqual([])
+        expect(await remind(id, later)).toEqual({ status: 'skipped', reason: 'disabled' })
+        expect(spy).not.toHaveBeenCalled()
+        expect((await find(id)).reminderSentAt ?? null).toBeNull()
+      } finally {
+        await payload.updateGlobal({ slug: 'booking-settings', data: { remindersEnabled: true } })
+      }
+      expect(await findReminderAppointmentIds(payload, later)).toContain(id)
+    })
+
     it('reminds again after the appointment is moved', async () => {
       sendEmail()
       const { doc } = await book({

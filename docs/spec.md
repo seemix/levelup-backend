@@ -156,7 +156,7 @@ CRM для барбершопу:
   - Записи: `scheduled | completed | paid | no_show`, скасовані — з `cancelled=1`. Рядок, який користувач може читати за policy `appointments`, повертається з повними деталями (клієнт `{id, firstName, lastName, phone}`, послуга й додаткові послуги з назвами мовою `?locale`, суми, нотатки). Інакше — рівно `{ start, end, busy: true }` і лише для активних статусів. Email клієнта календар не повертає нікому. Клієнтів читає система (барбер не має доступу до колекції).
   - Кількість запитів фіксована: налаштування, локації, барбери, винятки, записи, клієнти, послуги, додаткові послуги, media (+1 для manager, +2 для barber — контекст), незалежно від кількості записів (тест на seed-даних).
   - `GET /crm/slots` — режим персоналу (`computeSlots`, `mode = staff`), `warnings` у кожного варіанта. Барбер отримує лише свої слоти (рішення 37; `any` для барбера = свій). `exclude` — редагований запис (доступ перевіряється), `duration` — знімок тривалості (лише з конкретним барбером). Барбер не з цієї локації → `BARBER_NOT_FOUND`.
-  - `POST /crm/appointments`, `PATCH /crm/appointments/:id`, `POST …/:id/status` викликають сервіс записів з `req` користувача (`overrideAccess: false`), тож діють правила хуків (зона, ціни, слот під замком, статуси, історія, лист «перенесено»). Тіло: `start` (ISO), `promoCode` — текст коду (`null` знімає), `manualDiscount: {type, value, reason} | null`. PATCH приймає лише `location, barber, client, service, extras, start, durationMinutes, promoCode, manualDiscount, clientComment, internalNote, language, confirm` (статус — тільки через `/status`). Барбер без `barber` створює запис у своїй колонці; знайти клієнта не може (lookup — лише admin/manager), тож створює «Без імені».
+  - `POST /crm/appointments`, `PATCH /crm/appointments/:id`, `POST …/:id/status` викликають сервіс записів з `req` користувача (`overrideAccess: false`), тож діють правила хуків (зона, ціни, слот під замком, статуси, історія, лист «перенесено»). Тіло: `start` (ISO), `promoCode` — текст коду (`null` знімає), `manualDiscount: {type, value, reason} | null`. PATCH приймає лише `location, barber, client, service, extras, start, durationMinutes, customDurationMinutes, color, promoCode, manualDiscount, clientComment, internalNote, language, confirm` (статус — тільки через `/status`). Барбер без `barber` створює запис у своїй колонці; знайти клієнта не може (lookup — лише admin/manager), тож створює «Без імені».
   - Попередження потребують підтвердження: `OUTSIDE_SCHEDULE`, `PRICE_CHANGED` (`total` змінився без явної зміни складу/промокоду/знижки, тобто через зміну барбера), `HAS_PAYMENTS` (`total` змінився при `paidAmount > 0`), `REFUND_REQUIRED` (скасування з оплатою). Без `confirm: true` транзакція відкочується (нічого не змінено, лист не поставлено в чергу) і повертається 409 `CONFIRMATION_REQUIRED` з `details.warnings` (для PATCH ще `details.total {from, to}`). Успіх → `{ appointment, warnings }`.
   - `GET /crm/clients/lookup?phone=` — точний пошук за E.164 з правами користувача (`clients` read: admin, manager) → `{ client | null }`.
   - Автентифікація — `Authorization: Bearer <token>` або cookie адмінки (префікс `JWT` у цій версії Payload не приймається).
@@ -239,6 +239,11 @@ CRM для барбершопу:
   - Чайові: немає поля `tipAmount` у `transactions` і `appointments`, поля «Чайові» у вкладці «Оплата», коду `PAYMENT_TIP_INVALID`, колонок у фінансовому звіті, зарплаті й CSV. Усі гроші оплати йдуть у рахунок запису: Σ`entries` + `certificateAmount` = сума в рахунок запису; більше, ніж до сплати, — `PAYMENT_EXCEEDS_DUE`. Поле `tip` у тілі запиту оплати ігнорується. Міграції немає: до запуску в базі немає реальних оплат. Старі локальні оплати з чайовими (seed) після оновлення рахуються як гроші в рахунок запису — `pnpm seed:reset`.
   - Фіксована ставка: `barbers.fixedSalary` (бані, необов'язкова, вкладка «Зарплата»; права як у `%`: admin пише, барбер читає свою). Ставка місячна. У звіті «Зарплата» за період — для кожного місяця `ставка × днів періоду в місяці / днів у місяці`, округлення half-up помісячно; повний місяць дає рівно ставку. Рядок `fixedSalary` додається до `total`; барбер зі ставкою має рядок і без оплат. Ставка нараховується лише активним барберам, що підходять під фільтр звіту: барбер — `barber`, локація — одна з `barbers.locations` (у кожній локації окремо). Береться поточна ставка з картки, без історії змін. Прибуток адміна (касовий метод) враховує ставки.
 - A46. Сповіщення про нові записи у відкритій адмін-панелі (`src/components/notifications/NewAppointmentNotifier.tsx`, endpoint `GET /api/crm/new-appointments?since=` у `src/endpoints/crm/notifications.ts`). Опитування кожні 20 с (пауза у прихованій вкладці), toast + короткий звук, відкритий календар перезавантажується подією `crm:appointments-created`. Лише admin/manager/barber; записи, які користувач створив сам, і блокування часу не сповіщають; рядки фільтруються правом читання `appointments`. Модель даних не змінюється, міграцій немає.
+- A47. Колір блока й ручна тривалість запису в календарі.
+  - `appointments.color` (`#RRGGBB`, необов'язкове): колір блока в календарі (запис і блокування). Порожньо — колір барбера, тож блок «йде» за барбером при перенесенні та при зміні кольору барбера. Вибір у формі запису: «Колір барбера» + палітра `BARBER_COLORS`. Колеги барбера бачать чужий блок «Зайнято» в кольорі барбера (власний колір не розкривається).
+  - `appointments.customDurationMinutes` (ціле 1…1440, необов'язкове, лише для `kind = appointment`): ручна тривалість замість суми `lines`. Зберігається при зміні послуг/додаткових (ціна перераховується, тривалість — ні), доки її явно не очистять (`null` → знову за послугами). Запис має закінчитися в той самий локальний день, інакше `DURATION_INVALID`. Зміна тривалості перевіряє слот, як і зміна часу; пишеться в історію як `durationMinutes`.
+  - Права: обидва поля змінює кожен, хто може редагувати запис (зокрема барбер — свої), як і нотатки. Онлайн-запис і клієнт (скасування за токеном) ці поля не задають — хук зберігає збережені значення.
+  - API: `POST`/`PATCH /crm/appointments` приймають `color` (`#RRGGBB` | `null`) і `customDurationMinutes` (число | `null`); `GET /crm/calendar` і `GET /crm/appointments/:id` повертають обидва поля. Міграції немає: нові поля необов'язкові.
 
 ## 2. Загальні правила
 
@@ -316,7 +321,7 @@ CRM для барбершопу:
 - Якщо активна локація одна, вона обирається автоматично, а вибір прихований (на фронті й у календарі).
 
 ### 4.3 `booking-settings` (global)
-- `slotStepMinutes` (15), `minLeadMinutes` (120), `horizonDays` (30), `clientCancelMinHours` (3), `reminderHoursBefore` (24), `bufferMinutes` (0), `onlineBookingEnabled` (true), `senderName`, `replyTo`.
+- `slotStepMinutes` (15), `minLeadMinutes` (120), `horizonDays` (30), `clientCancelMinHours` (3), `reminderHoursBefore` (24), `bufferMinutes` (0), `onlineBookingEnabled` (true), `remindersEnabled` (true; вимкнено — нагадування не ставляться в чергу, а вже поставлені пропускаються з `skipped: disabled`), `senderName`, `replyTo`.
 
 ### 4.4 `barbers` (розширення наявної)
 Наявні поля зберігаються: `order`, `name`, `description` L, `image`, `about` L.
@@ -357,7 +362,7 @@ CRM для барбершопу:
 - `kind!`: `appointment | block`.
 - `location!`, `barber!` idx, `client` (обов'язковий для онлайн-запису; для персоналу може бути порожнім — «Без імені»).
 - `service` (обов'язковий для `appointment`), `extras` hasMany.
-- `startAt!` idx, `endAt!`, `durationMinutes!`.
+- `startAt!` idx, `endAt!`, `durationMinutes!`, `customDurationMinutes` (ручна тривалість, A47), `color` (колір блока, A47).
 - `lines` (snapshot): array {`itemType` service|extra, `item` (id), `price`, `durationMinutes`}.
 - `subtotal`, `promoCode` rel, `promoDiscount`, `manualDiscount`, `manualDiscountReason`, `total` — усі readOnly, рахуються сервером.
 - `plannedCertificate` rel → `gift-certificates` (код, введений онлайн; списання відбувається при оплаті).
@@ -529,7 +534,7 @@ scheduled ──► completed ──► paid
 
 ## 7. Email
 - Шаблони (React Email не використовуємо; прості HTML-шаблони в `src/emails/` + словники `ru/ro/en`): підтвердження (з посиланням на скасування), перенесення, скасування (клієнтом або салоном), нагадування.
-- Відправка через job `sendAppointmentEmail` (повтори до 3 разів). Нагадування — запланований job кожні 5 хв: записи `scheduled` з `startAt ∈ [now + 24h − 5хв, now + 24h]` і `reminderSentAt = null`.
+- Відправка через job `sendAppointmentEmail` (повтори до 3 разів). Нагадування — запланований job кожні 5 хв: записи `scheduled` з `startAt ∈ [now + 24h − 5хв, now + 24h]` і `reminderSentAt = null`, лише якщо `booking-settings.remindersEnabled ≠ false`.
 - Без email у клієнта листи не надсилаються.
 - Кожен лист пишеться в лог (`action = email`).
 

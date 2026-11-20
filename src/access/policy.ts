@@ -22,7 +22,7 @@ export type Resource =
   | 'booking-settings'
   /** Non-public booking-settings fields (`senderName`, `replyTo`). */
   | 'booking-settings.private'
-  /** Service catalog: service-categories, services, extras (spec §3.1). */
+  /** Service catalog: services, extras (spec §3.1). */
   | 'catalog'
   /** Barbers collection (documents); public profile fields use `content` at field level. */
   | 'barbers'

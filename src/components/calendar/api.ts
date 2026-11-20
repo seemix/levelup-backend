@@ -150,3 +150,8 @@ export type ClientLookup = {
 
 export type CatalogService = { id: string; name: string; price: number; durationMinutes: number }
 export type CatalogExtra = CatalogService & { appliesTo: string[] }
+
+/** `GET /api/crm/clients/search?q=` — clients by name or phone (admin/manager). */
+export type ClientSearch = {
+  clients: { id: string; firstName: string; lastName: string | null; phone: string; blocked: boolean }[]
+}

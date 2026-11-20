@@ -12,6 +12,7 @@ import { buildCancelUrl, renderEmail, type EmailData, type EmailType } from '@/e
 import { resolveEmailLanguage, type EmailLanguage } from '@/emails/language'
 
 import { APPOINTMENT_CONTEXT, type AppointmentResult } from './appointments'
+import { areRemindersEnabled } from './reminders'
 import { relationId } from './schedule'
 
 export type SendEmailInput = {
@@ -25,7 +26,7 @@ export type SendEmailInput = {
 
 export type SendEmailResult =
   | { status: 'sent'; language: EmailLanguage }
-  | { status: 'skipped'; reason: 'not_found' | 'stale' | 'no_email' | 'already_sent' }
+  | { status: 'skipped'; reason: 'not_found' | 'stale' | 'no_email' | 'already_sent' | 'disabled' }
 
 // ---------------------------------------------------------------------------
 // Queueing (afterChange hook)
@@ -199,6 +200,10 @@ export const sendAppointmentEmail = async (
   if (!client?.email) return { status: 'skipped', reason: 'no_email' }
 
   const claimed = input.type === 'reminder'
+  // Reminders may have been switched off after this job was queued.
+  if (claimed && !(await areRemindersEnabled(payload))) {
+    return { status: 'skipped', reason: 'disabled' }
+  }
   if (claimed && !(await claimReminder(payload, input.appointmentId, now))) {
     return { status: 'skipped', reason: 'already_sent' }
   }

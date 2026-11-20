@@ -11,6 +11,7 @@ export const RULE_ERROR_KEYS = {
   CLIENT_REQUIRED: 'errors.clientRequired',
   BARBER_LOCATION_INVALID: 'errors.barberLocationInvalid',
   BLOCK_TIME_INVALID: 'errors.blockTimeInvalid',
+  DURATION_INVALID: 'errors.appointmentDurationInvalid',
   STATUS_TRANSITION_INVALID: 'errors.statusTransitionInvalid',
   STATUS_TOO_EARLY: 'errors.statusTooEarly',
   STATUS_FORBIDDEN: 'errors.statusForbidden',

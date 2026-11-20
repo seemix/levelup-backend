@@ -19,7 +19,7 @@ export const orderDescription = crmLabel('fields.orderDescription')
 
 export const catalogGroup = crmLabels('groups.catalog')
 
-/** Catalog (service-categories, services, extras): anonymous reads active only, admin writes (spec §3.1). */
+/** Catalog (services, extras): anonymous reads active only, admin writes (spec §3.1). */
 export const catalogAccess: NonNullable<CollectionConfig['access']> = {
   read: accessFor('read', 'catalog'),
   create: accessFor('create', 'catalog'),

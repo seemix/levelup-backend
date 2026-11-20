@@ -8,6 +8,7 @@ import * as migration_20261113_000003_promo_codes from './20261113_000003_promo_
 import * as migration_20261113_000004_appointments from './20261113_000004_appointments'
 import * as migration_20261113_000005_ledger from './20261113_000005_ledger'
 import * as migration_20261114_000000_gift_certificates from './20261114_000000_gift_certificates'
+import * as migration_20261114_000001_drop_service_categories from './20261114_000001_drop_service_categories'
 
 export const migrations = [
   {
@@ -59,5 +60,10 @@ export const migrations = [
     up: migration_20261114_000000_gift_certificates.up,
     down: migration_20261114_000000_gift_certificates.down,
     name: '20261114_000000_gift_certificates',
+  },
+  {
+    up: migration_20261114_000001_drop_service_categories.up,
+    down: migration_20261114_000001_drop_service_categories.down,
+    name: '20261114_000001_drop_service_categories',
   },
 ]

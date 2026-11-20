@@ -22,7 +22,6 @@ describe('seed', { timeout: 300_000 }, () => {
           'locations',
           'users',
           'barbers',
-          'service-categories',
           'services',
           'extras',
           'barber-prices',

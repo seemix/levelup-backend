@@ -25,6 +25,8 @@ export type AppointmentRow = {
   startAt: string | Date
   endAt: string | Date
   durationMinutes?: number | null
+  customDurationMinutes?: number | null
+  color?: string | null
   subtotal?: number | null
   promoCode?: RelationValue
   promoDiscount?: number | null
@@ -55,6 +57,8 @@ export const APPOINTMENT_SELECT = {
   startAt: true,
   endAt: true,
   durationMinutes: true,
+  customDurationMinutes: true,
+  color: true,
   subtotal: true,
   promoCode: true,
   promoDiscount: true,
@@ -163,6 +167,8 @@ export const detailView = (row: AppointmentRow, names: Names) => {
     start: iso(row.startAt),
     end: iso(row.endAt),
     durationMinutes: row.durationMinutes ?? 0,
+    customDurationMinutes: row.customDurationMinutes ?? null,
+    color: row.color ?? null,
     location: relationId(row.location),
     barber: relationId(row.barber),
     client: clientId

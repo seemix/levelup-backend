@@ -43,6 +43,7 @@ import {
   type PromoErrorCode,
   toPromoRule,
 } from './promo'
+import { isHexColor } from './colors'
 import { relationId, type RelationValue } from './schedule'
 import { checkSlot } from './slots'
 import { appointmentsBusySource, loadSlotInput } from './slots.loader'
@@ -240,8 +241,12 @@ export type AppointmentInput = {
   service?: string | null
   extras?: string[]
   startAt?: string | Date
-  /** Blocks only; appointments take it from the services. */
+  /** Blocks only; appointments take it from the services (or `customDurationMinutes`). */
   durationMinutes?: number | null
+  /** Appointments only (A47): manual length instead of the services' one; `null` clears it. */
+  customDurationMinutes?: number | null
+  /** Calendar block color `#RRGGBB` (A47); `null` = the barber's color. */
+  color?: string | null
   promoCode?: string | null
   /** Gift certificate entered online (§4.11): charged only at payment. */
   plannedCertificate?: string | null
@@ -339,6 +344,8 @@ type Row = {
   startAt?: string | Date | null
   endAt?: string | Date | null
   durationMinutes?: number | null
+  customDurationMinutes?: number | null
+  color?: string | null
   lines?: LineRow[] | null
   subtotal?: number | null
   promoCode?: RelationValue
@@ -378,6 +385,15 @@ const SERVER_FIELDS = [
   'endAt',
   'paymentStatus',
 ] as const satisfies readonly (keyof Row)[]
+
+/** Longest appointment or block: one day (both must end on the local day they start). */
+export const MAX_DURATION_MINUTES = 24 * 60
+
+/** Staff-only presentation fields (A47): a client or the online booking never sets them. */
+const STAFF_FIELDS = ['customDurationMinutes', 'color'] as const satisfies readonly (keyof Row)[]
+
+const linesDuration = (lines: readonly LineRow[] | null | undefined): number | null =>
+  lines && lines.length > 0 ? lines.reduce((sum, line) => sum + line.durationMinutes, 0) : null
 
 /** Changed only by the payment service (`APPOINTMENT_CONTEXT.ledger`). */
 const PAYMENT_FIELDS = ['paidAmount', 'certificateAmount'] as const
@@ -628,10 +644,17 @@ export const prepareAppointment: CollectionBeforeChangeHook = async ({
     next.paymentStatus = 'unpaid'
   }
   const kind: AppointmentKind = next.kind ?? 'appointment'
+  // Staff-only fields (A47): the online booking and a client's cancel keep the stored values.
+  if (mode === 'online' || actorType === 'client')
+    for (const field of STAFF_FIELDS)
+      (next as Record<string, unknown>)[field] = prev?.[field] ?? null
+  next.color = isHexColor(next.color) ? next.color.toUpperCase() : null
+  next.customDurationMinutes ??= null
 
   // 2. Shape by kind.
   next.extras = ids(next.extras)
   if (kind === 'block') {
+    next.customDurationMinutes = null
     next.client = null
     next.service = null
     next.extras = []
@@ -752,10 +775,17 @@ export const prepareAppointment: CollectionBeforeChangeHook = async ({
     next.total = price.total
     next.durationMinutes = price.durationMinutes
   } else if (kind === 'appointment' && prev) {
-    next.durationMinutes = prev.durationMinutes
+    next.durationMinutes = linesDuration(next.lines) ?? prev.durationMinutes
+  }
+  // A manual length (A47) wins over the services' one and survives changes of the composition.
+  const custom = kind === 'appointment' ? next.customDurationMinutes : null
+  if (custom !== null && custom !== undefined) {
+    if (!Number.isInteger(custom) || custom <= 0 || custom > MAX_DURATION_MINUTES)
+      fail(req, 'DURATION_INVALID')
+    next.durationMinutes = custom
   }
 
-  // 7. Time: appointments last as long as their lines; blocks have their own duration.
+  // 7. Time: appointments last as long as their lines (or the manual length); blocks have their own.
   const start = toDate(next.startAt)
   if (!start || Number.isNaN(start.getTime())) return fail(req, 'SLOT_UNAVAILABLE')
   const duration = next.durationMinutes ?? 0
@@ -764,6 +794,8 @@ export const prepareAppointment: CollectionBeforeChangeHook = async ({
   const end = addMinutes(start, duration)
   const date = toLocalDate(start)
   if (kind === 'block' && end > localDayRange(date).end) fail(req, 'BLOCK_TIME_INVALID')
+  if (custom !== null && custom !== undefined && end > localDayRange(date).end)
+    fail(req, 'DURATION_INVALID')
   next.startAt = start.toISOString()
   next.endAt = end.toISOString()
 
@@ -898,6 +930,7 @@ export const LOGGED_FIELDS = [
   'startAt',
   'endAt',
   'durationMinutes',
+  'color',
   'subtotal',
   'promoCode',
   'promoDiscount',

@@ -67,37 +67,16 @@ describe('catalog collections', () => {
     await payload.delete({ collection: 'locations', where: { id: { equals: locationId } } })
     await payload.delete({ collection: 'extras', where: { id: { exists: true } } })
     await payload.delete({ collection: 'services', where: { id: { exists: true } } })
-    await payload.delete({ collection: 'service-categories', where: { id: { exists: true } } })
     await payload.delete({
       collection: 'users',
       where: { id: { in: Object.values(users).map((x) => x.id) } },
     })
   })
 
-  it('admin creates category, service and extra in three languages; price stays in bani', async () => {
-    const category = await make({
-      collection: 'service-categories',
-      data: { name: 'Стрижки' },
-      locale: 'ru',
-      ...as('admin'),
-      overrideAccess: false,
-    })
-    await payload.update({
-      collection: 'service-categories',
-      id: category.id,
-      data: { name: 'Tunsori' },
-      locale: 'ro',
-    })
-    await payload.update({
-      collection: 'service-categories',
-      id: category.id,
-      data: { name: 'Haircuts' },
-      locale: 'en',
-    })
-
+  it('admin creates service and extra in three languages; price stays in bani', async () => {
     const service = await make({
       collection: 'services',
-      data: { name: 'Стрижка', category: category.id, durationMinutes: 45, price: 25000 },
+      data: { name: 'Стрижка', durationMinutes: 45, price: 25000 },
       locale: 'ru',
       ...as('admin'),
       overrideAccess: false,
@@ -110,12 +89,20 @@ describe('catalog collections', () => {
       overrideAccess: false,
     })
 
-    const all = await payload.findByID({
-      collection: 'service-categories',
-      id: category.id,
-      locale: 'all',
+    await payload.update({
+      collection: 'services',
+      id: service.id,
+      data: { name: 'Tuns' },
+      locale: 'ro',
     })
-    expect(all.name).toEqual({ ru: 'Стрижки', ro: 'Tunsori', en: 'Haircuts' })
+    await payload.update({
+      collection: 'services',
+      id: service.id,
+      data: { name: 'Haircut' },
+      locale: 'en',
+    })
+    const all = await payload.findByID({ collection: 'services', id: service.id, locale: 'all' })
+    expect(all.name).toEqual({ ru: 'Стрижка', ro: 'Tuns', en: 'Haircut' })
     expect(service).toMatchObject({ price: 25000, active: true, onlineBooking: true })
     expect(extra.price).toBe(0)
   })
@@ -129,12 +116,8 @@ describe('catalog collections', () => {
       collection: 'extras',
       data: { name: 'Архив', durationMinutes: 5, price: 100, active: false },
     })
-    await make({
-      collection: 'service-categories',
-      data: { name: 'Архив', active: false },
-    })
 
-    for (const collection of ['services', 'extras', 'service-categories'] as const) {
+    for (const collection of ['services', 'extras'] as const) {
       const anon = await payload.find({ collection, overrideAccess: false, pagination: false })
       expect(anon.docs.length, collection).toBeGreaterThan(0)
       expect(
@@ -176,14 +159,6 @@ describe('catalog collections', () => {
       ).rejects.toThrow()
       await expect(
         make({ collection: 'extras', data, ...as(role), overrideAccess: false }),
-      ).rejects.toThrow()
-      await expect(
-        make({
-          collection: 'service-categories',
-          data: { name: 'X' },
-          ...as(role),
-          overrideAccess: false,
-        }),
       ).rejects.toThrow()
     }
   })

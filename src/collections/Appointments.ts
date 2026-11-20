@@ -1,4 +1,4 @@
-import type { CollectionConfig, Field, NumberField } from 'payload'
+import type { CollectionConfig, Field, NumberField, TextFieldSingleValidation } from 'payload'
 import { accessFor, rowAccessFor } from '@/access/policy'
 import {
   APPOINTMENT_KINDS,
@@ -6,10 +6,11 @@ import {
   APPOINTMENT_STATUSES,
   PAYMENT_STATUSES,
 } from '@/crm/appointment-status'
-import { logAppointmentChange, prepareAppointment } from '@/crm/appointments'
+import { logAppointmentChange, MAX_DURATION_MINUTES, prepareAppointment } from '@/crm/appointments'
+import { isHexColor } from '@/crm/colors'
 import { queueAppointmentEmails } from '@/crm/appointment-emails'
 import { moneyField } from '@/fields/money'
-import { crmLabel, crmLabels, supportedLocales, type CrmKey } from '@/i18n'
+import { crmLabel, crmLabels, crmT, supportedLocales, type CrmKey } from '@/i18n'
 
 const isAppointment = (data: unknown) =>
   ((data as { kind?: string } | undefined)?.kind ?? 'appointment') === 'appointment'
@@ -157,6 +158,39 @@ export const Appointments: CollectionConfig = {
           type: 'date',
           label: crmLabel('appointments.endAt'),
           admin: { ...dateTime, width: '33%', readOnly: true },
+        },
+      ],
+    },
+    {
+      type: 'row',
+      fields: [
+        {
+          // Manual length of an appointment (A47): kept until cleared, even if the services change.
+          name: 'customDurationMinutes',
+          type: 'number',
+          min: 1,
+          max: MAX_DURATION_MINUTES,
+          label: crmLabel('appointments.customDurationMinutes'),
+          admin: {
+            width: '50%',
+            description: crmLabel('appointments.customDurationDescription'),
+            condition: (data) => isAppointment(data),
+          },
+        },
+        {
+          // Calendar block color (A47): empty = the barber's color.
+          name: 'color',
+          type: 'text',
+          label: crmLabel('appointments.color'),
+          admin: {
+            width: '50%',
+            description: crmLabel('appointments.colorDescription'),
+            components: { Field: '@/components/color/ColorField#ColorField' },
+          },
+          validate: ((value, { req: { t } }) =>
+            !value || isHexColor(value)
+              ? true
+              : crmT(t, 'errors.colorInvalid')) satisfies TextFieldSingleValidation,
         },
       ],
     },

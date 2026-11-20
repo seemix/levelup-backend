@@ -12,14 +12,8 @@ export const SEED_USERS = [
   { key: 'barber3', email: `barber3${SEED_EMAIL_DOMAIN}`, roles: ['barber'] },
 ] as const
 
-export const SEED_CATEGORIES: { key: string; name: L10n }[] = [
-  { key: 'haircuts', name: { ru: 'Стрижки', ro: 'Tunsori', en: 'Haircuts' } },
-  { key: 'beard', name: { ru: 'Борода и уход', ro: 'Barbă și îngrijire', en: 'Beard & care' } },
-]
-
 export type SeedService = {
   key: string
-  category: string
   name: L10n
   description: L10n
   durationMinutes: number
@@ -30,7 +24,6 @@ export type SeedService = {
 export const SEED_SERVICES: SeedService[] = [
   {
     key: 'haircut',
-    category: 'haircuts',
     name: { ru: 'Мужская стрижка', ro: 'Tunsoare bărbătească', en: "Men's haircut" },
     description: {
       ru: 'Стрижка ножницами и машинкой, мытьё головы.',
@@ -43,7 +36,6 @@ export const SEED_SERVICES: SeedService[] = [
   },
   {
     key: 'clipper',
-    category: 'haircuts',
     name: { ru: 'Стрижка машинкой', ro: 'Tuns cu mașina', en: 'Clipper cut' },
     description: {
       ru: 'Быстрая стрижка под одну насадку.',
@@ -56,7 +48,6 @@ export const SEED_SERVICES: SeedService[] = [
   },
   {
     key: 'kids',
-    category: 'haircuts',
     name: { ru: 'Детская стрижка', ro: 'Tunsoare pentru copii', en: 'Kids haircut' },
     description: {
       ru: 'Для детей до 12 лет.',
@@ -69,7 +60,6 @@ export const SEED_SERVICES: SeedService[] = [
   },
   {
     key: 'beard',
-    category: 'beard',
     name: { ru: 'Оформление бороды', ro: 'Aranjarea bărbii', en: 'Beard trim' },
     description: {
       ru: 'Моделирование бороды и усов, горячее полотенце.',
@@ -82,7 +72,6 @@ export const SEED_SERVICES: SeedService[] = [
   },
   {
     key: 'combo',
-    category: 'beard',
     name: { ru: 'Стрижка + борода', ro: 'Tunsoare + barbă', en: 'Haircut + beard' },
     description: {
       ru: 'Комплекс: стрижка и оформление бороды.',
@@ -95,7 +84,6 @@ export const SEED_SERVICES: SeedService[] = [
   },
   {
     key: 'shave',
-    category: 'beard',
     name: { ru: 'Королевское бритьё', ro: 'Bărbierit regal', en: 'Royal shave' },
     description: {
       ru: 'Бритьё опасной бритвой с горячим полотенцем.',
