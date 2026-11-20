@@ -917,7 +917,7 @@ $column-min: 168px;
   span {
     position: absolute;
     top: 0;
-    left: 4px;
+    left: 50%;
     padding: 1px 6px;
     border-radius: var(--style-radius-s, 3px);
     background: var(--theme-elevation-800);
@@ -925,7 +925,8 @@ $column-min: 168px;
     font-size: var(--font-size-xs, 11px);
     font-weight: 600;
     line-height: 1.3;
-    transform: translateY(-50%);
+    white-space: nowrap;
+    transform: translate(-50%, -50%);
   }
 }
 
