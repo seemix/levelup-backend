@@ -26,7 +26,8 @@ export const SalaryReportPage = ({
       user={req.user ?? undefined}
       visibleEntities={visibleEntities}
     >
-      <Gutter>
+      {/* Narrow side padding (as on calendar screens): the wide table fits without scrolling. */}
+      <Gutter className="crm-gutter">
         <SalaryReportClient />
       </Gutter>
     </DefaultTemplate>

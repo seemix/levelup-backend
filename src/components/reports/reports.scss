@@ -147,3 +147,19 @@
 .reports__negative {
   color: var(--theme-error-500);
 }
+
+// Salary and finance reports: wide tables must fit the page without horizontal scroll — smaller text,
+// tighter cells, column headers may wrap.
+.reports--compact .reports__table {
+  font-size: var(--font-size-xs);
+
+  th,
+  td {
+    padding: 6px 8px;
+  }
+
+  th {
+    white-space: normal;
+    vertical-align: bottom;
+  }
+}

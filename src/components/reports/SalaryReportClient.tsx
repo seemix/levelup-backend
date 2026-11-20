@@ -59,7 +59,7 @@ export const SalaryReportClient = () => {
     setFilters((previous) => ({ ...previous, ...patch }))
 
   return (
-    <div className="reports">
+    <div className="reports reports--compact">
       <div className="reports__toolbar">
         <h1 className="reports__title">{t('reports.salary.title')}</h1>
         {valid && (

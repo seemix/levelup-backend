@@ -26,7 +26,8 @@ export const FinanceReportPage = ({
       user={req.user ?? undefined}
       visibleEntities={visibleEntities}
     >
-      <Gutter>
+      {/* Narrow side padding (as on calendar screens): the wide tables fit without scrolling. */}
+      <Gutter className="crm-gutter">
         <FinanceReportClient />
       </Gutter>
     </DefaultTemplate>
